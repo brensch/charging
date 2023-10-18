@@ -28,7 +28,7 @@ func main() {
 		port = "50051"
 	}
 
-	lis, err := net.Listen("tcp", port)
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
