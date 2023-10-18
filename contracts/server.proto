@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package relay;
+
+option go_package = "go/relay";
+
+import "meter.proto";
+
+service RelayUpdateService {
+    rpc UpdateRelayState(RelayState) returns (UpdateResponse);
+}
+
+message UpdateResponse {
+    bool success = 1; // Indicates if the update was successful
+    string message = 2; // Optional message, like error messages or additional info
+}
