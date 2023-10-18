@@ -31,4 +31,4 @@ watch-relaymanager:
 	reflex -r '\.go$$' -s -- sh -c 'go build -o relaymanager-bin ./relaymanager && ./relaymanager-bin'
 
 watch-all:
-	make watch-mothership & make watch-relaymanager &
+	make watch-mothership & make watch-relaymanager
