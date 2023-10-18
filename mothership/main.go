@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"github.com/brensch/charging/gen/go/relay"
 
 	"google.golang.org/grpc"
-)
-
-const (
-	port = ":50051"
 )
 
 type server struct {
@@ -25,6 +22,12 @@ func (s *server) UpdateRelayState(ctx context.Context, in *relay.RelayState) (*r
 }
 
 func main() {
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "50051"
+	}
+
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
