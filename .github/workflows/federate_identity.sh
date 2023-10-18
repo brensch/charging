@@ -26,6 +26,14 @@ fi
 # Set the project in gcloud config
 gcloud config set project $PROJECT_ID
 
+# Enable the required APIs
+echo "Enabling necessary APIs..."
+
+gcloud services enable iamcredentials.googleapis.com
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+gcloud services enable containerregistry.googleapis.com
+
 echo "Setting up identity federation for project: $PROJECT_ID"
 
 echo "Setting up pool..."
