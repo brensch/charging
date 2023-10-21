@@ -9,45 +9,39 @@ env:
   DEPLOY_CONF: ${{ github.workspace }}/.github/workflows/deploy.conf
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      project_id: ${{ steps.set-vars.outputs.project_id }}
-      service_account: ${{ steps.set-vars.outputs.service_account }}
-      workload_identity_provider: ${{ steps.set-vars.outputs.workload_identity_provider }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set Environment Variables from deploy.conf
-        id: set-vars
-        run: |
-          echo "Reading deploy.conf..."
-          source $DEPLOY_CONF
-          echo "Setting GitHub Actions outputs..."
-          echo "::set-output name=project_id::$PROJECT_ID"
-          echo "::set-output name=service_account::$SERVICE_ACCOUNT"
-          echo "::set-output name=workload_identity_provider::$WORKLOAD_IDENTITY_PROVIDER"
-
   deploy-backend:
-    needs: setup
     runs-on: ubuntu-latest
     permissions:
       contents: "read"
       id-token: "write"
     steps:
-      - id: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v3
-      - id: "Auth"
-        uses: "google-github-actions/auth@v1"
+
+      - name: Source deploy.conf
+        run: source $DEPLOY_CONF
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
         with:
-          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
-          service_account: ${{ needs.setup.outputs.service_account }}
-      - name: "Deploy"
-        uses: "google-github-actions/deploy-cloudrun@v1"
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v1
         with:
           source: "./mothership"
           service: "mothership"
           region: "australia-southeast2"
+
+  deploy-frontend: # Placeholder for the frontend deployment logic
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Source deploy.conf
+        run: source $DEPLOY_CONF
 
   # deploy-to-firebase:
   #   needs: setup
