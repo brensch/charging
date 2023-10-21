@@ -33,6 +33,9 @@ jobs:
 
   build_and_deploy:
     needs: setup
+    permissions:
+      contents: "read"
+      id-token: "write"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
