@@ -26,6 +26,7 @@ jobs:
           echo "::set-output name=workload_identity_provider::$WORKLOAD_IDENTITY_PROVIDER"
 
   build_and_preview:
+    needs: setup
     if: "${{ github.event.pull_request.head.repo.full_name == github.repository }}"
     runs-on: ubuntu-latest
     steps:
