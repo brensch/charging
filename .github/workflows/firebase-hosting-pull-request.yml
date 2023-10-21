@@ -54,7 +54,15 @@ jobs:
           echo "SERVICE_ACCOUNT_KEY=$(cat "${{ steps.auth.outputs.credentials_file_path }}" | tr -d '\n')" >> $GITHUB_ENV
 
       # deploy to firebase
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: "${{ env.SERVICE_ACCOUNT_KEY }}"
           projectId: ${{ needs.setup.outputs.project_id }}
+
+      - name: Comment PR with Preview URL
+        run: |
+          echo "Deploy preview is ready: ${{ steps.deploy.outputs.details_url }}" > comment.txt
+          gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file comment.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
