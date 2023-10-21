@@ -10,8 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: cd frontend && npm ci && npm run build
+
+      # get federated creds
+      - id: auth
+        uses: "google-github-actions/auth@v1"
+        with:
+          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
+          service_account: ${{ needs.setup.outputs.service_account }}
+          create_credentials_file: true
+      - run: |
+          echo "SERVICE_ACCOUNT_KEY=$(cat "${{ steps.auth.outputs.credentials_file_path }}" | tr -d '\n')" >> $GITHUB_ENV
+
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_CHARGING_402405 }}"
+          firebaseServiceAccount: "${{ env.SERVICE_ACCOUNT_KEY }}"
           projectId: charging-402405
