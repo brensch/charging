@@ -12,6 +12,25 @@ env:
   DEPLOY_CONF: ${{ github.workspace }}/.github/workflows/deploy.conf
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      project_id: ${{ steps.set-vars.outputs.project_id }}
+      service_account: ${{ steps.set-vars.outputs.service_account }}
+      workload_identity_provider: ${{ steps.set-vars.outputs.workload_identity_provider }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set Environment Variables from deploy.conf
+        id: set-vars
+        run: |
+          echo "Reading deploy.conf..."
+          source $DEPLOY_CONF
+          echo "Setting GitHub Actions outputs..."
+          echo "::set-output name=project_id::$PROJECT_ID"
+          echo "::set-output name=service_account::$SERVICE_ACCOUNT"
+          echo "::set-output name=workload_identity_provider::$WORKLOAD_IDENTITY_PROVIDER"
+
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
