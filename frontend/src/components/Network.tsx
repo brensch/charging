@@ -4,7 +4,7 @@ import { Outlet } from "react-router-dom"
 function Page() {
   return (
     <div>
-      Plug Settings Page
+      Plugs Page
       <Outlet />
     </div>
   )

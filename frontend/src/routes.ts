@@ -5,13 +5,14 @@ import Account from "./components/Account"
 import AccountProfile from "./components/AccountProfile"
 import AccountBilling from "./components/AccountBilling"
 import AccountDelete from "./components/AccountDelete"
-import Plugs from "./components/Plugs"
-import PlugsNew from "./components/PlugsNew"
+import Network from "./components/Network"
+import NetworkNewPlug from "./components/NetworkNewPlug"
 import PlugDetail from "./components/PlugDetail"
+import PlugSelect from "./components/PlugSelect"
 import PlugStatus from "./components/PlugStatus"
 import PlugSettings from "./components/PlugSettings"
 
-interface RouteConfig {
+export interface RouteConfig {
   path: string
   component: React.ComponentType
   children?: RouteConfig[]
@@ -20,12 +21,12 @@ interface RouteConfig {
 
 const routes: RouteConfig[] = [
   {
-    path: "/",
+    path: "",
     component: Home,
     exact: true,
   },
   {
-    path: "/account",
+    path: "account",
     component: Account,
     children: [
       {
@@ -33,7 +34,7 @@ const routes: RouteConfig[] = [
         component: AccountProfile,
       },
       {
-        path: "/account/billing",
+        path: "billing",
         component: AccountBilling,
       },
       {
@@ -43,26 +44,33 @@ const routes: RouteConfig[] = [
     ],
   },
   {
-    path: "/plugs",
-    component: Plugs,
-    exact: true,
-  },
-  {
-    path: "/plugs/new",
-    component: PlugsNew,
-    exact: true,
-  },
-  {
-    path: "/plug/:id",
-    component: PlugDetail,
+    path: "network",
+    component: Network,
     children: [
       {
-        path: "status",
-        component: PlugStatus,
+        path: "new",
+        component: NetworkNewPlug,
       },
+    ],
+  },
+
+  {
+    path: "plug",
+    component: PlugSelect,
+    children: [
       {
-        path: "settings",
-        component: PlugSettings,
+        path: ":id",
+        component: PlugDetail,
+        children: [
+          {
+            path: "status",
+            component: PlugStatus,
+          },
+          {
+            path: "settings",
+            component: PlugSettings,
+          },
+        ],
       },
     ],
   },
