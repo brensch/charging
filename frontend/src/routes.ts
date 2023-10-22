@@ -53,9 +53,28 @@ const routes: RouteConfig[] = [
       },
     ],
   },
-
   {
     path: "plug",
+    component: PlugSelect,
+    children: [
+      {
+        path: ":id",
+        component: PlugDetail,
+        children: [
+          {
+            path: "status",
+            component: PlugStatus,
+          },
+          {
+            path: "settings",
+            component: PlugSettings,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    path: "site",
     component: PlugSelect,
     children: [
       {

@@ -20,7 +20,6 @@ import {
   Outlet,
 } from "react-router-dom"
 import routes from "./routes"
-import SidePanel from "./components/SidePanel"
 import AppBar from "./components/AppBar"
 
 function RenderRoute(route: any) {
