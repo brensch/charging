@@ -1,0 +1,68 @@
+name: Deploy to Firebase Hosting on PR
+
+on: pull_request
+
+env:
+  DEPLOY_CONF: ${{ github.workspace }}/.github/workflows/deploy.conf
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      project_id: ${{ steps.set-vars.outputs.project_id }}
+      service_account: ${{ steps.set-vars.outputs.service_account }}
+      workload_identity_provider: ${{ steps.set-vars.outputs.workload_identity_provider }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set Environment Variables from deploy.conf
+        id: set-vars
+        run: |
+          echo "Reading deploy.conf..."
+          source $DEPLOY_CONF
+          echo "Setting GitHub Actions outputs..."
+          echo "::set-output name=project_id::$PROJECT_ID"
+          echo "::set-output name=service_account::$SERVICE_ACCOUNT"
+          echo "::set-output name=workload_identity_provider::$WORKLOAD_IDENTITY_PROVIDER"
+
+  build_and_preview:
+    needs: setup
+    permissions:
+      contents: "read"
+      id-token: "write"
+      pull-requests: "write"
+    if: "${{ github.event.pull_request.head.repo.full_name == github.repository }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install and Build
+        run: |
+          cd frontend 
+          npm ci 
+          npm run build
+
+      # get federated creds
+      - id: "Auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
+          service_account: ${{ needs.setup.outputs.service_account }}
+          create_credentials_file: true
+
+      - name: Set SERVICE_ACCOUNT_KEY Env Var
+        run: |
+          echo "SERVICE_ACCOUNT_KEY=$(cat "${{ steps.auth.outputs.credentials_file_path }}" | tr -d '\n')" >> $GITHUB_ENV
+
+      # deploy to firebase
+      - id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: "${{ env.SERVICE_ACCOUNT_KEY }}"
+          projectId: ${{ needs.setup.outputs.project_id }}
+
+      - name: Comment PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            Deploy preview is ready: ${{ steps.deploy.outputs.details_url }}
