@@ -1,10 +1,11 @@
 import React from "react"
-import { Outlet } from "react-router-dom"
+import { Outlet, useParams } from "react-router-dom"
 
 function Page() {
+  let { id } = useParams()
   return (
     <div>
-      Plug Detail Page
+      Plug Metadata for {id}
       <Outlet />
     </div>
   )
