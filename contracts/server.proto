@@ -1,14 +1,60 @@
 syntax = "proto3";
 
-package relay;
+package contracts;
 
-option go_package = "go/relay";
+option go_package = "go/contracts";
 
-import "meter.proto";
+import "contracts/objects.proto";
 
-service RelayUpdateService {
-    rpc UpdateRelayState(RelayState) returns (UpdateResponse);
+service UpdateService {
+    rpc UpdateSite(UpdateSiteRequest) returns (UpdateResponse);
+    rpc UpdateSiteSetting(UpdateSiteSettingRequest) returns (UpdateResponse); //This may be done through the ui
+    rpc UpdatePlug(UpdatePlugRequest) returns (UpdateResponse);
+    rpc UpdatePlugSetting(UpdatePlugSettingRequest) returns (UpdateResponse); //This may be done through the ui
+    rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
+    rpc CreatePlug(CreatePlugRequest) returns (CreatePlugResponse);
 }
+
+message CreateSiteRequest {
+    string name = 1; // The name of the site
+}
+
+message CreateSiteResponse {
+    string site_id = 1; // The ID of the created site
+}
+
+message CreatePlugRequest {
+    string site_id = 1; // The site ID
+    string name = 2; // The name of the plug
+}
+
+message CreatePlugResponse {
+    string plug_id = 1; // The ID of the created plug
+}
+
+message UpdatePlugRequest {
+    string plug_id = 1; // The plug ID
+    string site_id = 2; // The site ID
+    Reading reading = 3; // new reading (will be appended to the plug's readings)
+}
+
+message UpdatePlugSettingRequest {
+    string plug_id = 1; // The plug ID
+    string site_id = 2; // The site ID
+    string name = 3; // The name of the plug
+    PlugStrategy strategy = 4; // new reading
+}
+
+message UpdateSiteRequest {
+    string site_id = 2; // The site ID
+    Reading reading = 3; // new reading
+}
+
+message UpdateSiteSettingRequest {
+    string site_id = 2; // The site ID
+    Reading reading = 3; // new reading
+}
+
 
 message UpdateResponse {
     bool success = 1; // Indicates if the update was successful

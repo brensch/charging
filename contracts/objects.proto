@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package contracts;
+
+option go_package = "go/contracts";
+
+message Plug {
+    string plug_id = 1; // The plug ID
+    string site_id = 2; // The site ID
+    repeated Reading readings = 3; // The readings for the plug
+}
+
+message PlugSettings {
+    string name = 1; // The name of the plug
+    string site_id = 2; // The site ID
+    string plug_id = 3; // The plug ID
+    PlugStrategy strategy = 5; // The strategy for the plug
+}
+
+message PlugStrategy {
+    bool always_on = 1; // Whether the plug requires the user to turn it on
+    repeated string owner_ids = 2; // People sign up to be owners if there's a strategy that requires it
+    int64 duration_ms = 3; // The duration the user is signing up to pay for the plug for
+}
+
+enum SiteState {
+    SiteState_UNKNOWN = 0;      // Default value, used as a placeholder
+    SiteState_ONLINE = 1;           // Relay is on
+    SiteState_OFFLINE = 2;          // Relay is off
+    SiteState_ERROR=3;          // Not available or missing
+}
+
+message Site {
+    string site_id = 1; // The site ID
+    string site_name = 2; // The site name
+    SiteState state = 3; // The state of the site
+}
+
+message SiteSetting{
+    string name = 1; // The name of the site
+    string site_id = 2; // The site ID
+    repeated string owner_ids = 3; // People who have admin control over the site
+    SiteStrategy strategy = 4; // The strategy for the site
+}
+
+// may need to capture the strategy for the site as a whole
+message SiteStrategy {
+
+}
+
+enum PlugState {
+    PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
+    PlugState_ON = 1;           // Relay is on
+    PlugState_OFF = 2;          // Relay is off
+    PlugState_MIA = 3;          // Not available or missing
+    PlugState_OVERCURRENT = 4;  // Overcurrent detected
+    // TODO: decide how we represent off for cost reasons etc
+}
+
+message Reading {
+    PlugState state = 1; // Indicates if the relay is currently on, off, MIA, etc.
+    double current = 2; // The current power reading in watts
+    double voltage = 3; // The voltage reading in volts
+    double power_factor = 4; // Power factor, typically a value between -1 and 1
+    int64 timestamp = 5; // Timestamp of the reading in seconds since epoch
+}

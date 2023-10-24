@@ -5,7 +5,8 @@ import Account from "./components/Account"
 import AccountProfile from "./components/AccountProfile"
 import AccountBilling from "./components/AccountBilling"
 import AccountDelete from "./components/AccountDelete"
-import Network from "./components/Network"
+import Sites from "./components/Sites"
+import SiteDetails from "./components/SiteDetails"
 import NetworkNewPlug from "./components/NetworkNewPlug"
 import PlugDetail from "./components/PlugDetail"
 import PlugSelect from "./components/PlugSelect"
@@ -44,14 +45,12 @@ const routes: RouteConfig[] = [
     ],
   },
   {
-    path: "network",
-    component: Network,
-    children: [
-      {
-        path: "new",
-        component: NetworkNewPlug,
-      },
-    ],
+    path: "sites",
+    component: Sites,
+  },
+  {
+    path: "site/:id",
+    component: SiteDetails,
   },
   {
     path: "plug",

@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from "react"
+import React, { useState, FormEvent, useEffect } from "react"
 import { Outlet, useNavigate } from "react-router-dom"
 import {
   Box,
@@ -8,6 +8,8 @@ import {
   InputRightAddon,
   InputRightElement,
 } from "@chakra-ui/react"
+import { firestore } from "../firebase"
+import { collection, getDocs } from "firebase/firestore"
 
 function Page() {
   const [code, setCode] = useState<string>("")
