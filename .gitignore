@@ -22,3 +22,6 @@ go.work
 
 *bin
 *key.json
+node_modules
+
+dist
