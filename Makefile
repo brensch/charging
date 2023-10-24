@@ -23,6 +23,7 @@ build-deps:
 	go get -u google.golang.org/protobuf/cmd/protoc-gen-go
 	go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	go get -u github.com/cespare/reflex
+	go get -u github.com/srikrsna/protoc-gen-gotag
 
 watch-mothership:
 	reflex -r '\.go$$' -s -- sh -c 'go build -o mothership-bin ./mothership && ./mothership-bin'
