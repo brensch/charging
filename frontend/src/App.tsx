@@ -1,26 +1,7 @@
-import { useState } from "react"
-import {
-  ChakraProvider,
-  Box,
-  LinkBox,
-  LinkOverlay,
-  Image,
-  Heading,
-  Button,
-  Text,
-  Code,
-  VStack,
-  CSSReset,
-  Container,
-} from "@chakra-ui/react"
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Outlet,
-} from "react-router-dom"
-import routes from "./routes"
+import { Box, CSSReset, ChakraProvider, Container } from "@chakra-ui/react"
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
 import AppBar from "./components/AppBar"
+import routes from "./routes"
 
 function RenderRoute(route: any) {
   if (!route.children) {
