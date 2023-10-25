@@ -15,6 +15,8 @@ import React from "react"
 import { useLocation, useNavigate } from "react-router-dom" // Assuming you are using react-router
 import routes from "../routes"
 import { ChevronDownIcon } from "@chakra-ui/icons"
+import { auth } from "../firebase"
+import { signOut } from "firebase/auth"
 
 interface AppBarProps {}
 
@@ -29,6 +31,15 @@ const AppBar: React.FC<AppBarProps> = () => {
 
   // Extract current root parent path
   const currentRoot = getRootParentPath(location.pathname)
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      navigate("/") // Optional: Redirect to home or login page after logging out
+    } catch (error) {
+      console.error("Error signing out: ", error)
+    }
+  }
 
   return (
     <Box
@@ -45,6 +56,9 @@ const AppBar: React.FC<AppBarProps> = () => {
           justifyContent="space-between"
         >
           <Text fontSize="2xl">Charging</Text>
+          <Text fontSize="m" onClick={handleLogout}>
+            {auth.currentUser?.displayName}
+          </Text>
 
           <Menu>
             <MenuButton as={Button} size="sm" variant="outline">
