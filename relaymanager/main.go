@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	// address = "mothership-yufwwel26a-km.a.run.app"
-	address = "localhost"
+	address = "mothership-yufwwel26a-km.a.run.app"
+	// address = "localhost"
 
-	port    = ":50051"
+	// port    = ":50051"
+	port    = ":443"
 	keyPath = "./remote-device-sa-key.json"
 )
 
