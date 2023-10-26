@@ -6,15 +6,13 @@ option go_package = "go/contracts";
 
 message Plug {
     string plug_id = 1; // The plug ID
-    string site_id = 2; // The site ID
-    repeated Reading readings = 3; // The readings for the plug
+    Reading reading = 2; // The reading for the plug
 }
 
 message PlugSettings {
     string name = 1; // The name of the plug
-    string site_id = 2; // The site ID
-    string plug_id = 3; // The plug ID
-    PlugStrategy strategy = 5; // The strategy for the plug
+    string plug_id = 2; // The plug ID
+    PlugStrategy strategy = 3; // The strategy for the plug
 }
 
 message PlugStrategy {
@@ -34,6 +32,8 @@ message Site {
     string site_id = 1; // The site ID
     string site_name = 2; // The site name
     SiteState state = 3; // The state of the site
+    repeated Plug plugs = 4; // The plugs at the site
+    repeated string plug_ids = 5; // The IDs of the plugs at the site, used for firestore queries
 }
 
 message SiteSetting{
@@ -41,6 +41,7 @@ message SiteSetting{
     string site_id = 2; // The site ID
     repeated string owner_ids = 3; // People who have admin control over the site
     SiteStrategy strategy = 4; // The strategy for the site
+    repeated PlugSettings plugs = 5; // The settings for the plugs
 }
 
 // may need to capture the strategy for the site as a whole

@@ -7,12 +7,9 @@ option go_package = "go/contracts";
 import "contracts/objects.proto";
 
 service UpdateService {
-    rpc UpdateSite(UpdateSiteRequest) returns (UpdateResponse);
-    rpc UpdateSiteSetting(UpdateSiteSettingRequest) returns (UpdateResponse); //This may be done through the ui
-    rpc UpdatePlug(UpdatePlugRequest) returns (UpdateResponse);
-    rpc UpdatePlugSetting(UpdatePlugSettingRequest) returns (UpdateResponse); //This may be done through the ui
     rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
-    rpc CreatePlug(CreatePlugRequest) returns (CreatePlugResponse);
+    rpc UpdateSite(UpdateSiteRequest) returns (UpdateSiteResponse);
+    rpc UpdateSiteSetting(UpdateSiteSettingsRequest) returns (UpdateSiteSettingsResponse); //This may be done through the ui
 }
 
 message CreateSiteRequest {
@@ -23,40 +20,22 @@ message CreateSiteResponse {
     string site_id = 1; // The ID of the created site
 }
 
-message CreatePlugRequest {
-    string site_id = 1; // The site ID
-    string name = 2; // The name of the plug
-}
-
-message CreatePlugResponse {
-    string plug_id = 1; // The ID of the created plug
-}
-
-message UpdatePlugRequest {
-    string plug_id = 1; // The plug ID
-    string site_id = 2; // The site ID
-    Reading reading = 3; // new reading (will be appended to the plug's readings)
-}
-
-message UpdatePlugSettingRequest {
-    string plug_id = 1; // The plug ID
-    string site_id = 2; // The site ID
-    string name = 3; // The name of the plug
-    PlugStrategy strategy = 4; // new reading
-}
-
 message UpdateSiteRequest {
-    string site_id = 2; // The site ID
-    Reading reading = 3; // new reading
+    Site updated_site = 1; // The site ID
 }
 
-message UpdateSiteSettingRequest {
-    string site_id = 2; // The site ID
-    Reading reading = 3; // new reading
+message UpdateSiteResponse {
+    string site_id = 1; // The site ID
+    string message = 2;
+    string error = 3;
 }
 
+message UpdateSiteSettingsRequest {
+    SiteSetting site_settings = 1; // The site ID
+}
 
-message UpdateResponse {
-    bool success = 1; // Indicates if the update was successful
-    string message = 2; // Optional message, like error messages or additional info
+message UpdateSiteSettingsResponse {
+    string site_id = 1; // The site ID
+    string message = 2;
+    string error = 3;
 }

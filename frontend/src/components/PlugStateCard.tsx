@@ -20,7 +20,9 @@ interface PlugStateCardProps {
 }
 
 const PlugStateCard: React.FC<PlugStateCardProps> = ({ plugData }) => {
-  let latestReading = plugData.readings[plugData.readings.length - 1]
+  if (!plugData.reading) {
+    return
+  }
   return (
     <Box
       maxW="sm"
@@ -36,17 +38,21 @@ const PlugStateCard: React.FC<PlugStateCardProps> = ({ plugData }) => {
         <Text fontWeight="bold" fontSize="xl">
           Plug {plugData.plug_id}
         </Text>
-        <Text fontSize="l">{plugStateToJSON(latestReading.state)}</Text>
+        <Text fontSize="l">{plugStateToJSON(plugData.reading.state)}</Text>
       </Grid>
 
       <Grid templateColumns="1fr 1fr" gap={4}>
         <Stat>
           <StatLabel>Amps</StatLabel>
-          <StatNumber>{Number(latestReading.current).toFixed(2)}A</StatNumber>
+          <StatNumber>
+            {Number(plugData.reading.current).toFixed(2)}A
+          </StatNumber>
         </Stat>
         <Stat>
           <StatLabel>Voltage </StatLabel>
-          <StatNumber>{Number(latestReading.voltage).toFixed(2)}V</StatNumber>
+          <StatNumber>
+            {Number(plugData.reading.voltage).toFixed(2)}V
+          </StatNumber>
         </Stat>
       </Grid>
 
@@ -54,13 +60,13 @@ const PlugStateCard: React.FC<PlugStateCardProps> = ({ plugData }) => {
         <Stat>
           <StatLabel>Power Factor</StatLabel>
           <StatNumber>
-            {Number(latestReading.power_factor).toFixed(2)}
+            {Number(plugData.reading.power_factor).toFixed(2)}
           </StatNumber>
         </Stat>
         <Text fontSize="sm" gridColumn="span 2">
           Last Reading:{" "}
-          {new Date(latestReading.timestamp * 1000).toLocaleDateString()}{" "}
-          {new Date(latestReading.timestamp * 1000).toLocaleTimeString()}
+          {new Date(plugData.reading.timestamp * 1000).toLocaleDateString()}{" "}
+          {new Date(plugData.reading.timestamp * 1000).toLocaleTimeString()}
         </Text>
       </Grid>
     </Box>

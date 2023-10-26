@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { firestore } from "../firebase"
-import { collection, onSnapshot, query, where } from "firebase/firestore"
-import { Plug } from "../contracts/objects"
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore"
+import { Plug, Site } from "../contracts/objects"
 
 const PlugsList: React.FC = () => {
   const [plugs, setPlugs] = useState<Plug[]>([])
@@ -14,18 +14,16 @@ const PlugsList: React.FC = () => {
       return // Return early if id is not available
     }
 
-    const plugsCollectionRef = collection(firestore, "plugs")
-    const q = query(plugsCollectionRef, where("site_id", "==", id)) // Filter plugs by site_id
+    // Directly reference the site document with the given id
+    const siteDocRef = doc(firestore, "sites", id)
 
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const plugsData: Plug[] = []
-      querySnapshot.forEach((doc) => {
-        const plug = doc.data() as Plug
-        plugsData.push(plug)
-      })
-      setPlugs(plugsData)
-      console.log(plugsData)
+    // Listen for real-time updates on the site document
+    const unsubscribe = onSnapshot(siteDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const siteData = Site.fromJSON(docSnapshot.data())
+        setPlugs(siteData.plugs)
+        console.log(siteData.plugs)
+      }
     })
 
     // Clean up the listener on component unmount
