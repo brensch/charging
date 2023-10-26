@@ -112,17 +112,13 @@ export function plugStateToJSON(object: PlugState): string {
 export interface Plug {
   /** The plug ID */
   plug_id: string;
-  /** The site ID */
-  site_id: string;
-  /** The readings for the plug */
-  readings: Reading[];
+  /** The reading for the plug */
+  reading: Reading | undefined;
 }
 
 export interface PlugSettings {
   /** The name of the plug */
   name: string;
-  /** The site ID */
-  site_id: string;
   /** The plug ID */
   plug_id: string;
   /** The strategy for the plug */
@@ -145,6 +141,10 @@ export interface Site {
   site_name: string;
   /** The state of the site */
   state: SiteState;
+  /** The plugs at the site */
+  plugs: Plug[];
+  /** The IDs of the plugs at the site, used for firestore queries */
+  plug_ids: string[];
 }
 
 export interface SiteSetting {
@@ -155,7 +155,11 @@ export interface SiteSetting {
   /** People who have admin control over the site */
   owner_ids: string[];
   /** The strategy for the site */
-  strategy: SiteStrategy | undefined;
+  strategy:
+    | SiteStrategy
+    | undefined;
+  /** The settings for the plugs */
+  plugs: PlugSettings[];
 }
 
 /** may need to capture the strategy for the site as a whole */
@@ -176,7 +180,7 @@ export interface Reading {
 }
 
 function createBasePlug(): Plug {
-  return { plug_id: "", site_id: "", readings: [] };
+  return { plug_id: "", reading: undefined };
 }
 
 export const Plug = {
@@ -184,11 +188,8 @@ export const Plug = {
     if (message.plug_id !== "") {
       writer.uint32(10).string(message.plug_id);
     }
-    if (message.site_id !== "") {
-      writer.uint32(18).string(message.site_id);
-    }
-    for (const v of message.readings) {
-      Reading.encode(v!, writer.uint32(26).fork()).ldelim();
+    if (message.reading !== undefined) {
+      Reading.encode(message.reading, writer.uint32(18).fork()).ldelim();
     }
     return writer;
   },
@@ -212,14 +213,7 @@ export const Plug = {
             break;
           }
 
-          message.site_id = reader.string();
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.readings.push(Reading.decode(reader, reader.uint32()));
+          message.reading = Reading.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -233,8 +227,7 @@ export const Plug = {
   fromJSON(object: any): Plug {
     return {
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      readings: globalThis.Array.isArray(object?.readings) ? object.readings.map((e: any) => Reading.fromJSON(e)) : [],
+      reading: isSet(object.reading) ? Reading.fromJSON(object.reading) : undefined,
     };
   },
 
@@ -243,11 +236,8 @@ export const Plug = {
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
     }
-    if (message.site_id !== "") {
-      obj.site_id = message.site_id;
-    }
-    if (message.readings?.length) {
-      obj.readings = message.readings.map((e) => Reading.toJSON(e));
+    if (message.reading !== undefined) {
+      obj.reading = Reading.toJSON(message.reading);
     }
     return obj;
   },
@@ -258,14 +248,15 @@ export const Plug = {
   fromPartial<I extends Exact<DeepPartial<Plug>, I>>(object: I): Plug {
     const message = createBasePlug();
     message.plug_id = object.plug_id ?? "";
-    message.site_id = object.site_id ?? "";
-    message.readings = object.readings?.map((e) => Reading.fromPartial(e)) || [];
+    message.reading = (object.reading !== undefined && object.reading !== null)
+      ? Reading.fromPartial(object.reading)
+      : undefined;
     return message;
   },
 };
 
 function createBasePlugSettings(): PlugSettings {
-  return { name: "", site_id: "", plug_id: "", strategy: undefined };
+  return { name: "", plug_id: "", strategy: undefined };
 }
 
 export const PlugSettings = {
@@ -273,14 +264,11 @@ export const PlugSettings = {
     if (message.name !== "") {
       writer.uint32(10).string(message.name);
     }
-    if (message.site_id !== "") {
-      writer.uint32(18).string(message.site_id);
-    }
     if (message.plug_id !== "") {
-      writer.uint32(26).string(message.plug_id);
+      writer.uint32(18).string(message.plug_id);
     }
     if (message.strategy !== undefined) {
-      PlugStrategy.encode(message.strategy, writer.uint32(42).fork()).ldelim();
+      PlugStrategy.encode(message.strategy, writer.uint32(26).fork()).ldelim();
     }
     return writer;
   },
@@ -304,17 +292,10 @@ export const PlugSettings = {
             break;
           }
 
-          message.site_id = reader.string();
+          message.plug_id = reader.string();
           continue;
         case 3:
           if (tag !== 26) {
-            break;
-          }
-
-          message.plug_id = reader.string();
-          continue;
-        case 5:
-          if (tag !== 42) {
             break;
           }
 
@@ -332,7 +313,6 @@ export const PlugSettings = {
   fromJSON(object: any): PlugSettings {
     return {
       name: isSet(object.name) ? globalThis.String(object.name) : "",
-      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
       strategy: isSet(object.strategy) ? PlugStrategy.fromJSON(object.strategy) : undefined,
     };
@@ -342,9 +322,6 @@ export const PlugSettings = {
     const obj: any = {};
     if (message.name !== "") {
       obj.name = message.name;
-    }
-    if (message.site_id !== "") {
-      obj.site_id = message.site_id;
     }
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
@@ -361,7 +338,6 @@ export const PlugSettings = {
   fromPartial<I extends Exact<DeepPartial<PlugSettings>, I>>(object: I): PlugSettings {
     const message = createBasePlugSettings();
     message.name = object.name ?? "";
-    message.site_id = object.site_id ?? "";
     message.plug_id = object.plug_id ?? "";
     message.strategy = (object.strategy !== undefined && object.strategy !== null)
       ? PlugStrategy.fromPartial(object.strategy)
@@ -462,7 +438,7 @@ export const PlugStrategy = {
 };
 
 function createBaseSite(): Site {
-  return { site_id: "", site_name: "", state: 0 };
+  return { site_id: "", site_name: "", state: 0, plugs: [], plug_ids: [] };
 }
 
 export const Site = {
@@ -475,6 +451,12 @@ export const Site = {
     }
     if (message.state !== 0) {
       writer.uint32(24).int32(message.state);
+    }
+    for (const v of message.plugs) {
+      Plug.encode(v!, writer.uint32(34).fork()).ldelim();
+    }
+    for (const v of message.plug_ids) {
+      writer.uint32(42).string(v!);
     }
     return writer;
   },
@@ -507,6 +489,20 @@ export const Site = {
 
           message.state = reader.int32() as any;
           continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.plugs.push(Plug.decode(reader, reader.uint32()));
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.plug_ids.push(reader.string());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -521,6 +517,8 @@ export const Site = {
       site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
       site_name: isSet(object.site_name) ? globalThis.String(object.site_name) : "",
       state: isSet(object.state) ? siteStateFromJSON(object.state) : 0,
+      plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => Plug.fromJSON(e)) : [],
+      plug_ids: globalThis.Array.isArray(object?.plug_ids) ? object.plug_ids.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -535,6 +533,12 @@ export const Site = {
     if (message.state !== 0) {
       obj.state = siteStateToJSON(message.state);
     }
+    if (message.plugs?.length) {
+      obj.plugs = message.plugs.map((e) => Plug.toJSON(e));
+    }
+    if (message.plug_ids?.length) {
+      obj.plug_ids = message.plug_ids;
+    }
     return obj;
   },
 
@@ -546,12 +550,14 @@ export const Site = {
     message.site_id = object.site_id ?? "";
     message.site_name = object.site_name ?? "";
     message.state = object.state ?? 0;
+    message.plugs = object.plugs?.map((e) => Plug.fromPartial(e)) || [];
+    message.plug_ids = object.plug_ids?.map((e) => e) || [];
     return message;
   },
 };
 
 function createBaseSiteSetting(): SiteSetting {
-  return { name: "", site_id: "", owner_ids: [], strategy: undefined };
+  return { name: "", site_id: "", owner_ids: [], strategy: undefined, plugs: [] };
 }
 
 export const SiteSetting = {
@@ -567,6 +573,9 @@ export const SiteSetting = {
     }
     if (message.strategy !== undefined) {
       SiteStrategy.encode(message.strategy, writer.uint32(34).fork()).ldelim();
+    }
+    for (const v of message.plugs) {
+      PlugSettings.encode(v!, writer.uint32(42).fork()).ldelim();
     }
     return writer;
   },
@@ -606,6 +615,13 @@ export const SiteSetting = {
 
           message.strategy = SiteStrategy.decode(reader, reader.uint32());
           continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.plugs.push(PlugSettings.decode(reader, reader.uint32()));
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -623,6 +639,7 @@ export const SiteSetting = {
         ? object.owner_ids.map((e: any) => globalThis.String(e))
         : [],
       strategy: isSet(object.strategy) ? SiteStrategy.fromJSON(object.strategy) : undefined,
+      plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => PlugSettings.fromJSON(e)) : [],
     };
   },
 
@@ -640,6 +657,9 @@ export const SiteSetting = {
     if (message.strategy !== undefined) {
       obj.strategy = SiteStrategy.toJSON(message.strategy);
     }
+    if (message.plugs?.length) {
+      obj.plugs = message.plugs.map((e) => PlugSettings.toJSON(e));
+    }
     return obj;
   },
 
@@ -654,6 +674,7 @@ export const SiteSetting = {
     message.strategy = (object.strategy !== undefined && object.strategy !== null)
       ? SiteStrategy.fromPartial(object.strategy)
       : undefined;
+    message.plugs = object.plugs?.map((e) => PlugSettings.fromPartial(e)) || [];
     return message;
   },
 };

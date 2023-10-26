@@ -19,24 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	UpdateService_CreateSite_FullMethodName        = "/contracts.UpdateService/CreateSite"
 	UpdateService_UpdateSite_FullMethodName        = "/contracts.UpdateService/UpdateSite"
 	UpdateService_UpdateSiteSetting_FullMethodName = "/contracts.UpdateService/UpdateSiteSetting"
-	UpdateService_UpdatePlug_FullMethodName        = "/contracts.UpdateService/UpdatePlug"
-	UpdateService_UpdatePlugSetting_FullMethodName = "/contracts.UpdateService/UpdatePlugSetting"
-	UpdateService_CreateSite_FullMethodName        = "/contracts.UpdateService/CreateSite"
-	UpdateService_CreatePlug_FullMethodName        = "/contracts.UpdateService/CreatePlug"
 )
 
 // UpdateServiceClient is the client API for UpdateService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UpdateServiceClient interface {
-	UpdateSite(ctx context.Context, in *UpdateSiteRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
-	UpdateSiteSetting(ctx context.Context, in *UpdateSiteSettingRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
-	UpdatePlug(ctx context.Context, in *UpdatePlugRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
-	UpdatePlugSetting(ctx context.Context, in *UpdatePlugSettingRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 	CreateSite(ctx context.Context, in *CreateSiteRequest, opts ...grpc.CallOption) (*CreateSiteResponse, error)
-	CreatePlug(ctx context.Context, in *CreatePlugRequest, opts ...grpc.CallOption) (*CreatePlugResponse, error)
+	UpdateSite(ctx context.Context, in *UpdateSiteRequest, opts ...grpc.CallOption) (*UpdateSiteResponse, error)
+	UpdateSiteSetting(ctx context.Context, in *UpdateSiteSettingsRequest, opts ...grpc.CallOption) (*UpdateSiteSettingsResponse, error)
 }
 
 type updateServiceClient struct {
@@ -45,42 +39,6 @@ type updateServiceClient struct {
 
 func NewUpdateServiceClient(cc grpc.ClientConnInterface) UpdateServiceClient {
 	return &updateServiceClient{cc}
-}
-
-func (c *updateServiceClient) UpdateSite(ctx context.Context, in *UpdateSiteRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
-	out := new(UpdateResponse)
-	err := c.cc.Invoke(ctx, UpdateService_UpdateSite_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *updateServiceClient) UpdateSiteSetting(ctx context.Context, in *UpdateSiteSettingRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
-	out := new(UpdateResponse)
-	err := c.cc.Invoke(ctx, UpdateService_UpdateSiteSetting_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *updateServiceClient) UpdatePlug(ctx context.Context, in *UpdatePlugRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
-	out := new(UpdateResponse)
-	err := c.cc.Invoke(ctx, UpdateService_UpdatePlug_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *updateServiceClient) UpdatePlugSetting(ctx context.Context, in *UpdatePlugSettingRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
-	out := new(UpdateResponse)
-	err := c.cc.Invoke(ctx, UpdateService_UpdatePlugSetting_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *updateServiceClient) CreateSite(ctx context.Context, in *CreateSiteRequest, opts ...grpc.CallOption) (*CreateSiteResponse, error) {
@@ -92,9 +50,18 @@ func (c *updateServiceClient) CreateSite(ctx context.Context, in *CreateSiteRequ
 	return out, nil
 }
 
-func (c *updateServiceClient) CreatePlug(ctx context.Context, in *CreatePlugRequest, opts ...grpc.CallOption) (*CreatePlugResponse, error) {
-	out := new(CreatePlugResponse)
-	err := c.cc.Invoke(ctx, UpdateService_CreatePlug_FullMethodName, in, out, opts...)
+func (c *updateServiceClient) UpdateSite(ctx context.Context, in *UpdateSiteRequest, opts ...grpc.CallOption) (*UpdateSiteResponse, error) {
+	out := new(UpdateSiteResponse)
+	err := c.cc.Invoke(ctx, UpdateService_UpdateSite_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *updateServiceClient) UpdateSiteSetting(ctx context.Context, in *UpdateSiteSettingsRequest, opts ...grpc.CallOption) (*UpdateSiteSettingsResponse, error) {
+	out := new(UpdateSiteSettingsResponse)
+	err := c.cc.Invoke(ctx, UpdateService_UpdateSiteSetting_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,12 +72,9 @@ func (c *updateServiceClient) CreatePlug(ctx context.Context, in *CreatePlugRequ
 // All implementations must embed UnimplementedUpdateServiceServer
 // for forward compatibility
 type UpdateServiceServer interface {
-	UpdateSite(context.Context, *UpdateSiteRequest) (*UpdateResponse, error)
-	UpdateSiteSetting(context.Context, *UpdateSiteSettingRequest) (*UpdateResponse, error)
-	UpdatePlug(context.Context, *UpdatePlugRequest) (*UpdateResponse, error)
-	UpdatePlugSetting(context.Context, *UpdatePlugSettingRequest) (*UpdateResponse, error)
 	CreateSite(context.Context, *CreateSiteRequest) (*CreateSiteResponse, error)
-	CreatePlug(context.Context, *CreatePlugRequest) (*CreatePlugResponse, error)
+	UpdateSite(context.Context, *UpdateSiteRequest) (*UpdateSiteResponse, error)
+	UpdateSiteSetting(context.Context, *UpdateSiteSettingsRequest) (*UpdateSiteSettingsResponse, error)
 	mustEmbedUnimplementedUpdateServiceServer()
 }
 
@@ -118,23 +82,14 @@ type UpdateServiceServer interface {
 type UnimplementedUpdateServiceServer struct {
 }
 
-func (UnimplementedUpdateServiceServer) UpdateSite(context.Context, *UpdateSiteRequest) (*UpdateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSite not implemented")
-}
-func (UnimplementedUpdateServiceServer) UpdateSiteSetting(context.Context, *UpdateSiteSettingRequest) (*UpdateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateSiteSetting not implemented")
-}
-func (UnimplementedUpdateServiceServer) UpdatePlug(context.Context, *UpdatePlugRequest) (*UpdateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlug not implemented")
-}
-func (UnimplementedUpdateServiceServer) UpdatePlugSetting(context.Context, *UpdatePlugSettingRequest) (*UpdateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlugSetting not implemented")
-}
 func (UnimplementedUpdateServiceServer) CreateSite(context.Context, *CreateSiteRequest) (*CreateSiteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSite not implemented")
 }
-func (UnimplementedUpdateServiceServer) CreatePlug(context.Context, *CreatePlugRequest) (*CreatePlugResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreatePlug not implemented")
+func (UnimplementedUpdateServiceServer) UpdateSite(context.Context, *UpdateSiteRequest) (*UpdateSiteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSite not implemented")
+}
+func (UnimplementedUpdateServiceServer) UpdateSiteSetting(context.Context, *UpdateSiteSettingsRequest) (*UpdateSiteSettingsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSiteSetting not implemented")
 }
 func (UnimplementedUpdateServiceServer) mustEmbedUnimplementedUpdateServiceServer() {}
 
@@ -147,6 +102,24 @@ type UnsafeUpdateServiceServer interface {
 
 func RegisterUpdateServiceServer(s grpc.ServiceRegistrar, srv UpdateServiceServer) {
 	s.RegisterService(&UpdateService_ServiceDesc, srv)
+}
+
+func _UpdateService_CreateSite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSiteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UpdateServiceServer).CreateSite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UpdateService_CreateSite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UpdateServiceServer).CreateSite(ctx, req.(*CreateSiteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _UpdateService_UpdateSite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -168,7 +141,7 @@ func _UpdateService_UpdateSite_Handler(srv interface{}, ctx context.Context, dec
 }
 
 func _UpdateService_UpdateSiteSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateSiteSettingRequest)
+	in := new(UpdateSiteSettingsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -180,79 +153,7 @@ func _UpdateService_UpdateSiteSetting_Handler(srv interface{}, ctx context.Conte
 		FullMethod: UpdateService_UpdateSiteSetting_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).UpdateSiteSetting(ctx, req.(*UpdateSiteSettingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UpdateService_UpdatePlug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePlugRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UpdateServiceServer).UpdatePlug(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UpdateService_UpdatePlug_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).UpdatePlug(ctx, req.(*UpdatePlugRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UpdateService_UpdatePlugSetting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePlugSettingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UpdateServiceServer).UpdatePlugSetting(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UpdateService_UpdatePlugSetting_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).UpdatePlugSetting(ctx, req.(*UpdatePlugSettingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UpdateService_CreateSite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateSiteRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UpdateServiceServer).CreateSite(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UpdateService_CreateSite_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).CreateSite(ctx, req.(*CreateSiteRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UpdateService_CreatePlug_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreatePlugRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UpdateServiceServer).CreatePlug(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UpdateService_CreatePlug_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UpdateServiceServer).CreatePlug(ctx, req.(*CreatePlugRequest))
+		return srv.(UpdateServiceServer).UpdateSiteSetting(ctx, req.(*UpdateSiteSettingsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -265,28 +166,16 @@ var UpdateService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UpdateServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "CreateSite",
+			Handler:    _UpdateService_CreateSite_Handler,
+		},
+		{
 			MethodName: "UpdateSite",
 			Handler:    _UpdateService_UpdateSite_Handler,
 		},
 		{
 			MethodName: "UpdateSiteSetting",
 			Handler:    _UpdateService_UpdateSiteSetting_Handler,
-		},
-		{
-			MethodName: "UpdatePlug",
-			Handler:    _UpdateService_UpdatePlug_Handler,
-		},
-		{
-			MethodName: "UpdatePlugSetting",
-			Handler:    _UpdateService_UpdatePlugSetting_Handler,
-		},
-		{
-			MethodName: "CreateSite",
-			Handler:    _UpdateService_CreateSite_Handler,
-		},
-		{
-			MethodName: "CreatePlug",
-			Handler:    _UpdateService_CreatePlug_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"log"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
-
 	"google.golang.org/api/idtoken"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -17,12 +17,15 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
-const (
-	address = "mothership-yufwwel26a-km.a.run.app"
-	// address = "localhost"
+const siteName = "brendo pi"
+const configFile = "./siteSettings.json"
 
-	// port    = ":50051"
-	port    = ":443"
+const (
+	// address = "mothership-yufwwel26a-km.a.run.app"
+	address = "localhost"
+
+	port = ":50051"
+	// port    = ":443"
 	keyPath = "./remote-device-sa-key.json"
 )
 
@@ -37,6 +40,19 @@ func generateRandomString(length int) string {
 
 func main() {
 	ctx := context.Background()
+
+	// Check for the presence of config file and load it if it exists
+	var loadedSiteSettings *contracts.SiteSetting
+	if _, err := os.Stat(configFile); err == nil {
+		data, err := os.ReadFile(configFile)
+		if err != nil {
+			log.Fatalf("Failed to read config file: %v", err)
+		}
+		err = json.Unmarshal(data, &loadedSiteSettings)
+		if err != nil {
+			log.Fatalf("Failed to unmarshal config file: %v", err)
+		}
+	}
 
 	key, err := os.ReadFile(keyPath)
 	if err != nil {
@@ -65,35 +81,64 @@ func main() {
 
 	c := contracts.NewUpdateServiceClient(conn)
 
-	// Create a Site with Random Name
-	randomSiteName := generateRandomString(10)
-	createSiteRes, err := c.CreateSite(ctx, &contracts.CreateSiteRequest{
-		Name: randomSiteName,
-	})
-	if err != nil {
-		log.Fatalf("Failed to create site: %v", err)
-	}
-	log.Printf("Created Site with ID: %s", createSiteRes.SiteId)
-
-	// Generate Multiple Plugs for that Site
-	numberOfPlugs := rand.Intn(10) + 1 // let's say a site can have 1 to 10 plugs
-	plugIDs := make([]string, numberOfPlugs)
-	for i := 0; i < numberOfPlugs; i++ {
-		randomPlugName := generateRandomString(8)
-		createPlugRes, err := c.CreatePlug(ctx, &contracts.CreatePlugRequest{
-			SiteId: createSiteRes.SiteId,
-			Name:   randomPlugName,
+	if loadedSiteSettings == nil {
+		// Create a Site with static name
+		createSiteRes, err := c.CreateSite(ctx, &contracts.CreateSiteRequest{
+			Name: siteName,
 		})
 		if err != nil {
-			log.Fatalf("Failed to create plug: %v", err)
+			log.Fatalf("Failed to create site: %v", err)
 		}
-		plugIDs[i] = createPlugRes.PlugId
-		log.Printf("Created Plug with ID: %s for Site: %s", createPlugRes.PlugId, createSiteRes.SiteId)
+		log.Printf("Created Site with ID: %s", createSiteRes.SiteId)
+
+		// Generate Multiple Plugs for that Site locally
+		numberOfPlugs := rand.Intn(10) + 1
+		plugs := make([]*contracts.Plug, numberOfPlugs)
+		plugSettings := make([]*contracts.PlugSettings, numberOfPlugs)
+		for i := 0; i < numberOfPlugs; i++ {
+			plugID := generateRandomString(8) // Assuming plug IDs are also random strings
+			plugs[i] = &contracts.Plug{
+				PlugId: plugID,
+				Reading: &contracts.Reading{
+					State:       contracts.PlugState(rand.Intn(5)),
+					Current:     rand.Float64() * 1000,
+					Voltage:     110 + rand.Float64()*10,
+					PowerFactor: rand.Float64()*2 - 1,
+					Timestamp:   time.Now().Unix(),
+				},
+			}
+			plugSettings[i] = &contracts.PlugSettings{
+				Name:     generateRandomString(8),
+				PlugId:   plugID,
+				Strategy: &contracts.PlugStrategy{}, // This needs to be set properly
+			}
+			log.Printf("Generated Plug with ID: %s for Site: %s", plugID, createSiteRes.SiteId)
+		}
+		// Save SiteSetting to disk
+		siteSettings := &contracts.SiteSetting{
+			Name:   siteName,
+			SiteId: createSiteRes.SiteId,
+			Plugs:  plugSettings,
+		}
+		data, err := json.Marshal(siteSettings)
+		if err != nil {
+			log.Fatalf("Failed to marshal site settings: %v", err)
+		}
+		err = os.WriteFile(configFile, data, 0644)
+		if err != nil {
+			log.Fatalf("Failed to write site settings to disk: %v", err)
+		}
+
+		loadedSiteSettings = siteSettings
+	} else {
+		log.Printf("Loaded site settings from disk for Site ID: %s", loadedSiteSettings.SiteId)
 	}
 
-	// Upload values for all plugs
+	// Continuous loop generating random readings for all plugs and updating the site
 	for {
-		for _, plugID := range plugIDs {
+		plugs := make([]*contracts.Plug, len(loadedSiteSettings.Plugs))
+
+		for i, plugSetting := range loadedSiteSettings.Plugs {
 			reading := &contracts.Reading{
 				State:       contracts.PlugState(rand.Intn(5)),
 				Current:     rand.Float64() * 1000,
@@ -102,19 +147,27 @@ func main() {
 				Timestamp:   time.Now().Unix(),
 			}
 
-			response, err := c.UpdatePlug(ctx, &contracts.UpdatePlugRequest{
-				PlugId:  plugID,
-				SiteId:  createSiteRes.SiteId,
+			plugs[i] = &contracts.Plug{
+				PlugId:  plugSetting.PlugId,
 				Reading: reading,
-			})
-			if err != nil {
-				log.Fatalf("Could not update: %v", err)
 			}
 
-			log.Print(reading)
-
-			log.Printf("Updated Plug ID: %s, Site ID: %s, Status: %v, Message: %s", plugID, createSiteRes.SiteId, response.Success, response.Message)
+			log.Printf("Generated Reading for Plug ID: %s, Current: %f, Voltage: %f", plugSetting.PlugId, reading.Current, reading.Voltage)
 		}
+
+		site := &contracts.Site{
+			SiteId:   loadedSiteSettings.SiteId,
+			SiteName: siteName,
+			Plugs:    plugs,
+		}
+
+		_, err := c.UpdateSite(ctx, &contracts.UpdateSiteRequest{UpdatedSite: site})
+		if err != nil {
+			log.Fatalf("Failed to update site: %v", err)
+		}
+
+		log.Printf("Updated Site with ID: %s with new plug readings", loadedSiteSettings.SiteId)
+
 		time.Sleep(5 * time.Second)
 	}
 }
