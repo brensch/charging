@@ -21,11 +21,11 @@ const siteName = "brendo pi"
 const configFile = "./siteSettings.json"
 
 const (
-	// address = "mothership-yufwwel26a-km.a.run.app"
-	address = "localhost"
+	address = "mothership-yufwwel26a-km.a.run.app"
+	// address = "localhost"
 
-	port = ":50051"
-	// port    = ":443"
+	// port = ":50051"
+	port    = ":443"
 	keyPath = "./remote-device-sa-key.json"
 )
 
@@ -168,6 +168,6 @@ func main() {
 
 		log.Printf("Updated Site with ID: %s with new plug readings", loadedSiteSettings.SiteId)
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
