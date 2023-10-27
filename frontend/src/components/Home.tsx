@@ -24,7 +24,7 @@ function Page() {
         <Text fontSize="xl" align={"right"}>
           Here's some places that have signed up.
         </Text>
-        <Flex justifyContent="flex-end" marginTop={3}>
+        <Flex justifyContent="flex-end" marginTop={3} marginBottom={5}>
           <Button bg="black" color="white">
             Sign me up too
           </Button>
@@ -33,7 +33,7 @@ function Page() {
         <Grid templateColumns={["repeat(1, 1fr)", "repeat(3, 1fr)"]}>
           <SiteCard />
           <SiteCard />
-          <SiteCardGrid />
+          {/* <SiteCardGrid /> */}
         </Grid>
       </Container>
     </>

@@ -13,16 +13,17 @@ import {
 } from "@chakra-ui/react"
 // import { BsArrowUpRight, BsHeartFill, BsHeart } from "react-icons/bs"
 
-export default function SiteCard() {
+export default function PostWithLike() {
   const [liked, setLiked] = useState(false)
 
   return (
     <Center py={6}>
       <Box
+        width={"100%"}
         // w="xs"
         rounded={"sm"}
         // my={5}
-        mx={[2, 5]}
+        mx={[2, 4]}
         overflow={"hidden"}
         bg="white"
         border={"1px"}
@@ -30,18 +31,6 @@ export default function SiteCard() {
         boxShadow={useColorModeValue("6px 6px 0 black", "6px 6px 0 cyan")}
       >
         <Box p={4}>
-          {/* <Box
-            bg="black"
-            display={"inline-block"}
-            px={2}
-            py={1}
-            color="white"
-            mb={2}
-          >
-            <Text fontSize={"xs"} fontWeight="medium">
-              New
-            </Text>
-          </Box> */}
           <Heading color={"black"} fontSize={"2xl"} noOfLines={1}>
             Brendo Pi
           </Heading>
