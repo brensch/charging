@@ -39,7 +39,7 @@ const AppBar: React.FC<AppBarProps> = () => {
           width="100%"
           onSubmit={(e) => e.preventDefault()} // Prevent form submission
         >
-          <Heading marginRight="2rem" onClick={() => signOut(auth)}>
+          <Heading marginRight="2rem" onClick={() => navigate("/")}>
             Charging
           </Heading>
           <Input

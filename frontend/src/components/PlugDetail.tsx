@@ -50,7 +50,11 @@ function Page() {
   }, [id])
 
   if (!plugData) {
-    return <div>Loading...</div>
+    return (
+      <Container maxW="4xl" p={4}>
+        Loading...
+      </Container>
+    )
   }
   return (
     <Container maxW="4xl" p={4}>

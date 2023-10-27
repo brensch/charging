@@ -8,11 +8,12 @@ import {
   Text,
 } from "@chakra-ui/react"
 import React from "react"
-import { Outlet } from "react-router-dom"
+import { Outlet, useNavigate } from "react-router-dom"
 import SiteCard from "./SiteCard"
 import SiteCardGrid from "./SiteCardGrid"
 
 function Page() {
+  let navigate = useNavigate()
   return (
     <>
       <Container maxW="4xl" p={4}>
@@ -25,7 +26,11 @@ function Page() {
           Here's some places that have signed up.
         </Text>
         <Flex justifyContent="flex-end" marginTop={3} marginBottom={5}>
-          <Button bg="black" color="white">
+          <Button
+            bg="black"
+            color="white"
+            onClick={() => navigate("/plug/sVJGAe3z")}
+          >
             Sign me up too
           </Button>
         </Flex>

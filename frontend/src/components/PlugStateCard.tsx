@@ -31,6 +31,7 @@ const PlugStateCard: React.FC<PlugStateCardProps> = ({ plugData }) => {
         boxShadow={useColorModeValue("6px 6px 0 black", "6px 6px 0 cyan")}
         p={5}
         bg={useColorModeValue("white", "gray.800")}
+        width={"100%"}
       >
         <Box p={4}>
           <Text fontWeight="bold" fontSize="xl">
@@ -61,15 +62,6 @@ const PlugStateCard: React.FC<PlugStateCardProps> = ({ plugData }) => {
             {new Date(plugData.reading.timestamp * 1000).toLocaleTimeString()}
           </Text>
         </Box>
-        <HStack borderTop="1px" borderColor="black" spacing={4}>
-          <Text fontSize="xs" p={4} fontWeight="medium" flex={1}>
-            Reading Data
-          </Text>
-          {/* You can add more tags or controls here */}
-        </HStack>
-        <HStack borderTop="1px" borderColor="black" spacing={4}>
-          {/* This is for the bottom controls. Similar to the SiteCard */}
-        </HStack>
       </Box>
     </Center>
   )
