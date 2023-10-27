@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore"
 import { Plug, PlugState } from "../contracts/objects"
 import PlugStateCard from "./PlugStateCard"
+import { Container } from "@chakra-ui/react"
 
 function Page() {
   let { id } = useParams<{ id: string }>()
@@ -52,10 +53,10 @@ function Page() {
     return <div>Loading...</div>
   }
   return (
-    <div>
-      Plug Metadata for {id}: <PlugStateCard plugData={plugData} />
+    <Container maxW="4xl" p={4}>
+      <PlugStateCard plugData={plugData} />
       <Outlet />
-    </div>
+    </Container>
   )
 }
 

@@ -1,46 +1,28 @@
-import {
-  Box,
-  Flex,
-  Button,
-  Container,
-  Heading,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  Text,
-  MenuDivider,
-  Input,
-} from "@chakra-ui/react"
-import React from "react"
-import { useLocation, useNavigate } from "react-router-dom" // Assuming you are using react-router
-import routes from "../routes"
-import { ChevronDownIcon } from "@chakra-ui/icons"
-import { auth } from "../firebase"
+import React, { useState, useEffect } from "react"
+import { Box, Flex, Container, Heading, Input } from "@chakra-ui/react"
+import { useNavigate, useParams } from "react-router-dom"
 import { signOut } from "firebase/auth"
+import { auth } from "../firebase"
 
 interface AppBarProps {}
 
-function getRootParentPath(pathname: string): string {
-  const segments = pathname.split("/").filter(Boolean)
-  return segments[0] || ""
-}
-
 const AppBar: React.FC<AppBarProps> = () => {
-  const location = useLocation()
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const [inputValue, setInputValue] = useState(id || "")
 
-  // Extract current root parent path
-  const currentRoot = getRootParentPath(location.pathname)
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth)
-      navigate("/") // Optional: Redirect to home or login page after logging out
-    } catch (error) {
-      console.error("Error signing out: ", error)
+  useEffect(() => {
+    if (id) {
+      setInputValue(id)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    // If inputValue length is 5, navigate
+    if (inputValue.length >= 5) {
+      navigate(`/plug/${inputValue}`)
+    }
+  }, [inputValue, navigate])
 
   return (
     <Box
@@ -55,19 +37,21 @@ const AppBar: React.FC<AppBarProps> = () => {
           alignItems="center"
           justifyContent="space-between"
           width="100%"
-          onSubmit={(e) => {
-            e.preventDefault()
-            // You can handle the form submission logic here.
-          }}
+          onSubmit={(e) => e.preventDefault()} // Prevent form submission
         >
-          <Heading marginRight="2rem">Charging</Heading>
+          <Heading marginRight="2rem" onClick={() => signOut(auth)}>
+            Charging
+          </Heading>
           <Input
             placeholder="Plug ID"
             size="lg"
             height="55px"
             variant="outline"
             borderColor="black"
-            width="200px" // Corrected width to 100 pixels
+            width="200px"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            // maxLength={5} // Limit input to 5 characters
           />
         </Flex>
       </Container>
@@ -76,29 +60,3 @@ const AppBar: React.FC<AppBarProps> = () => {
 }
 
 export default AppBar
-
-{
-  /* <Text fontSize="m" onClick={handleLogout}>
-            {auth.currentUser?.displayName}
-          </Text> */
-}
-
-{
-  /* <Menu>
-            <MenuButton as={Button} size="sm" variant="outline">
-              {currentRoot || "home"}
-            </MenuButton>
-            <MenuList>
-              {routes.map((route) => (
-                <MenuItem
-                  key={route.path}
-                  onClick={() => {
-                    navigate(route.path)
-                  }}
-                >
-                  {route.path || "home"}
-                </MenuItem>
-              ))}
-            </MenuList>
-          </Menu> */
-}

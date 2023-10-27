@@ -19,10 +19,11 @@ function Page() {
     e.preventDefault()
     navigate(`${code}`)
   }
+  // return <Outlet />
 
   return (
     <Box>
-      <form onSubmit={handleSubmit}>
+      {/* <form onSubmit={handleSubmit}>
         <InputGroup mt={4}>
           <Input
             value={code}
@@ -36,7 +37,7 @@ function Page() {
             </Button>
           </InputRightElement>
         </InputGroup>
-      </form>
+      </form> */}
       <Outlet />
     </Box>
   )

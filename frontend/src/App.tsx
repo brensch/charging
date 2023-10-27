@@ -1,6 +1,7 @@
 import {
   Box,
   CSSReset,
+  Center,
   ChakraProvider,
   Container,
   Heading,
@@ -48,24 +49,31 @@ function App() {
     return () => unsubscribe() // Cleanup on unmount
   }, [])
 
-  if (user === undefined) {
-    return <div>Loading...</div>
+  if (user === null) {
+    return (
+      <ChakraProvider theme={theme}>
+        <CSSReset />
+        <Fonts />
+        <SignIn />
+      </ChakraProvider>
+    )
   }
 
-  if (!user) {
-    return <SignIn />
-  }
   return (
     <ChakraProvider theme={theme}>
       <CSSReset />
       <Fonts />
       <Box w="100vw" minHeight="100vh" m="0" p="0">
-        <Router>
-          <Box as="header" position="sticky" top="0" zIndex="1000" bg="white">
-            <AppBar />
-          </Box>
-          <Routes>{routes.map(RenderRoute)}</Routes>
-        </Router>
+        {user === undefined ? (
+          <Center>Loading...</Center>
+        ) : (
+          <Router>
+            <Box as="header" position="sticky" top="0" zIndex="1000" bg="white">
+              <AppBar />
+            </Box>
+            <Routes>{routes.map(RenderRoute)}</Routes>
+          </Router>
+        )}
       </Box>
     </ChakraProvider>
   )
