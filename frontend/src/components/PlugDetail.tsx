@@ -11,9 +11,10 @@ import {
 } from "firebase/firestore"
 import { Plug, PlugState } from "../contracts/objects"
 import PlugStateCard from "./PlugStateCard"
+import { Container } from "@chakra-ui/react"
 
 function Page() {
-  let { id } = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>()
   const [plugData, setPlugData] = useState<Plug | null>(null)
 
   useEffect(() => {
@@ -49,13 +50,17 @@ function Page() {
   }, [id])
 
   if (!plugData) {
-    return <div>Loading...</div>
+    return (
+      <Container maxW="4xl" p={4}>
+        Loading...
+      </Container>
+    )
   }
   return (
-    <div>
-      Plug Metadata for {id}: <PlugStateCard plugData={plugData} />
+    <Container maxW="4xl" p={4}>
+      <PlugStateCard plugData={plugData} />
       <Outlet />
-    </div>
+    </Container>
   )
 }
 

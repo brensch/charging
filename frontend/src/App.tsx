@@ -1,4 +1,12 @@
-import { Box, CSSReset, ChakraProvider, Container } from "@chakra-ui/react"
+import {
+  Box,
+  CSSReset,
+  Center,
+  ChakraProvider,
+  Container,
+  Heading,
+  Text,
+} from "@chakra-ui/react"
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom"
 import AppBar from "./components/AppBar"
 import routes from "./routes"
@@ -6,6 +14,8 @@ import { auth } from "./firebase"
 import { useEffect, useState } from "react"
 import { User } from "@firebase/auth"
 import SignIn from "./components/SignIn"
+import Fonts from "./Fonts"
+import theme from "./Theme"
 
 function RenderRoute(route: any) {
   if (!route.children) {
@@ -39,23 +49,31 @@ function App() {
     return () => unsubscribe() // Cleanup on unmount
   }, [])
 
-  if (user === undefined) {
-    return <div>Loading...</div>
+  if (user === null) {
+    return (
+      <ChakraProvider theme={theme}>
+        <CSSReset />
+        <Fonts />
+        <SignIn />
+      </ChakraProvider>
+    )
   }
 
-  if (!user) {
-    return <SignIn />
-  }
   return (
-    <ChakraProvider>
+    <ChakraProvider theme={theme}>
       <CSSReset />
-      <Box w="100vw">
-        <Router>
-          <AppBar />
-          <Container maxW="4xl" p={4}>
+      <Fonts />
+      <Box w="100vw" minHeight="100vh" m="0" p="0">
+        {user === undefined ? (
+          <Center>Loading...</Center>
+        ) : (
+          <Router>
+            <Box as="header" position="sticky" top="0" zIndex="1000" bg="white">
+              <AppBar />
+            </Box>
             <Routes>{routes.map(RenderRoute)}</Routes>
-          </Container>
-        </Router>
+          </Router>
+        )}
       </Box>
     </ChakraProvider>
   )

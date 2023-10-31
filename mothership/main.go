@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
 
@@ -43,6 +44,7 @@ func (s *server) UpdateSite(ctx context.Context, req *contracts.UpdateSiteReques
 	}
 	// Set the PlugIds field
 	req.GetUpdatedSite().PlugIds = plugIDs
+	req.GetUpdatedSite().LastUpdatedMs = time.Now().UnixMilli()
 	_, err := siteRef.Set(ctx, req.GetUpdatedSite())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update site: %v", err)
@@ -51,13 +53,14 @@ func (s *server) UpdateSite(ctx context.Context, req *contracts.UpdateSiteReques
 }
 
 func (s *server) UpdateSiteSetting(ctx context.Context, req *contracts.UpdateSiteSettingsRequest) (*contracts.UpdateSiteSettingsResponse, error) {
-	siteRef := s.firestoreClient.Collection("siteSettings").Doc(req.GetSiteSettings().GetSiteId())
+	siteRef := s.firestoreClient.Collection("sitesettings").Doc(req.GetSiteSettings().GetSiteId())
 	_, err := siteRef.Set(ctx, req.GetSiteSettings())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update site settings: %v", err)
 	}
 	return &contracts.UpdateSiteSettingsResponse{SiteId: siteRef.ID, Message: "Updated Settings Successfully"}, nil
 }
+
 func logInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	log.Printf("Received Headers: %v", md)
