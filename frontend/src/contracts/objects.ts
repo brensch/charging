@@ -137,19 +137,21 @@ export interface PlugStrategy {
 export interface Site {
   /** The site ID */
   site_id: string;
-  /** The site name */
-  site_name: string;
   /** The state of the site */
   state: SiteState;
   /** The plugs at the site */
   plugs: Plug[];
   /** The IDs of the plugs at the site, used for firestore queries */
   plug_ids: string[];
+  /** The timestamp of the last update in milliseconds since epoch */
+  last_updated_ms: number;
 }
 
 export interface SiteSetting {
   /** The name of the site */
   name: string;
+  /** The description of the site */
+  description: string;
   /** The site ID */
   site_id: string;
   /** People who have admin control over the site */
@@ -160,6 +162,8 @@ export interface SiteSetting {
     | undefined;
   /** The settings for the plugs */
   plugs: PlugSettings[];
+  /** Tags for the site */
+  tags: string[];
 }
 
 /** may need to capture the strategy for the site as a whole */
@@ -438,7 +442,7 @@ export const PlugStrategy = {
 };
 
 function createBaseSite(): Site {
-  return { site_id: "", site_name: "", state: 0, plugs: [], plug_ids: [] };
+  return { site_id: "", state: 0, plugs: [], plug_ids: [], last_updated_ms: 0 };
 }
 
 export const Site = {
@@ -446,17 +450,17 @@ export const Site = {
     if (message.site_id !== "") {
       writer.uint32(10).string(message.site_id);
     }
-    if (message.site_name !== "") {
-      writer.uint32(18).string(message.site_name);
-    }
     if (message.state !== 0) {
-      writer.uint32(24).int32(message.state);
+      writer.uint32(16).int32(message.state);
     }
     for (const v of message.plugs) {
-      Plug.encode(v!, writer.uint32(34).fork()).ldelim();
+      Plug.encode(v!, writer.uint32(26).fork()).ldelim();
     }
     for (const v of message.plug_ids) {
-      writer.uint32(42).string(v!);
+      writer.uint32(34).string(v!);
+    }
+    if (message.last_updated_ms !== 0) {
+      writer.uint32(40).int64(message.last_updated_ms);
     }
     return writer;
   },
@@ -476,32 +480,32 @@ export const Site = {
           message.site_id = reader.string();
           continue;
         case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.site_name = reader.string();
-          continue;
-        case 3:
-          if (tag !== 24) {
+          if (tag !== 16) {
             break;
           }
 
           message.state = reader.int32() as any;
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.plugs.push(Plug.decode(reader, reader.uint32()));
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.plugs.push(Plug.decode(reader, reader.uint32()));
+          message.plug_ids.push(reader.string());
           continue;
         case 5:
-          if (tag !== 42) {
+          if (tag !== 40) {
             break;
           }
 
-          message.plug_ids.push(reader.string());
+          message.last_updated_ms = longToNumber(reader.int64() as Long);
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -515,10 +519,10 @@ export const Site = {
   fromJSON(object: any): Site {
     return {
       site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      site_name: isSet(object.site_name) ? globalThis.String(object.site_name) : "",
       state: isSet(object.state) ? siteStateFromJSON(object.state) : 0,
       plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => Plug.fromJSON(e)) : [],
       plug_ids: globalThis.Array.isArray(object?.plug_ids) ? object.plug_ids.map((e: any) => globalThis.String(e)) : [],
+      last_updated_ms: isSet(object.last_updated_ms) ? globalThis.Number(object.last_updated_ms) : 0,
     };
   },
 
@@ -526,9 +530,6 @@ export const Site = {
     const obj: any = {};
     if (message.site_id !== "") {
       obj.site_id = message.site_id;
-    }
-    if (message.site_name !== "") {
-      obj.site_name = message.site_name;
     }
     if (message.state !== 0) {
       obj.state = siteStateToJSON(message.state);
@@ -539,6 +540,9 @@ export const Site = {
     if (message.plug_ids?.length) {
       obj.plug_ids = message.plug_ids;
     }
+    if (message.last_updated_ms !== 0) {
+      obj.last_updated_ms = Math.round(message.last_updated_ms);
+    }
     return obj;
   },
 
@@ -548,16 +552,16 @@ export const Site = {
   fromPartial<I extends Exact<DeepPartial<Site>, I>>(object: I): Site {
     const message = createBaseSite();
     message.site_id = object.site_id ?? "";
-    message.site_name = object.site_name ?? "";
     message.state = object.state ?? 0;
     message.plugs = object.plugs?.map((e) => Plug.fromPartial(e)) || [];
     message.plug_ids = object.plug_ids?.map((e) => e) || [];
+    message.last_updated_ms = object.last_updated_ms ?? 0;
     return message;
   },
 };
 
 function createBaseSiteSetting(): SiteSetting {
-  return { name: "", site_id: "", owner_ids: [], strategy: undefined, plugs: [] };
+  return { name: "", description: "", site_id: "", owner_ids: [], strategy: undefined, plugs: [], tags: [] };
 }
 
 export const SiteSetting = {
@@ -565,17 +569,23 @@ export const SiteSetting = {
     if (message.name !== "") {
       writer.uint32(10).string(message.name);
     }
+    if (message.description !== "") {
+      writer.uint32(18).string(message.description);
+    }
     if (message.site_id !== "") {
-      writer.uint32(18).string(message.site_id);
+      writer.uint32(26).string(message.site_id);
     }
     for (const v of message.owner_ids) {
-      writer.uint32(26).string(v!);
+      writer.uint32(34).string(v!);
     }
     if (message.strategy !== undefined) {
-      SiteStrategy.encode(message.strategy, writer.uint32(34).fork()).ldelim();
+      SiteStrategy.encode(message.strategy, writer.uint32(42).fork()).ldelim();
     }
     for (const v of message.plugs) {
-      PlugSettings.encode(v!, writer.uint32(42).fork()).ldelim();
+      PlugSettings.encode(v!, writer.uint32(50).fork()).ldelim();
+    }
+    for (const v of message.tags) {
+      writer.uint32(58).string(v!);
     }
     return writer;
   },
@@ -599,28 +609,42 @@ export const SiteSetting = {
             break;
           }
 
-          message.site_id = reader.string();
+          message.description = reader.string();
           continue;
         case 3:
           if (tag !== 26) {
             break;
           }
 
-          message.owner_ids.push(reader.string());
+          message.site_id = reader.string();
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.strategy = SiteStrategy.decode(reader, reader.uint32());
+          message.owner_ids.push(reader.string());
           continue;
         case 5:
           if (tag !== 42) {
             break;
           }
 
+          message.strategy = SiteStrategy.decode(reader, reader.uint32());
+          continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
           message.plugs.push(PlugSettings.decode(reader, reader.uint32()));
+          continue;
+        case 7:
+          if (tag !== 58) {
+            break;
+          }
+
+          message.tags.push(reader.string());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -634,12 +658,14 @@ export const SiteSetting = {
   fromJSON(object: any): SiteSetting {
     return {
       name: isSet(object.name) ? globalThis.String(object.name) : "",
+      description: isSet(object.description) ? globalThis.String(object.description) : "",
       site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
       owner_ids: globalThis.Array.isArray(object?.owner_ids)
         ? object.owner_ids.map((e: any) => globalThis.String(e))
         : [],
       strategy: isSet(object.strategy) ? SiteStrategy.fromJSON(object.strategy) : undefined,
       plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => PlugSettings.fromJSON(e)) : [],
+      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -647,6 +673,9 @@ export const SiteSetting = {
     const obj: any = {};
     if (message.name !== "") {
       obj.name = message.name;
+    }
+    if (message.description !== "") {
+      obj.description = message.description;
     }
     if (message.site_id !== "") {
       obj.site_id = message.site_id;
@@ -660,6 +689,9 @@ export const SiteSetting = {
     if (message.plugs?.length) {
       obj.plugs = message.plugs.map((e) => PlugSettings.toJSON(e));
     }
+    if (message.tags?.length) {
+      obj.tags = message.tags;
+    }
     return obj;
   },
 
@@ -669,12 +701,14 @@ export const SiteSetting = {
   fromPartial<I extends Exact<DeepPartial<SiteSetting>, I>>(object: I): SiteSetting {
     const message = createBaseSiteSetting();
     message.name = object.name ?? "";
+    message.description = object.description ?? "";
     message.site_id = object.site_id ?? "";
     message.owner_ids = object.owner_ids?.map((e) => e) || [];
     message.strategy = (object.strategy !== undefined && object.strategy !== null)
       ? SiteStrategy.fromPartial(object.strategy)
       : undefined;
     message.plugs = object.plugs?.map((e) => PlugSettings.fromPartial(e)) || [];
+    message.tags = object.tags?.map((e) => e) || [];
     return message;
   },
 };

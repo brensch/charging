@@ -30,18 +30,21 @@ enum SiteState {
 
 message Site {
     string site_id = 1; // The site ID
-    string site_name = 2; // The site name
-    SiteState state = 3; // The state of the site
-    repeated Plug plugs = 4; // The plugs at the site
-    repeated string plug_ids = 5; // The IDs of the plugs at the site, used for firestore queries
+    SiteState state = 2; // The state of the site
+    repeated Plug plugs = 3; // The plugs at the site
+    repeated string plug_ids = 4; // The IDs of the plugs at the site, used for firestore queries
+    int64 last_updated_ms = 5; // The timestamp of the last update in milliseconds since epoch
 }
 
 message SiteSetting{
     string name = 1; // The name of the site
-    string site_id = 2; // The site ID
-    repeated string owner_ids = 3; // People who have admin control over the site
-    SiteStrategy strategy = 4; // The strategy for the site
-    repeated PlugSettings plugs = 5; // The settings for the plugs
+    string description = 2; // The description of the site
+    string site_id = 3; // The site ID
+    repeated string owner_ids = 4; // People who have admin control over the site
+    SiteStrategy strategy = 5; // The strategy for the site
+    repeated PlugSettings plugs = 6; // The settings for the plugs
+    repeated string tags = 7; // Tags for the site
+
 }
 
 // may need to capture the strategy for the site as a whole

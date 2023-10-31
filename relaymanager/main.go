@@ -21,16 +21,16 @@ const siteName = "brendo pi"
 const configFile = "./siteSettings.json"
 
 const (
-	address = "mothership-yufwwel26a-km.a.run.app"
-	// address = "localhost"
+	// address = "mothership-yufwwel26a-km.a.run.app"
+	address = "localhost"
 
-	// port = ":50051"
-	port    = ":443"
+	port = ":50051"
+	// port    = ":443"
 	keyPath = "./remote-device-sa-key.json"
 )
 
 func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	result := make([]byte, length)
 	for i := range result {
 		result[i] = charset[rand.Intn(len(charset))]
@@ -40,6 +40,32 @@ func generateRandomString(length int) string {
 
 func main() {
 	ctx := context.Background()
+
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		log.Fatalf("Failed to load key: %v", err)
+	}
+
+	// connect to grpc server
+	tokenSource, err := idtoken.NewTokenSource(ctx, "https://"+address, option.WithCredentialsJSON(key))
+	if err != nil {
+		log.Fatalf("new token source: %v", err)
+	}
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+	creds := credentials.NewTLS(config)
+	conn, err := grpc.Dial(
+		address+port,
+		grpc.WithTransportCredentials(creds),
+		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: tokenSource}),
+	)
+	if err != nil {
+		log.Fatalf("Did not connect: %v", err)
+	}
+	defer conn.Close()
+
+	c := contracts.NewUpdateServiceClient(conn)
 
 	// Check for the presence of config file and load it if it exists
 	var loadedSiteSettings *contracts.SiteSetting
@@ -53,33 +79,6 @@ func main() {
 			log.Fatalf("Failed to unmarshal config file: %v", err)
 		}
 	}
-
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		log.Fatalf("Failed to load key: %v", err)
-	}
-
-	tokenSource, err := idtoken.NewTokenSource(ctx, "https://"+address, option.WithCredentialsJSON(key))
-	if err != nil {
-		log.Fatalf("new token source: %v", err)
-	}
-
-	config := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	creds := credentials.NewTLS(config)
-
-	conn, err := grpc.Dial(
-		address+port,
-		grpc.WithTransportCredentials(creds),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: tokenSource}),
-	)
-	if err != nil {
-		log.Fatalf("Did not connect: %v", err)
-	}
-	defer conn.Close()
-
-	c := contracts.NewUpdateServiceClient(conn)
 
 	if loadedSiteSettings == nil {
 		// Create a Site with static name
@@ -96,7 +95,7 @@ func main() {
 		plugs := make([]*contracts.Plug, numberOfPlugs)
 		plugSettings := make([]*contracts.PlugSettings, numberOfPlugs)
 		for i := 0; i < numberOfPlugs; i++ {
-			plugID := generateRandomString(8) // Assuming plug IDs are also random strings
+			plugID := generateRandomString(5) // Assuming plug IDs are also random strings
 			plugs[i] = &contracts.Plug{
 				PlugId: plugID,
 				Reading: &contracts.Reading{
@@ -108,7 +107,7 @@ func main() {
 				},
 			}
 			plugSettings[i] = &contracts.PlugSettings{
-				Name:     generateRandomString(8),
+				Name:     "name me",
 				PlugId:   plugID,
 				Strategy: &contracts.PlugStrategy{}, // This needs to be set properly
 			}
@@ -120,6 +119,7 @@ func main() {
 			SiteId: createSiteRes.SiteId,
 			Plugs:  plugSettings,
 		}
+
 		data, err := json.Marshal(siteSettings)
 		if err != nil {
 			log.Fatalf("Failed to marshal site settings: %v", err)
@@ -133,6 +133,12 @@ func main() {
 	} else {
 		log.Printf("Loaded site settings from disk for Site ID: %s", loadedSiteSettings.SiteId)
 	}
+
+	res, err := c.UpdateSiteSetting(ctx, &contracts.UpdateSiteSettingsRequest{SiteSettings: loadedSiteSettings})
+	if err != nil {
+		log.Fatalf("Failed to store site settings: %v", err)
+	}
+	log.Print("saved response: ", res)
 
 	// Continuous loop generating random readings for all plugs and updating the site
 	for {
@@ -156,9 +162,9 @@ func main() {
 		}
 
 		site := &contracts.Site{
-			SiteId:   loadedSiteSettings.SiteId,
-			SiteName: siteName,
-			Plugs:    plugs,
+			SiteId: loadedSiteSettings.SiteId,
+			Plugs:  plugs,
+			State:  contracts.SiteState_SiteState_ONLINE,
 		}
 
 		_, err := c.UpdateSite(ctx, &contracts.UpdateSiteRequest{UpdatedSite: site})
@@ -168,6 +174,6 @@ func main() {
 
 		log.Printf("Updated Site with ID: %s with new plug readings", loadedSiteSettings.SiteId)
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 }

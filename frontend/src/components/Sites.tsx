@@ -35,7 +35,7 @@ const SitesList: React.FC = () => {
             key={site.site_id}
             onClick={() => navigate(`/site/${site.site_id}`)}
           >
-            {site.site_name}
+            {site.site_id}
           </li>
         ))}
       </ul>

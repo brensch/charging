@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import {
   Box,
@@ -11,32 +9,57 @@ import {
   useColorModeValue,
   HStack,
 } from "@chakra-ui/react"
+import { Site, SiteSetting, SiteState } from "../contracts/objects"
+import { useNavigate } from "react-router-dom"
+import { Icon } from "@chakra-ui/react"
+import { FaPlug, FaBolt } from "react-icons/fa"
 // import { BsArrowUpRight, BsHeartFill, BsHeart } from "react-icons/bs"
+interface SiteCardProps {
+  site: Site
+  site_settings: SiteSetting | undefined
+}
 
-export default function PostWithLike() {
-  const [liked, setLiked] = useState(false)
+const SiteCard: React.FC<SiteCardProps> = ({ site, site_settings }) => {
+  let navigate = useNavigate()
+
+  // Check if the timestamp is more than 30 seconds old
+  const currentTime = Date.now() // Current time in milliseconds
+  const thirtySecondsInMilliseconds = 30 * 1000
+  const isOffline =
+    !site.last_updated_ms ||
+    currentTime - site.last_updated_ms > thirtySecondsInMilliseconds
+
+  console.log(isOffline)
+
+  // Determine the site state based on the timestamp and existing state
+  const siteState = isOffline
+    ? "Offline"
+    : site.state === SiteState.SiteState_ONLINE
+    ? "Online"
+    : "Offline"
+  const backgroundColor = siteState === "Online" ? "#90ee90" : "#ff6b6b"
+
+  // Calculate total power (W) for all plugs
+  const totalPower = site.plugs.reduce((sum, plug) => {
+    return sum + (plug.reading?.voltage || 0) * (plug.reading?.current || 0)
+  }, 0)
 
   return (
     <Center py={6}>
       <Box
         width={"100%"}
-        // w="xs"
-        rounded={"sm"}
-        // my={5}
         mx={[2, 4]}
         overflow={"hidden"}
         bg="white"
         border={"1px"}
         borderColor="black"
         boxShadow={useColorModeValue("6px 6px 0 black", "6px 6px 0 cyan")}
+        onClick={() => navigate(`/site/${site.site_id}`)}
       >
         <Box p={4}>
           <Heading color={"black"} fontSize={"2xl"} noOfLines={1}>
-            Brendo Pi
+            {site_settings?.name}
           </Heading>
-          <Text color={"gray.500"} noOfLines={2}>
-            Shady garage with free beer on tap
-          </Text>
         </Box>
         <HStack borderTop={"1px"} color="black">
           <Flex
@@ -46,83 +69,49 @@ export default function PostWithLike() {
             roundedBottom={"sm"}
             w="full"
           >
-            <Box
-              bg="black"
-              display={"inline-block"}
-              px={2}
-              py={1}
-              color="white"
-              marginRight={2}
-            >
-              <Text fontSize={"xs"} fontWeight="medium">
-                Shady
-              </Text>
-            </Box>
-            <Box
-              bg="black"
-              display={"inline-block"}
-              px={2}
-              py={1}
-              color="white"
-              marginRight={2}
-            >
-              <Text fontSize={"xs"} fontWeight="medium">
-                Beer
-              </Text>
-            </Box>
-            <Box
-              bg="black"
-              display={"inline-block"}
-              px={2}
-              py={1}
-              color="white"
-              marginRight={2}
-            >
-              <Text fontSize={"xs"} fontWeight="medium">
-                Shady
-              </Text>
-            </Box>
+            {site_settings?.description}
           </Flex>
         </HStack>
-        <HStack borderTop={"1px"} color="black">
+        <Flex borderTop={"1px"} borderBottom={"1px"} color="black" w="full">
           <Flex
             p={4}
             alignItems="center"
-            justifyContent={"space-between"}
-            roundedBottom={"sm"}
-            cursor={"pointer"}
-            w="full"
+            justifyContent={"center"}
+            flex={1}
+            borderRight={"1px solid black"}
           >
-            <Box
-              bg="black"
-              display={"inline-block"}
-              px={2}
-              py={1}
-              color="white"
-            >
-              <Text fontSize={"xs"} fontWeight="medium">
-                New
-              </Text>
-            </Box>
+            <Icon as={FaPlug} marginRight={1} />
+            <Text fontSize={"md"} fontWeight="medium">
+              {site.plug_ids.length}
+            </Text>
           </Flex>
           <Flex
-            p={5}
+            p={4}
             alignItems="center"
-            justifyContent={"space-between"}
-            roundedBottom={""}
-            borderLeft={"1px"}
-            cursor="pointer"
-            onClick={() => setLiked(!liked)}
+            justifyContent={"center"}
+            flex={3}
+            borderRight={"1px solid black"}
           >
-            hi
-            {/* {liked ? (
-              <BsHeartFill fill="red" fontSize={"24px"} />
-            ) : (
-              <BsHeart fontSize={"24px"} />
-            )} */}
+            <Icon as={FaBolt} marginRight={1} />
+            <Text fontSize={"md"} fontWeight="medium">
+              {Math.round(totalPower)} W
+            </Text>
           </Flex>
-        </HStack>
+          <Flex
+            p={2}
+            alignItems="center"
+            justifyContent={"center"}
+            flex={1}
+            backgroundColor={backgroundColor}
+          >
+            <Text fontSize={"lg"} fontWeight="medium">
+              {siteState}
+            </Text>
+          </Flex>
+        </Flex>
       </Box>
     </Center>
   )
 }
+
+export default SiteCard
