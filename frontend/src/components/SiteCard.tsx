@@ -20,7 +20,7 @@ interface SiteCardProps {
 }
 
 const SiteCard: React.FC<SiteCardProps> = ({ site, site_settings }) => {
-  let navigate = useNavigate()
+  const navigate = useNavigate()
 
   // Check if the timestamp is more than 30 seconds old
   const currentTime = Date.now() // Current time in milliseconds

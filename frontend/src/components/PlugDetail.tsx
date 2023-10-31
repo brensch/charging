@@ -14,7 +14,7 @@ import PlugStateCard from "./PlugStateCard"
 import { Container } from "@chakra-ui/react"
 
 function Page() {
-  let { id } = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>()
   const [plugData, setPlugData] = useState<Plug | null>(null)
 
   useEffect(() => {

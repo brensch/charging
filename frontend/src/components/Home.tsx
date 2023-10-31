@@ -1,24 +1,13 @@
-import {
-  Box,
-  Button,
-  Container,
-  Flex,
-  Grid,
-  Image,
-  SimpleGrid,
-  Text,
-} from "@chakra-ui/react"
-import React, { useEffect, useState } from "react"
-import { Outlet, useNavigate } from "react-router-dom"
-import SiteCard from "./SiteCard"
-import SiteCardGrid from "./SiteCardGrid"
-import { Site, SiteSetting } from "../contracts/objects"
+import { Box, Container, Grid, Text } from "@chakra-ui/react"
 import { collection, onSnapshot } from "firebase/firestore"
+import { useEffect, useState } from "react"
+import { Outlet, useNavigate } from "react-router-dom"
+import { Site, SiteSetting } from "../contracts/objects"
 import { firestore } from "../firebase"
-import car from "../assets/car-side.svg" // adjust the path to match your directory structure
+import SiteCard from "./SiteCard"
 
 function Page() {
-  let navigate = useNavigate()
+  const navigate = useNavigate()
   const [sites, setSites] = useState<Site[]>([])
 
   useEffect(() => {
