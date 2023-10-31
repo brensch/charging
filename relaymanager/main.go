@@ -21,12 +21,14 @@ const siteName = "brendo pi"
 const configFile = "./siteSettings.json"
 
 const (
-	// address = "mothership-yufwwel26a-km.a.run.app"
-	address = "localhost"
+	address = "mothership-yufwwel26a-km.a.run.app"
+	// address = "localhost"
 
-	port = ":50051"
-	// port    = ":443"
-	keyPath = "./remote-device-sa-key.json"
+	// port = ":50051"
+	port      = ":443"
+	configDir = "./config/"
+	secretDir = "./secrets/"
+	keyFile   = secretDir + "remote-device-sa-key.json"
 )
 
 func generateRandomString(length int) string {
@@ -41,7 +43,7 @@ func generateRandomString(length int) string {
 func main() {
 	ctx := context.Background()
 
-	key, err := os.ReadFile(keyPath)
+	key, err := os.ReadFile(keyFile)
 	if err != nil {
 		log.Fatalf("Failed to load key: %v", err)
 	}
@@ -120,6 +122,9 @@ func main() {
 			Plugs:  plugSettings,
 		}
 
+		// Update to save SiteSetting with pattern "config-<site-id>.json"
+		configFile := configDir + "config.json"
+
 		data, err := json.Marshal(siteSettings)
 		if err != nil {
 			log.Fatalf("Failed to marshal site settings: %v", err)
@@ -131,6 +136,7 @@ func main() {
 
 		loadedSiteSettings = siteSettings
 	} else {
+
 		log.Printf("Loaded site settings from disk for Site ID: %s", loadedSiteSettings.SiteId)
 	}
 
