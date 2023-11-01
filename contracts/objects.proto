@@ -13,6 +13,23 @@ message PlugSettings {
     string name = 1; // The name of the plug
     string plug_id = 2; // The plug ID
     PlugStrategy strategy = 3; // The strategy for the plug
+    double current_limit = 4; // The current limit for the plug
+}
+
+message PlugStateRequestRecord {
+    string plug_id = 1; // The plug ID
+    PlugStateRequest state_requested = 2;
+    int64 timestamp_ms = 3;
+    string user_id = 4;
+    PlugStateRequestReason reason = 5;
+}
+
+message PlugLocalStateRequest {
+    PlugStateRequest requested_state = 1;
+}
+
+message PlugLocalStateResult {
+    PlugState current_state = 1;
 }
 
 message PlugStrategy {
@@ -27,6 +44,8 @@ enum SiteState {
     SiteState_OFFLINE = 2;          // Relay is off
     SiteState_ERROR=3;          // Not available or missing
 }
+
+
 
 message Site {
     string site_id = 1; // The site ID
@@ -61,10 +80,25 @@ enum PlugState {
     // TODO: decide how we represent off for cost reasons etc
 }
 
+enum PlugStateRequest {
+    PlugStateRequest_UNKNOWN = 0;      // Default value, used as a placeholder
+    PlugStateRequest_ON = 1;           // Relay is on
+    PlugStateRequest_OFF = 2;          // Relay is off
+}
+
+enum PlugStateRequestReason {
+    PlugStateRequestReason_UNKNOWN = 0;      // Default value, used as a placeholder
+    PlugStateRequestReason_PRICE = 1;          
+    PlugStateRequestReason_USER = 2;         
+    PlugStateRequestReason_CREDIT = 3;         
+}
+
 message Reading {
     PlugState state = 1; // Indicates if the relay is currently on, off, MIA, etc.
     double current = 2; // The current power reading in watts
     double voltage = 3; // The voltage reading in volts
     double power_factor = 4; // Power factor, typically a value between -1 and 1
     int64 timestamp = 5; // Timestamp of the reading in seconds since epoch
+    double energy = 6; // The energy reading in kWh
 }
+

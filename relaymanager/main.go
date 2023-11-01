@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/plug/shelly"
 	"google.golang.org/api/idtoken"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
@@ -42,6 +44,17 @@ func generateRandomString(length int) string {
 
 func main() {
 	ctx := context.Background()
+
+	discoverer := &shelly.ShellyDiscoverer{}
+
+	plugs, err := discoverer.Discover()
+	if err != nil {
+		log.Fatalf("Failed to discover plugs: %v", err)
+	}
+
+	fmt.Println(plugs)
+
+	return
 
 	key, err := os.ReadFile(keyFile)
 	if err != nil {
