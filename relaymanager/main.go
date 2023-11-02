@@ -2,21 +2,13 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
-	"time"
 
-	"github.com/brensch/charging/gen/go/contracts"
-	"github.com/brensch/charging/plug/shelly"
-	"google.golang.org/api/idtoken"
+	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 const siteName = "brendo pi"
@@ -33,166 +25,105 @@ const (
 	keyFile   = secretDir + "remote-device-sa-key.json"
 )
 
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[rand.Intn(len(charset))]
+// func generateRandomString(length int) string {
+// 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+// 	result := make([]byte, length)
+// 	for i := range result {
+// 		result[i] = charset[rand.Intn(len(charset))]
+// 	}
+// 	return string(result)
+// }
+
+type Secret struct {
+	Type         string `json:"type"`
+	ProjectID    string `json:"project_id"`
+	PrivateKeyID string `json:"private_key_id"`
+	PrivateKey   string `json:"private_key"`
+	ClientEmail  string `json:"client_email"`
+	// TODO: confirm that clientID is unique to every key
+	ClientID string `json:"client_id"`
+}
+
+func extractProjectAndClientID(filePath string) (string, string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", "", err
 	}
-	return string(result)
+
+	var secret Secret
+	err = json.Unmarshal(data, &secret)
+	if err != nil {
+		return "", "", err
+	}
+
+	return secret.ProjectID, secret.ClientID, nil
 }
 
 func main() {
 	ctx := context.Background()
 
-	discoverer := &shelly.ShellyDiscoverer{}
-
-	plugs, err := discoverer.Discover()
+	projectID, clientID, err := extractProjectAndClientID(keyFile)
 	if err != nil {
-		log.Fatalf("Failed to discover plugs: %v", err)
+		log.Fatalf("Failed to get identity: %v", err)
 	}
 
-	fmt.Println(plugs)
+	fmt.Println(clientID, projectID)
 
-	return
-
-	key, err := os.ReadFile(keyFile)
+	// Set up Firestore client
+	client, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
-		log.Fatalf("Failed to load key: %v", err)
+		log.Fatalf("Failed to create Firestore client: %v", err)
 	}
+	defer client.Close()
 
-	// connect to grpc server
-	tokenSource, err := idtoken.NewTokenSource(ctx, "https://"+address, option.WithCredentialsJSON(key))
+	_, err = client.Collection("sitemeta").Doc(clientID).Set(ctx, struct{}{})
 	if err != nil {
-		log.Fatalf("new token source: %v", err)
+		log.Fatalf("Failed to write to sitemeta: %v", err)
 	}
-	config := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	creds := credentials.NewTLS(config)
-	conn, err := grpc.Dial(
-		address+port,
-		grpc.WithTransportCredentials(creds),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: tokenSource}),
-	)
-	if err != nil {
-		log.Fatalf("Did not connect: %v", err)
-	}
-	defer conn.Close()
+	// discoverers := []plug.Discoverer{
+	// 	&shelly.ShellyDiscoverer{},
+	// 	// as we make more plug brands we can add their discoverers here.
+	// }
 
-	c := contracts.NewUpdateServiceClient(conn)
+	// plugs := make([]plug.Plug, 0)
+	// for _, discoverer := range discoverers {
+	// 	discoveredPlugs, err := discoverer.Discover()
+	// 	if err != nil {
+	// 		log.Fatalf("Failed to discover plugs: %v", err)
+	// 	}
+	// 	plugs = append(plugs, discoveredPlugs...)
+	// }
 
-	// Check for the presence of config file and load it if it exists
-	var loadedSiteSettings *contracts.SiteSetting
-	if _, err := os.Stat(configFile); err == nil {
-		data, err := os.ReadFile(configFile)
-		if err != nil {
-			log.Fatalf("Failed to read config file: %v", err)
-		}
-		err = json.Unmarshal(data, &loadedSiteSettings)
-		if err != nil {
-			log.Fatalf("Failed to unmarshal config file: %v", err)
-		}
-	}
+	// // log details of discovered plugs
+	// log.Printf("Discovered %d Plugs", len(plugs))
+	// for _, plug := range plugs {
+	// 	log.Printf("Discovered Plug: %s", plug)
+	// }
 
-	if loadedSiteSettings == nil {
-		// Create a Site with static name
-		createSiteRes, err := c.CreateSite(ctx, &contracts.CreateSiteRequest{
-			Name: siteName,
-		})
-		if err != nil {
-			log.Fatalf("Failed to create site: %v", err)
-		}
-		log.Printf("Created Site with ID: %s", createSiteRes.SiteId)
+	// // check the disk for a key to load our grpc and firestore client
+	// // connect to grpc server
+	// key, err := os.ReadFile(keyFile)
+	// if err != nil {
+	// 	log.Fatalf("Failed to load key: %v", err)
+	// }
+	// tokenSource, err := idtoken.NewTokenSource(ctx, "https://"+address, option.WithCredentialsJSON(key))
+	// if err != nil {
+	// 	log.Fatalf("new token source: %v", err)
+	// }
+	// config := &tls.Config{
+	// 	InsecureSkipVerify: true,
+	// }
+	// creds := credentials.NewTLS(config)
+	// conn, err := grpc.Dial(
+	// 	address+port,
+	// 	grpc.WithTransportCredentials(creds),
+	// 	grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: tokenSource}),
+	// )
+	// if err != nil {
+	// 	log.Fatalf("Did not connect: %v", err)
+	// }
+	// defer conn.Close()
+	// c := contracts.NewUpdateServiceClient(conn)
+	// _ = c
 
-		// Generate Multiple Plugs for that Site locally
-		numberOfPlugs := rand.Intn(10) + 1
-		plugs := make([]*contracts.Plug, numberOfPlugs)
-		plugSettings := make([]*contracts.PlugSettings, numberOfPlugs)
-		for i := 0; i < numberOfPlugs; i++ {
-			plugID := generateRandomString(5) // Assuming plug IDs are also random strings
-			plugs[i] = &contracts.Plug{
-				PlugId: plugID,
-				Reading: &contracts.Reading{
-					State:       contracts.PlugState(rand.Intn(5)),
-					Current:     rand.Float64() * 1000,
-					Voltage:     110 + rand.Float64()*10,
-					PowerFactor: rand.Float64()*2 - 1,
-					Timestamp:   time.Now().Unix(),
-				},
-			}
-			plugSettings[i] = &contracts.PlugSettings{
-				Name:     "name me",
-				PlugId:   plugID,
-				Strategy: &contracts.PlugStrategy{}, // This needs to be set properly
-			}
-			log.Printf("Generated Plug with ID: %s for Site: %s", plugID, createSiteRes.SiteId)
-		}
-		// Save SiteSetting to disk
-		siteSettings := &contracts.SiteSetting{
-			Name:   siteName,
-			SiteId: createSiteRes.SiteId,
-			Plugs:  plugSettings,
-		}
-
-		// Update to save SiteSetting with pattern "config-<site-id>.json"
-		configFile := configDir + "config.json"
-
-		data, err := json.Marshal(siteSettings)
-		if err != nil {
-			log.Fatalf("Failed to marshal site settings: %v", err)
-		}
-		err = os.WriteFile(configFile, data, 0644)
-		if err != nil {
-			log.Fatalf("Failed to write site settings to disk: %v", err)
-		}
-
-		loadedSiteSettings = siteSettings
-	} else {
-
-		log.Printf("Loaded site settings from disk for Site ID: %s", loadedSiteSettings.SiteId)
-	}
-
-	res, err := c.UpdateSiteSetting(ctx, &contracts.UpdateSiteSettingsRequest{SiteSettings: loadedSiteSettings})
-	if err != nil {
-		log.Fatalf("Failed to store site settings: %v", err)
-	}
-	log.Print("saved response: ", res)
-
-	// Continuous loop generating random readings for all plugs and updating the site
-	for {
-		plugs := make([]*contracts.Plug, len(loadedSiteSettings.Plugs))
-
-		for i, plugSetting := range loadedSiteSettings.Plugs {
-			reading := &contracts.Reading{
-				State:       contracts.PlugState(rand.Intn(5)),
-				Current:     rand.Float64() * 1000,
-				Voltage:     110 + rand.Float64()*10,
-				PowerFactor: rand.Float64()*2 - 1,
-				Timestamp:   time.Now().Unix(),
-			}
-
-			plugs[i] = &contracts.Plug{
-				PlugId:  plugSetting.PlugId,
-				Reading: reading,
-			}
-
-			log.Printf("Generated Reading for Plug ID: %s, Current: %f, Voltage: %f", plugSetting.PlugId, reading.Current, reading.Voltage)
-		}
-
-		site := &contracts.Site{
-			SiteId: loadedSiteSettings.SiteId,
-			Plugs:  plugs,
-			State:  contracts.SiteState_SiteState_ONLINE,
-		}
-
-		_, err := c.UpdateSite(ctx, &contracts.UpdateSiteRequest{UpdatedSite: site})
-		if err != nil {
-			log.Fatalf("Failed to update site: %v", err)
-		}
-
-		log.Printf("Updated Site with ID: %s with new plug readings", loadedSiteSettings.SiteId)
-
-		time.Sleep(10 * time.Second)
-	}
 }

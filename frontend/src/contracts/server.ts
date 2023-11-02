@@ -1,12 +1,10 @@
 /* eslint-disable */
 import _m0 from "protobufjs/minimal";
-import { Site, SiteSetting } from "./objects";
+import { Site, SiteSettings } from "./objects";
 
 export const protobufPackage = "contracts";
 
 export interface CreateSiteRequest {
-  /** The name of the site */
-  name: string;
 }
 
 export interface CreateSiteResponse {
@@ -28,7 +26,7 @@ export interface UpdateSiteResponse {
 
 export interface UpdateSiteSettingsRequest {
   /** The site ID */
-  site_settings: SiteSetting | undefined;
+  site_settings: SiteSettings | undefined;
 }
 
 export interface UpdateSiteSettingsResponse {
@@ -39,14 +37,11 @@ export interface UpdateSiteSettingsResponse {
 }
 
 function createBaseCreateSiteRequest(): CreateSiteRequest {
-  return { name: "" };
+  return {};
 }
 
 export const CreateSiteRequest = {
-  encode(message: CreateSiteRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.name !== "") {
-      writer.uint32(10).string(message.name);
-    }
+  encode(_: CreateSiteRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     return writer;
   },
 
@@ -57,13 +52,6 @@ export const CreateSiteRequest = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.name = reader.string();
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -73,24 +61,20 @@ export const CreateSiteRequest = {
     return message;
   },
 
-  fromJSON(object: any): CreateSiteRequest {
-    return { name: isSet(object.name) ? globalThis.String(object.name) : "" };
+  fromJSON(_: any): CreateSiteRequest {
+    return {};
   },
 
-  toJSON(message: CreateSiteRequest): unknown {
+  toJSON(_: CreateSiteRequest): unknown {
     const obj: any = {};
-    if (message.name !== "") {
-      obj.name = message.name;
-    }
     return obj;
   },
 
   create<I extends Exact<DeepPartial<CreateSiteRequest>, I>>(base?: I): CreateSiteRequest {
     return CreateSiteRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<CreateSiteRequest>, I>>(object: I): CreateSiteRequest {
+  fromPartial<I extends Exact<DeepPartial<CreateSiteRequest>, I>>(_: I): CreateSiteRequest {
     const message = createBaseCreateSiteRequest();
-    message.name = object.name ?? "";
     return message;
   },
 };
@@ -307,7 +291,7 @@ function createBaseUpdateSiteSettingsRequest(): UpdateSiteSettingsRequest {
 export const UpdateSiteSettingsRequest = {
   encode(message: UpdateSiteSettingsRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.site_settings !== undefined) {
-      SiteSetting.encode(message.site_settings, writer.uint32(10).fork()).ldelim();
+      SiteSettings.encode(message.site_settings, writer.uint32(10).fork()).ldelim();
     }
     return writer;
   },
@@ -324,7 +308,7 @@ export const UpdateSiteSettingsRequest = {
             break;
           }
 
-          message.site_settings = SiteSetting.decode(reader, reader.uint32());
+          message.site_settings = SiteSettings.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -336,13 +320,13 @@ export const UpdateSiteSettingsRequest = {
   },
 
   fromJSON(object: any): UpdateSiteSettingsRequest {
-    return { site_settings: isSet(object.site_settings) ? SiteSetting.fromJSON(object.site_settings) : undefined };
+    return { site_settings: isSet(object.site_settings) ? SiteSettings.fromJSON(object.site_settings) : undefined };
   },
 
   toJSON(message: UpdateSiteSettingsRequest): unknown {
     const obj: any = {};
     if (message.site_settings !== undefined) {
-      obj.site_settings = SiteSetting.toJSON(message.site_settings);
+      obj.site_settings = SiteSettings.toJSON(message.site_settings);
     }
     return obj;
   },
@@ -353,7 +337,7 @@ export const UpdateSiteSettingsRequest = {
   fromPartial<I extends Exact<DeepPartial<UpdateSiteSettingsRequest>, I>>(object: I): UpdateSiteSettingsRequest {
     const message = createBaseUpdateSiteSettingsRequest();
     message.site_settings = (object.site_settings !== undefined && object.site_settings !== null)
-      ? SiteSetting.fromPartial(object.site_settings)
+      ? SiteSettings.fromPartial(object.site_settings)
       : undefined;
     return message;
   },

@@ -4,6 +4,40 @@ import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "contracts";
 
+export enum PlugType {
+  /** PlugType_UNKNOWN - Default value, used as a placeholder */
+  PlugType_UNKNOWN = 0,
+  PlugType_SHELLY = 1,
+  UNRECOGNIZED = -1,
+}
+
+export function plugTypeFromJSON(object: any): PlugType {
+  switch (object) {
+    case 0:
+    case "PlugType_UNKNOWN":
+      return PlugType.PlugType_UNKNOWN;
+    case 1:
+    case "PlugType_SHELLY":
+      return PlugType.PlugType_SHELLY;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return PlugType.UNRECOGNIZED;
+  }
+}
+
+export function plugTypeToJSON(object: PlugType): string {
+  switch (object) {
+    case PlugType.PlugType_UNKNOWN:
+      return "PlugType_UNKNOWN";
+    case PlugType.PlugType_SHELLY:
+      return "PlugType_SHELLY";
+    case PlugType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export enum SiteState {
   /** SiteState_UNKNOWN - Default value, used as a placeholder */
   SiteState_UNKNOWN = 0,
@@ -217,6 +251,14 @@ export interface PlugSettings {
   current_limit: number;
 }
 
+export interface PlugMeta {
+  plug_id: string;
+  site_id: string;
+  /** this is something like a mac address followed by its index */
+  fixed_id: string;
+  type: PlugType;
+}
+
 export interface PlugStateRequestRecord {
   /** The plug ID */
   plug_id: string;
@@ -256,7 +298,7 @@ export interface Site {
   last_updated_ms: number;
 }
 
-export interface SiteSetting {
+export interface SiteSettings {
   /** The name of the site */
   name: string;
   /** The description of the site */
@@ -472,6 +514,110 @@ export const PlugSettings = {
       ? PlugStrategy.fromPartial(object.strategy)
       : undefined;
     message.current_limit = object.current_limit ?? 0;
+    return message;
+  },
+};
+
+function createBasePlugMeta(): PlugMeta {
+  return { plug_id: "", site_id: "", fixed_id: "", type: 0 };
+}
+
+export const PlugMeta = {
+  encode(message: PlugMeta, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.plug_id !== "") {
+      writer.uint32(10).string(message.plug_id);
+    }
+    if (message.site_id !== "") {
+      writer.uint32(18).string(message.site_id);
+    }
+    if (message.fixed_id !== "") {
+      writer.uint32(26).string(message.fixed_id);
+    }
+    if (message.type !== 0) {
+      writer.uint32(32).int32(message.type);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): PlugMeta {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePlugMeta();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fixed_id = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.type = reader.int32() as any;
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PlugMeta {
+    return {
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      fixed_id: isSet(object.fixed_id) ? globalThis.String(object.fixed_id) : "",
+      type: isSet(object.type) ? plugTypeFromJSON(object.type) : 0,
+    };
+  },
+
+  toJSON(message: PlugMeta): unknown {
+    const obj: any = {};
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.fixed_id !== "") {
+      obj.fixed_id = message.fixed_id;
+    }
+    if (message.type !== 0) {
+      obj.type = plugTypeToJSON(message.type);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PlugMeta>, I>>(base?: I): PlugMeta {
+    return PlugMeta.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PlugMeta>, I>>(object: I): PlugMeta {
+    const message = createBasePlugMeta();
+    message.plug_id = object.plug_id ?? "";
+    message.site_id = object.site_id ?? "";
+    message.fixed_id = object.fixed_id ?? "";
+    message.type = object.type ?? 0;
     return message;
   },
 };
@@ -919,12 +1065,12 @@ export const Site = {
   },
 };
 
-function createBaseSiteSetting(): SiteSetting {
+function createBaseSiteSettings(): SiteSettings {
   return { name: "", description: "", site_id: "", owner_ids: [], strategy: undefined, plugs: [], tags: [] };
 }
 
-export const SiteSetting = {
-  encode(message: SiteSetting, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const SiteSettings = {
+  encode(message: SiteSettings, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.name !== "") {
       writer.uint32(10).string(message.name);
     }
@@ -949,10 +1095,10 @@ export const SiteSetting = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): SiteSetting {
+  decode(input: _m0.Reader | Uint8Array, length?: number): SiteSettings {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSiteSetting();
+    const message = createBaseSiteSettings();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -1014,7 +1160,7 @@ export const SiteSetting = {
     return message;
   },
 
-  fromJSON(object: any): SiteSetting {
+  fromJSON(object: any): SiteSettings {
     return {
       name: isSet(object.name) ? globalThis.String(object.name) : "",
       description: isSet(object.description) ? globalThis.String(object.description) : "",
@@ -1028,7 +1174,7 @@ export const SiteSetting = {
     };
   },
 
-  toJSON(message: SiteSetting): unknown {
+  toJSON(message: SiteSettings): unknown {
     const obj: any = {};
     if (message.name !== "") {
       obj.name = message.name;
@@ -1054,11 +1200,11 @@ export const SiteSetting = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<SiteSetting>, I>>(base?: I): SiteSetting {
-    return SiteSetting.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<SiteSettings>, I>>(base?: I): SiteSettings {
+    return SiteSettings.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SiteSetting>, I>>(object: I): SiteSetting {
-    const message = createBaseSiteSetting();
+  fromPartial<I extends Exact<DeepPartial<SiteSettings>, I>>(object: I): SiteSettings {
+    const message = createBaseSiteSettings();
     message.name = object.name ?? "";
     message.description = object.description ?? "";
     message.site_id = object.site_id ?? "";

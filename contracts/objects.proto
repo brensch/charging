@@ -16,6 +16,19 @@ message PlugSettings {
     double current_limit = 4; // The current limit for the plug
 }
 
+message PlugMeta {
+    string plug_id = 1;
+    string site_id = 2;
+    string fixed_id = 3; // this is something like a mac address followed by its index
+    PlugType type = 4;
+}
+
+enum PlugType {
+    PlugType_UNKNOWN = 0;      // Default value, used as a placeholder
+    PlugType_SHELLY = 1;           
+
+}
+
 message PlugStateRequestRecord {
     string plug_id = 1; // The plug ID
     PlugStateRequest state_requested = 2;
@@ -45,8 +58,6 @@ enum SiteState {
     SiteState_ERROR=3;          // Not available or missing
 }
 
-
-
 message Site {
     string site_id = 1; // The site ID
     SiteState state = 2; // The state of the site
@@ -55,7 +66,7 @@ message Site {
     int64 last_updated_ms = 5; // The timestamp of the last update in milliseconds since epoch
 }
 
-message SiteSetting{
+message SiteSettings{
     string name = 1; // The name of the site
     string description = 2; // The description of the site
     string site_id = 3; // The site ID
