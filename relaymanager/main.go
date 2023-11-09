@@ -22,7 +22,8 @@ const (
 	port      = ":443"
 	configDir = "./config/"
 	secretDir = "./secrets/"
-	keyFile   = secretDir + "remote-device-sa-key.json"
+	// keyFile   = secretDir + "remote-device-sa-key.json"
+	keyFile = "./testprovision.key"
 )
 
 // func generateRandomString(length int) string {
@@ -79,6 +80,29 @@ func main() {
 	_, err = client.Collection("sitemeta").Doc(clientID).Set(ctx, struct{}{})
 	if err != nil {
 		log.Fatalf("Failed to write to sitemeta: %v", err)
+	}
+
+	// Set up a snapshot listener for the sitemeta document
+	docRef := client.Collection("sitemeta").Doc(clientID)
+	snapshots := docRef.Snapshots(ctx)
+	defer snapshots.Stop()
+
+	for {
+		snapshot, err := snapshots.Next()
+		if err != nil {
+			log.Fatalf("Error listening to snapshot changes: %v", err)
+		}
+
+		// Only proceed if the snapshot has changes
+		if snapshot.Exists() {
+			var data map[string]interface{}
+			err := snapshot.DataTo(&data)
+			if err != nil {
+				log.Fatalf("Error converting document snapshot: %v", err)
+			}
+
+			fmt.Printf("Detected change in document: %v\n", data)
+		}
 	}
 	// discoverers := []plug.Discoverer{
 	// 	&shelly.ShellyDiscoverer{},

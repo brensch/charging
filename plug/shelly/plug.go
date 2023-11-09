@@ -204,3 +204,57 @@ func (s *ShellyPlug) rpcCall(rpcReq *RpcRequest) ([]byte, error) {
 
 	return ioutil.ReadAll(resp.Body)
 }
+
+type SwitchGetConfigParams struct {
+	ID int `json:"id"`
+}
+
+type GetConfigResult struct {
+	ID      int           `json:"id"`
+	Output  bool          `json:"output"`
+	APower  float64       `json:"apower"`
+	Voltage float64       `json:"voltage"`
+	Freq    float64       `json:"freq"`
+	Current float64       `json:"current"`
+	Pf      float64       `json:"pf"`
+	AEnergy ShellyAEnergy `json:"aenergy"`
+	Temp    ShellyTemp    `json:"temperature"`
+}
+
+func (s *ShellyPlug) GetConfig() (*contracts.Reading, error) {
+	rpcReq := &RpcRequest{
+		ID:     0,
+		Method: "switch.getconfig",
+		Params: &SwitchGetConfigParams{
+			ID: s.SwitchNumber,
+		},
+	}
+
+	resp, err := s.rpcCall(rpcReq)
+	if err != nil {
+		return nil, err
+	}
+
+	var response RpcResponse
+	err = json.Unmarshal(resp, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	result, ok := response.Result.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("failed to parse response result")
+	}
+
+	var statusResult GetStatusResult
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsonData, &statusResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertToReading(statusResult), nil
+}

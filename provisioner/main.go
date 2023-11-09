@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2/google"
@@ -131,14 +136,45 @@ func CreateFirestoreServiceAccount(projectID, accountID, accountDisplayName stri
 }
 
 func main() {
-	accountID := "autoprovisioned6" // Unique ID for the service account
-	accountDisplayName := "Firestore Service Account"
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("Enter account ID: ")
+	accountID, _ := reader.ReadString('\n')
+	accountID = strings.TrimSpace(accountID) // Remove any newline or space
+
+	fmt.Print("Enter display name: ")
+	accountDisplayName, _ := reader.ReadString('\n')
+	accountDisplayName = strings.TrimSpace(accountDisplayName)
 
 	key, err := CreateFirestoreServiceAccount(projectID, accountID, accountDisplayName)
 	if err != nil {
 		log.Fatalf("Failed to create service account: %v", err)
 	}
 
-	// Print the service account secret
-	fmt.Println(key.PrivateKeyData)
+	// Decode the PrivateKeyData from Base64
+	decodedData, err := base64.StdEncoding.DecodeString(key.PrivateKeyData)
+	if err != nil {
+		log.Fatalf("Failed to decode PrivateKeyData: %v", err)
+	}
+
+	// Unmarshal the JSON credentials into a map to prettify the JSON
+	var creds map[string]interface{}
+	if err := json.Unmarshal(decodedData, &creds); err != nil {
+		log.Fatalf("Failed to unmarshal credentials: %v", err)
+	}
+
+	// Marshal the credentials back to prettified JSON
+	prettyJSON, err := json.MarshalIndent(creds, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed to marshal credentials: %v", err)
+	}
+
+	// Save the prettified JSON to a file named {account_id}.key
+	fileName := fmt.Sprintf("%s.key", accountID)
+	err = os.WriteFile(fileName, prettyJSON, 0600)
+	if err != nil {
+		log.Fatalf("Failed to write to file: %v", err)
+	}
+
+	fmt.Printf("Service account key saved to %s\n", fileName)
 }
