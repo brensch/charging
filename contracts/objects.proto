@@ -5,111 +5,112 @@ package contracts;
 option go_package = "go/contracts";
 
 message Plug {
-    string plug_id = 1; // The plug ID
-    Reading reading = 2; // The reading for the plug
+  string plug_id = 1;   // The plug ID
+  Reading reading = 2;  // The reading for the plug
 }
 
 message PlugSettings {
-    string name = 1; // The name of the plug
-    string plug_id = 2; // The plug ID
-    PlugStrategy strategy = 3; // The strategy for the plug
-    double current_limit = 4; // The current limit for the plug
+  string name = 1;            // The name of the plug
+  string plug_id = 2;         // The plug ID
+  PlugStrategy strategy = 3;  // The strategy for the plug
+  double current_limit = 4;   // The current limit for the plug
 }
 
 message PlugMeta {
-    string plug_id = 1;
-    string site_id = 2;
-    string fixed_id = 3; // this is something like a mac address followed by its index
-    PlugType type = 4;
+  string plug_id = 1;
+  string site_id = 2;
+  string fixed_id =
+      3;  // this is something like a mac address followed by its index
+  PlugType type = 4;
 }
 
 enum PlugType {
-    PlugType_UNKNOWN = 0;      // Default value, used as a placeholder
-    PlugType_SHELLY = 1;           
-
+  PlugType_UNKNOWN = 0;  // Default value, used as a placeholder
+  PlugType_SHELLY = 1;
 }
 
 message PlugStateRequestRecord {
-    string plug_id = 1; // The plug ID
-    PlugStateRequest state_requested = 2;
-    int64 timestamp_ms = 3;
-    string user_id = 4;
-    PlugStateRequestReason reason = 5;
+  string plug_id = 1;  // The plug ID
+  PlugStateRequest state_requested = 2;
+  int64 timestamp_ms = 3;
+  string user_id = 4;
+  PlugStateRequestReason reason = 5;
 }
 
 message PlugLocalStateRequest {
-    PlugStateRequest requested_state = 1;
+  PlugStateRequest requested_state = 1;
 }
 
 message PlugLocalStateResult {
-    PlugState current_state = 1;
+  PlugState current_state = 1;
 }
 
 message PlugStrategy {
-    bool always_on = 1; // Whether the plug requires the user to turn it on
-    repeated string owner_ids = 2; // People sign up to be owners if there's a strategy that requires it
-    int64 duration_ms = 3; // The duration the user is signing up to pay for the plug for
+  bool always_on = 1;  // Whether the plug requires the user to turn it on
+  repeated string owner_ids =
+      2;  // People sign up to be owners if there's a strategy that requires it
+  int64 duration_ms =
+      3;  // The duration the user is signing up to pay for the plug for
 }
 
 enum SiteState {
-    SiteState_UNKNOWN = 0;      // Default value, used as a placeholder
-    SiteState_ONLINE = 1;           // Relay is on
-    SiteState_OFFLINE = 2;          // Relay is off
-    SiteState_ERROR=3;          // Not available or missing
+  SiteState_UNKNOWN = 0;  // Default value, used as a placeholder
+  SiteState_ONLINE = 1;   // Relay is on
+  SiteState_OFFLINE = 2;  // Relay is off
+  SiteState_ERROR = 3;    // Not available or missing
 }
 
 message Site {
-    string site_id = 1; // The site ID
-    SiteState state = 2; // The state of the site
-    repeated Plug plugs = 3; // The plugs at the site
-    repeated string plug_ids = 4; // The IDs of the plugs at the site, used for firestore queries
-    int64 last_updated_ms = 5; // The timestamp of the last update in milliseconds since epoch
+  string site_id = 1;       // The site ID
+  SiteState state = 2;      // The state of the site
+  repeated Plug plugs = 3;  // The plugs at the site
+  repeated string plug_ids =
+      4;  // The IDs of the plugs at the site, used for firestore queries
+  int64 last_updated_ms =
+      5;  // The timestamp of the last update in milliseconds since epoch
 }
 
-message SiteSettings{
-    string name = 1; // The name of the site
-    string description = 2; // The description of the site
-    string site_id = 3; // The site ID
-    repeated string owner_ids = 4; // People who have admin control over the site
-    SiteStrategy strategy = 5; // The strategy for the site
-    repeated PlugSettings plugs = 6; // The settings for the plugs
-    repeated string tags = 7; // Tags for the site
-
+message SiteSettings {
+  string name = 1;                // The name of the site
+  string description = 2;         // The description of the site
+  string site_id = 3;             // The site ID
+  repeated string owner_ids = 4;  // People who have admin control over the site
+  SiteStrategy strategy = 5;      // The strategy for the site
+  repeated PlugSettings plugs = 6;  // The settings for the plugs
+  repeated string tags = 7;         // Tags for the site
 }
 
 // may need to capture the strategy for the site as a whole
-message SiteStrategy {
-
-}
+message SiteStrategy {}
 
 enum PlugState {
-    PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
-    PlugState_ON = 1;           // Relay is on
-    PlugState_OFF = 2;          // Relay is off
-    PlugState_MIA = 3;          // Not available or missing
-    PlugState_OVERCURRENT = 4;  // Overcurrent detected
-    // TODO: decide how we represent off for cost reasons etc
+  PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
+  PlugState_ON = 1;           // Relay is on
+  PlugState_OFF = 2;          // Relay is off
+  PlugState_MIA = 3;          // Not available or missing
+  PlugState_OVERCURRENT = 4;  // Overcurrent detected
+  // TODO: decide how we represent off for cost reasons etc
 }
 
 enum PlugStateRequest {
-    PlugStateRequest_UNKNOWN = 0;      // Default value, used as a placeholder
-    PlugStateRequest_ON = 1;           // Relay is on
-    PlugStateRequest_OFF = 2;          // Relay is off
+  PlugStateRequest_UNKNOWN = 0;  // Default value, used as a placeholder
+  PlugStateRequest_ON = 1;       // Relay is on
+  PlugStateRequest_OFF = 2;      // Relay is off
 }
 
 enum PlugStateRequestReason {
-    PlugStateRequestReason_UNKNOWN = 0;      // Default value, used as a placeholder
-    PlugStateRequestReason_PRICE = 1;          
-    PlugStateRequestReason_USER = 2;         
-    PlugStateRequestReason_CREDIT = 3;         
+  PlugStateRequestReason_UNKNOWN = 0;  // Default value, used as a placeholder
+  PlugStateRequestReason_PRICE = 1;
+  PlugStateRequestReason_USER = 2;
+  PlugStateRequestReason_CREDIT = 3;
 }
 
 message Reading {
-    PlugState state = 1; // Indicates if the relay is currently on, off, MIA, etc.
-    double current = 2; // The current power reading in watts
-    double voltage = 3; // The voltage reading in volts
-    double power_factor = 4; // Power factor, typically a value between -1 and 1
-    int64 timestamp = 5; // Timestamp of the reading in seconds since epoch
-    double energy = 6; // The energy reading in kWh
+  PlugState state =
+      1;               // Indicates if the relay is currently on, off, MIA, etc.
+  double current = 2;  // The current power reading in watts
+  double voltage = 3;  // The voltage reading in volts
+  double power_factor = 4;  // Power factor, typically a value between -1 and 1
+  int64 timestamp = 5;      // Timestamp of the reading in seconds since epoch
+  double energy = 6;        // The energy reading in kWh
 }
-
