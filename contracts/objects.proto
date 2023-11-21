@@ -4,6 +4,27 @@ package contracts;
 
 option go_package = "go/contracts";
 
+// FuzeGroup represents a collection of plugs that need to obey an electrical
+// limit, ie all four plugs in a shelly 4pro.
+message FuzeGroup {
+  string group_id = 1;  // The group ID
+  Reading reading = 2;  // The reading for the group
+}
+
+message FuzeGroupSettings {
+  string name = 1;           // The name of the group
+  string group_id = 2;       // The group ID
+  double current_limit = 3;  // The current limit for the group
+}
+
+message FuzeGroupMeta {
+  string group_id = 1;
+  string site_id = 2;
+  string fixed_id = 3;  // this is something like a mac address
+}
+
+// Plug represents a single plug controller, ie one of the relays in a shelly
+// 4pro
 message Plug {
   string plug_id = 1;   // The plug ID
   Reading reading = 2;  // The reading for the plug
@@ -19,8 +40,7 @@ message PlugSettings {
 message PlugMeta {
   string plug_id = 1;
   string site_id = 2;
-  string fixed_id =
-      3;  // this is something like a mac address followed by its index
+  string fixed_id = 3;  // this is something like the index of the plug
   PlugType type = 4;
 }
 
@@ -29,6 +49,8 @@ enum PlugType {
   PlugType_SHELLY = 1;
 }
 
+// PlugStateRequestRecord represents a request to change the state of a plug
+// that either was or was not successful
 message PlugStateRequestRecord {
   string plug_id = 1;  // The plug ID
   PlugStateRequest state_requested = 2;
@@ -37,14 +59,20 @@ message PlugStateRequestRecord {
   PlugStateRequestReason reason = 5;
 }
 
+// PlugLocalStateRequest is what is sent to the plug interface to request a
+// change in state
 message PlugLocalStateRequest {
   PlugStateRequest requested_state = 1;
 }
 
+// PlugLocalStateResult is what is returned from the plug interface after an
+// attempt to change the state
 message PlugLocalStateResult {
-  PlugState current_state = 1;
+  ElectricalState current_state = 1;
 }
 
+// PlugStrategy is defined by a user and captures what it should do in various
+// situations
 message PlugStrategy {
   bool always_on = 1;  // Whether the plug requires the user to turn it on
   repeated string owner_ids =
@@ -70,6 +98,8 @@ message Site {
       5;  // The timestamp of the last update in milliseconds since epoch
 }
 
+// TODO: start here next time!!!!!!!!!!!!!!!!!
+// site settings should be the one thing stored to FS
 message SiteSettings {
   string name = 1;                // The name of the site
   string description = 2;         // The description of the site
@@ -83,7 +113,7 @@ message SiteSettings {
 // may need to capture the strategy for the site as a whole
 message SiteStrategy {}
 
-enum PlugState {
+enum ElectricalState {
   PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
   PlugState_ON = 1;           // Relay is on
   PlugState_OFF = 2;          // Relay is off
@@ -106,7 +136,7 @@ enum PlugStateRequestReason {
 }
 
 message Reading {
-  PlugState state =
+  ElectricalState state =
       1;               // Indicates if the relay is currently on, off, MIA, etc.
   double current = 2;  // The current power reading in watts
   double voltage = 3;  // The voltage reading in volts

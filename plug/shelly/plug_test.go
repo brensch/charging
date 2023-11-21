@@ -15,25 +15,25 @@ func TestSetState(t *testing.T) {
 	tests := []struct {
 		requestedState contracts.PlugStateRequest
 		mockResponse   string
-		expectedState  contracts.PlugState
+		expectedState  contracts.ElectricalState
 		expectedErr    bool
 	}{
 		{
 			requestedState: contracts.PlugStateRequest_PlugStateRequest_ON,
 			mockResponse:   `{"id": 0, "src": "test", "result": {"was_on": false}}`,
-			expectedState:  contracts.PlugState_PlugState_ON,
+			expectedState:  contracts.ElectricalState_PlugState_ON,
 			expectedErr:    false,
 		},
 		{
 			requestedState: contracts.PlugStateRequest_PlugStateRequest_ON,
 			mockResponse:   `{"id": 0, "src": "test", "result": {"was_on": true}}`,
-			expectedState:  contracts.PlugState_PlugState_ON,
+			expectedState:  contracts.ElectricalState_PlugState_ON,
 			expectedErr:    false,
 		},
 		{
 			requestedState: contracts.PlugStateRequest_PlugStateRequest_OFF,
 			mockResponse:   `{"id": 0, "src": "test", "result": {"was_on": true}}`,
-			expectedState:  contracts.PlugState_PlugState_OFF,
+			expectedState:  contracts.ElectricalState_PlugState_OFF,
 			expectedErr:    false,
 		},
 	}
@@ -68,7 +68,7 @@ func TestGetReading(t *testing.T) {
 		{
 			mockResponse: `{"id": 2, "src": "test", "result": {"id": 0, "output": true, "apower": 10, "voltage": 220, "freq": 50, "current": 5, "pf": 0.9, "aenergy": {"total": 100, "by_minute": [10, 20], "minute_ts": 1629300000}, "temperature": {"tC": 25, "tF": 77}}}`,
 			expected: &contracts.Reading{
-				State:       contracts.PlugState_PlugState_ON,
+				State:       contracts.ElectricalState_PlugState_ON,
 				Current:     5,
 				Voltage:     220,
 				PowerFactor: 0.9,

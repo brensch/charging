@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -33,11 +33,11 @@ type RpcResponse struct {
 	Result interface{} `json:"result"`
 }
 
-func ConvertToPlugState(wasOn bool) contracts.PlugState {
+func ConvertToPlugState(wasOn bool) contracts.ElectricalState {
 	if wasOn {
-		return contracts.PlugState_PlugState_ON
+		return contracts.ElectricalState_PlugState_ON
 	}
-	return contracts.PlugState_PlugState_OFF
+	return contracts.ElectricalState_PlugState_OFF
 }
 
 func ConvertToShellyState(state contracts.PlugStateRequest) (bool, error) {
@@ -202,7 +202,7 @@ func (s *ShellyPlug) rpcCall(rpcReq *RpcRequest) ([]byte, error) {
 		return nil, errors.New("failed to make RPC call")
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 type SwitchGetConfigParams struct {
@@ -221,7 +221,7 @@ type GetConfigResult struct {
 	Temp    ShellyTemp    `json:"temperature"`
 }
 
-func (s *ShellyPlug) GetConfig() (*contracts.Reading, error) {
+func (s *ShellyPlug) GetConfig() (*contracts.PlugMeta, error) {
 	rpcReq := &RpcRequest{
 		ID:     0,
 		Method: "switch.getconfig",
@@ -246,15 +246,22 @@ func (s *ShellyPlug) GetConfig() (*contracts.Reading, error) {
 		return nil, errors.New("failed to parse response result")
 	}
 
-	var statusResult GetStatusResult
+	var structuredResult GetConfigResult
 	jsonData, err := json.Marshal(result)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(jsonData, &statusResult)
+	err = json.Unmarshal(jsonData, &structuredResult)
 	if err != nil {
 		return nil, err
 	}
 
-	return ConvertToReading(statusResult), nil
+	return ConvertToConfig(structuredResult), nil
+}
+
+func ConvertToConfig(statusResult GetConfigResult) *contracts.PlugMeta {
+	// TODO: actually convert
+	return &contracts.PlugMeta{
+		Type: contracts.PlugType_PlugType_SHELLY,
+	}
 }

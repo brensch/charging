@@ -87,7 +87,7 @@ export function siteStateToJSON(object: SiteState): string {
   }
 }
 
-export enum PlugState {
+export enum ElectricalState {
   /** PlugState_UNKNOWN - Default value, used as a placeholder */
   PlugState_UNKNOWN = 0,
   /** PlugState_ON - Relay is on */
@@ -101,43 +101,43 @@ export enum PlugState {
   UNRECOGNIZED = -1,
 }
 
-export function plugStateFromJSON(object: any): PlugState {
+export function electricalStateFromJSON(object: any): ElectricalState {
   switch (object) {
     case 0:
     case "PlugState_UNKNOWN":
-      return PlugState.PlugState_UNKNOWN;
+      return ElectricalState.PlugState_UNKNOWN;
     case 1:
     case "PlugState_ON":
-      return PlugState.PlugState_ON;
+      return ElectricalState.PlugState_ON;
     case 2:
     case "PlugState_OFF":
-      return PlugState.PlugState_OFF;
+      return ElectricalState.PlugState_OFF;
     case 3:
     case "PlugState_MIA":
-      return PlugState.PlugState_MIA;
+      return ElectricalState.PlugState_MIA;
     case 4:
     case "PlugState_OVERCURRENT":
-      return PlugState.PlugState_OVERCURRENT;
+      return ElectricalState.PlugState_OVERCURRENT;
     case -1:
     case "UNRECOGNIZED":
     default:
-      return PlugState.UNRECOGNIZED;
+      return ElectricalState.UNRECOGNIZED;
   }
 }
 
-export function plugStateToJSON(object: PlugState): string {
+export function electricalStateToJSON(object: ElectricalState): string {
   switch (object) {
-    case PlugState.PlugState_UNKNOWN:
+    case ElectricalState.PlugState_UNKNOWN:
       return "PlugState_UNKNOWN";
-    case PlugState.PlugState_ON:
+    case ElectricalState.PlugState_ON:
       return "PlugState_ON";
-    case PlugState.PlugState_OFF:
+    case ElectricalState.PlugState_OFF:
       return "PlugState_OFF";
-    case PlugState.PlugState_MIA:
+    case ElectricalState.PlugState_MIA:
       return "PlugState_MIA";
-    case PlugState.PlugState_OVERCURRENT:
+    case ElectricalState.PlugState_OVERCURRENT:
       return "PlugState_OVERCURRENT";
-    case PlugState.UNRECOGNIZED:
+    case ElectricalState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -231,6 +231,37 @@ export function plugStateRequestReasonToJSON(object: PlugStateRequestReason): st
   }
 }
 
+/**
+ * FuzeGroup represents a collection of plugs that need to obey an electrical
+ * limit, ie all four plugs in a shelly 4pro.
+ */
+export interface FuzeGroup {
+  /** The group ID */
+  group_id: string;
+  /** The reading for the group */
+  reading: Reading | undefined;
+}
+
+export interface FuzeGroupSettings {
+  /** The name of the group */
+  name: string;
+  /** The group ID */
+  group_id: string;
+  /** The current limit for the group */
+  current_limit: number;
+}
+
+export interface FuzeGroupMeta {
+  group_id: string;
+  site_id: string;
+  /** this is something like a mac address */
+  fixed_id: string;
+}
+
+/**
+ * Plug represents a single plug controller, ie one of the relays in a shelly
+ * 4pro
+ */
 export interface Plug {
   /** The plug ID */
   plug_id: string;
@@ -254,11 +285,15 @@ export interface PlugSettings {
 export interface PlugMeta {
   plug_id: string;
   site_id: string;
-  /** this is something like a mac address followed by its index */
+  /** this is something like the index of the plug */
   fixed_id: string;
   type: PlugType;
 }
 
+/**
+ * PlugStateRequestRecord represents a request to change the state of a plug
+ * that either was or was not successful
+ */
 export interface PlugStateRequestRecord {
   /** The plug ID */
   plug_id: string;
@@ -268,14 +303,26 @@ export interface PlugStateRequestRecord {
   reason: PlugStateRequestReason;
 }
 
+/**
+ * PlugLocalStateRequest is what is sent to the plug interface to request a
+ * change in state
+ */
 export interface PlugLocalStateRequest {
   requested_state: PlugStateRequest;
 }
 
+/**
+ * PlugLocalStateResult is what is returned from the plug interface after an
+ * attempt to change the state
+ */
 export interface PlugLocalStateResult {
-  current_state: PlugState;
+  current_state: ElectricalState;
 }
 
+/**
+ * PlugStrategy is defined by a user and captures what it should do in various
+ * situations
+ */
 export interface PlugStrategy {
   /** Whether the plug requires the user to turn it on */
   always_on: boolean;
@@ -323,7 +370,7 @@ export interface SiteStrategy {
 
 export interface Reading {
   /** Indicates if the relay is currently on, off, MIA, etc. */
-  state: PlugState;
+  state: ElectricalState;
   /** The current power reading in watts */
   current: number;
   /** The voltage reading in volts */
@@ -335,6 +382,260 @@ export interface Reading {
   /** The energy reading in kWh */
   energy: number;
 }
+
+function createBaseFuzeGroup(): FuzeGroup {
+  return { group_id: "", reading: undefined };
+}
+
+export const FuzeGroup = {
+  encode(message: FuzeGroup, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.group_id !== "") {
+      writer.uint32(10).string(message.group_id);
+    }
+    if (message.reading !== undefined) {
+      Reading.encode(message.reading, writer.uint32(18).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeGroup {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFuzeGroup();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.group_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.reading = Reading.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FuzeGroup {
+    return {
+      group_id: isSet(object.group_id) ? globalThis.String(object.group_id) : "",
+      reading: isSet(object.reading) ? Reading.fromJSON(object.reading) : undefined,
+    };
+  },
+
+  toJSON(message: FuzeGroup): unknown {
+    const obj: any = {};
+    if (message.group_id !== "") {
+      obj.group_id = message.group_id;
+    }
+    if (message.reading !== undefined) {
+      obj.reading = Reading.toJSON(message.reading);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<FuzeGroup>, I>>(base?: I): FuzeGroup {
+    return FuzeGroup.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<FuzeGroup>, I>>(object: I): FuzeGroup {
+    const message = createBaseFuzeGroup();
+    message.group_id = object.group_id ?? "";
+    message.reading = (object.reading !== undefined && object.reading !== null)
+      ? Reading.fromPartial(object.reading)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseFuzeGroupSettings(): FuzeGroupSettings {
+  return { name: "", group_id: "", current_limit: 0 };
+}
+
+export const FuzeGroupSettings = {
+  encode(message: FuzeGroupSettings, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.name !== "") {
+      writer.uint32(10).string(message.name);
+    }
+    if (message.group_id !== "") {
+      writer.uint32(18).string(message.group_id);
+    }
+    if (message.current_limit !== 0) {
+      writer.uint32(25).double(message.current_limit);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeGroupSettings {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFuzeGroupSettings();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.name = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.group_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 25) {
+            break;
+          }
+
+          message.current_limit = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FuzeGroupSettings {
+    return {
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      group_id: isSet(object.group_id) ? globalThis.String(object.group_id) : "",
+      current_limit: isSet(object.current_limit) ? globalThis.Number(object.current_limit) : 0,
+    };
+  },
+
+  toJSON(message: FuzeGroupSettings): unknown {
+    const obj: any = {};
+    if (message.name !== "") {
+      obj.name = message.name;
+    }
+    if (message.group_id !== "") {
+      obj.group_id = message.group_id;
+    }
+    if (message.current_limit !== 0) {
+      obj.current_limit = message.current_limit;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<FuzeGroupSettings>, I>>(base?: I): FuzeGroupSettings {
+    return FuzeGroupSettings.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<FuzeGroupSettings>, I>>(object: I): FuzeGroupSettings {
+    const message = createBaseFuzeGroupSettings();
+    message.name = object.name ?? "";
+    message.group_id = object.group_id ?? "";
+    message.current_limit = object.current_limit ?? 0;
+    return message;
+  },
+};
+
+function createBaseFuzeGroupMeta(): FuzeGroupMeta {
+  return { group_id: "", site_id: "", fixed_id: "" };
+}
+
+export const FuzeGroupMeta = {
+  encode(message: FuzeGroupMeta, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.group_id !== "") {
+      writer.uint32(10).string(message.group_id);
+    }
+    if (message.site_id !== "") {
+      writer.uint32(18).string(message.site_id);
+    }
+    if (message.fixed_id !== "") {
+      writer.uint32(26).string(message.fixed_id);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeGroupMeta {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseFuzeGroupMeta();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.group_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fixed_id = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): FuzeGroupMeta {
+    return {
+      group_id: isSet(object.group_id) ? globalThis.String(object.group_id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      fixed_id: isSet(object.fixed_id) ? globalThis.String(object.fixed_id) : "",
+    };
+  },
+
+  toJSON(message: FuzeGroupMeta): unknown {
+    const obj: any = {};
+    if (message.group_id !== "") {
+      obj.group_id = message.group_id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.fixed_id !== "") {
+      obj.fixed_id = message.fixed_id;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<FuzeGroupMeta>, I>>(base?: I): FuzeGroupMeta {
+    return FuzeGroupMeta.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<FuzeGroupMeta>, I>>(object: I): FuzeGroupMeta {
+    const message = createBaseFuzeGroupMeta();
+    message.group_id = object.group_id ?? "";
+    message.site_id = object.site_id ?? "";
+    message.fixed_id = object.fixed_id ?? "";
+    return message;
+  },
+};
 
 function createBasePlug(): Plug {
   return { plug_id: "", reading: undefined };
@@ -834,13 +1135,13 @@ export const PlugLocalStateResult = {
   },
 
   fromJSON(object: any): PlugLocalStateResult {
-    return { current_state: isSet(object.current_state) ? plugStateFromJSON(object.current_state) : 0 };
+    return { current_state: isSet(object.current_state) ? electricalStateFromJSON(object.current_state) : 0 };
   },
 
   toJSON(message: PlugLocalStateResult): unknown {
     const obj: any = {};
     if (message.current_state !== 0) {
-      obj.current_state = plugStateToJSON(message.current_state);
+      obj.current_state = electricalStateToJSON(message.current_state);
     }
     return obj;
   },
@@ -1348,7 +1649,7 @@ export const Reading = {
 
   fromJSON(object: any): Reading {
     return {
-      state: isSet(object.state) ? plugStateFromJSON(object.state) : 0,
+      state: isSet(object.state) ? electricalStateFromJSON(object.state) : 0,
       current: isSet(object.current) ? globalThis.Number(object.current) : 0,
       voltage: isSet(object.voltage) ? globalThis.Number(object.voltage) : 0,
       power_factor: isSet(object.power_factor) ? globalThis.Number(object.power_factor) : 0,
@@ -1360,7 +1661,7 @@ export const Reading = {
   toJSON(message: Reading): unknown {
     const obj: any = {};
     if (message.state !== 0) {
-      obj.state = plugStateToJSON(message.state);
+      obj.state = electricalStateToJSON(message.state);
     }
     if (message.current !== 0) {
       obj.current = message.current;

@@ -82,28 +82,6 @@ func main() {
 		log.Fatalf("Failed to write to sitemeta: %v", err)
 	}
 
-	// Set up a snapshot listener for the sitemeta document
-	docRef := client.Collection("sitemeta").Doc(clientID)
-	snapshots := docRef.Snapshots(ctx)
-	defer snapshots.Stop()
-
-	for {
-		snapshot, err := snapshots.Next()
-		if err != nil {
-			log.Fatalf("Error listening to snapshot changes: %v", err)
-		}
-
-		// Only proceed if the snapshot has changes
-		if snapshot.Exists() {
-			var data map[string]interface{}
-			err := snapshot.DataTo(&data)
-			if err != nil {
-				log.Fatalf("Error converting document snapshot: %v", err)
-			}
-
-			fmt.Printf("Detected change in document: %v\n", data)
-		}
-	}
 	// discoverers := []plug.Discoverer{
 	// 	&shelly.ShellyDiscoverer{},
 	// 	// as we make more plug brands we can add their discoverers here.
@@ -149,5 +127,14 @@ func main() {
 	// defer conn.Close()
 	// c := contracts.NewUpdateServiceClient(conn)
 	// _ = c
+
+	// ticker := time.NewTicker(1 * time.Second)
+	// for {
+	// 	ControlLoop()
+	// 	select {
+	// 	case <-ticker.C:
+	// 	case <-ctx.Done():
+	// 	}
+	// }
 
 }
