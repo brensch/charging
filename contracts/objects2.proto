@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package contracts;
+
+option go_package = "go/contracts";
+
+// FuzeGroup represents a collection of plugs that need to obey an electrical
+// limit, ie all four plugs in a shelly 4pro.
+message FuzeSettings {
+  string id = 1;
+  string name = 2;
+  double current_limit = 3;
+  string site_id = 4;
+}
+
+message PlugSettings {
+  string id = 1;
+  string name = 2;
+  double current_limit = 3;
+  string site_id = 4;
+  repeated string owner_ids = 5;
+  PlugStateRequest state_request = 6;
+  PlugStateRequestReason state_request_reason = 7;
+}
+
+enum PlugStateRequest {
+  PlugStateRequest_UNKNOWN = 0;  // Default value, used as a placeholder
+  PlugStateRequest_ON = 1;       // Relay is on
+  PlugStateRequest_OFF = 2;      // Relay is off
+}
+
+enum PlugStateRequestReason {
+  PlugStateRequestReason_UNKNOWN = 0;  // Default value, used as a placeholder
+  PlugStateRequestReason_PRICE = 1;
+  PlugStateRequestReason_USER = 2;
+  PlugStateRequestReason_CREDIT = 3;
+}
+
+message FuzeLocalState {
+  string id = 1;
+  double current = 2;
+  FuzeState state = 3;
+}
+
+enum FuzeState {
+  FuzeState_UNKNOWN = 0;  // Default value, used as a placeholder
+  FuzeState_OK = 1;
+  FuzeState_LIMITING = 2;
+}
+
+message PlugLocalState {
+  string id = 1;
+  Reading latest_reading = 2;
+}
+
+enum ElectricalState {
+  PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
+  PlugState_ON = 1;           // Relay is on
+  PlugState_OFF = 2;          // Relay is off
+  PlugState_MIA = 3;          // Not available or missing
+  PlugState_OVERCURRENT = 4;  // Overcurrent detected
+  // TODO: decide how we represent off for cost reasons etc
+}
+
+message Reading {
+  ElectricalState state =
+      1;               // Indicates if the relay is currently on, off, MIA, etc.
+  double current = 2;  // The current power reading in watts
+  double voltage = 3;  // The voltage reading in volts
+  double power_factor = 4;  // Power factor, typically a value between -1 and 1
+  int64 timestamp = 5;      // Timestamp of the reading in seconds since epoch
+  double energy = 6;        // The energy reading in kWh
+  string plug_id = 7;
+}
+
+message ReadingChunk {
+  string site_id = 1;
+  repeated Reading readings = 2;
+}
+
+message SiteSettings {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string owner_ids = 4;
+  repeated string tags = 6;
+}

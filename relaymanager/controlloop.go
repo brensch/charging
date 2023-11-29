@@ -3,51 +3,64 @@ package main
 import (
 	"context"
 	"fmt"
-	"sync"
+	"log"
+
+	"github.com/brensch/charging/electrical"
+	"github.com/brensch/charging/gen/go/contracts"
 
 	"cloud.google.com/go/firestore"
-	"github.com/brensch/charging/gen/go/contracts"
 )
 
+const PlugSettingsCollection = "plug_settings"
+
 type PlugLocalState struct {
-	PlugID          string
-	requestReceiver *Receiver[contracts.PlugStateRequestRecord]
+	plug             electrical.Plug
+	settingsReceiver *Receiver[contracts.PlugSettings]
 }
 
-type SiteLocalState struct {
-	AllPlugs   []*PlugLocalState
-	AllPlugsMu sync.Mutex
-
-	settingsReceiver *Receiver[contracts.SiteSettings]
-}
-
-func InitPlugLocalState(ctx context.Context, fs *firestore.Client, plugID string) (*PlugLocalState, error) {
-	receiver, err := InitReceiver[contracts.PlugStateRequestRecord](ctx, fs, plugID, RequestsCollection)
+func InitPlugLocalState(ctx context.Context, fs *firestore.Client, plug electrical.Plug) (*PlugLocalState, error) {
+	receiver, err := InitReceiver[contracts.PlugSettings](ctx, fs, plug, PlugSettingsCollection)
 	if err != nil {
 		return nil, err
 	}
 	return &PlugLocalState{
-		PlugID:          plugID,
-		requestReceiver: receiver,
+		plug:             plug,
+		settingsReceiver: receiver,
 	}, nil
 }
 
-func InitSiteLocalState(ctx context.Context, fs *firestore.Client, plugIDs []string) (*SiteLocalState, error) {
+const FuzeSettingsCollection = "fuze_settings"
 
-	siteLocalState := &SiteLocalState{}
-
-	for _, plugID := range plugIDs {
-		plug, err := InitPlugLocalState(ctx, fs, plugID)
-		if err != nil {
-			return nil, err
-		}
-		siteLocalState.AllPlugs = append(siteLocalState.AllPlugs, plug)
-	}
-
-	return siteLocalState, nil
+type FuzeLocalState struct {
+	fuze             electrical.Fuze
+	settingsReceiver *Receiver[contracts.FuzeSettings]
 }
 
-func ControlLoop(siteLocalState *SiteLocalState) {
+func InitFuzeLocalState(ctx context.Context, fs *firestore.Client, fuze electrical.Fuze) (*FuzeLocalState, error) {
+	receiver, err := InitReceiver[contracts.FuzeSettings](ctx, fs, fuze, FuzeSettingsCollection)
+	if err != nil {
+		return nil, err
+	}
+	return &FuzeLocalState{
+		fuze:             fuze,
+		settingsReceiver: receiver,
+	}, nil
+}
+
+func ControlLoop(localPlugs []*PlugLocalState, localFuzes []*FuzeLocalState, readingsCHAN chan *contracts.Reading) {
 	fmt.Println("running control loop")
+
+	for _, localPlug := range localPlugs {
+		fmt.Println(localPlug.settingsReceiver.GetLatest().GetId())
+
+		reading, err := localPlug.plug.GetReading()
+		if err != nil {
+			log.Println("failed to get reading", err)
+			continue
+		}
+
+		readingsCHAN <- reading
+
+	}
 
 }

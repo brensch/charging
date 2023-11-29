@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/brensch/charging/electrical"
 	"github.com/brensch/charging/gen/go/contracts"
-	"github.com/brensch/charging/plug"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,12 +50,9 @@ func TestSetState(t *testing.T) {
 			SwitchNumber: 0,
 		}
 
-		result, err := plug.SetState(&contracts.PlugLocalStateRequest{RequestedState: tt.requestedState})
+		err := plug.SetState(tt.requestedState)
 		assert.Equal(t, tt.expectedErr, err != nil)
 
-		if err == nil {
-			assert.Equal(t, tt.expectedState, result.CurrentState)
-		}
 	}
 }
 
@@ -102,7 +99,7 @@ func TestGetReading(t *testing.T) {
 }
 
 func TestShellyPlugInterface(t *testing.T) {
-	var plug plug.Plug
+	var plug electrical.Plug
 	_ = plug
 	plug = &ShellyPlug{}
 }

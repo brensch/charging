@@ -17,6 +17,16 @@ type ShellyPlug struct {
 	Host         string
 	Mac          string
 	SwitchNumber int
+
+	siteID string
+}
+
+func (s *ShellyPlug) ID() string {
+	return fmt.Sprintf("shelly:%s:%d", s.Mac, s.SwitchNumber)
+}
+
+func (s *ShellyPlug) SiteID() string {
+	return s.siteID
 }
 
 // RpcRequest represents the structure for an RPC request to the Shelly plug.
@@ -40,14 +50,14 @@ func ConvertToPlugState(wasOn bool) contracts.ElectricalState {
 	return contracts.ElectricalState_PlugState_OFF
 }
 
-func ConvertToShellyState(state contracts.PlugStateRequest) (bool, error) {
+func ConvertToShellyState(state contracts.PlugStateRequest) bool {
 	switch state {
 	case contracts.PlugStateRequest_PlugStateRequest_ON:
-		return true, nil
+		return true
 	case contracts.PlugStateRequest_PlugStateRequest_OFF:
-		return false, nil
+		return false
 	default:
-		return false, errors.New("unknown plug state request")
+		return false
 	}
 }
 
@@ -60,11 +70,8 @@ type SwitchSetParams struct {
 	State bool `json:"state"`
 }
 
-func (s *ShellyPlug) SetState(req *contracts.PlugLocalStateRequest) (*contracts.PlugLocalStateResult, error) {
-	state, err := ConvertToShellyState(req.GetRequestedState())
-	if err != nil {
-		return nil, err
-	}
+func (s *ShellyPlug) SetState(req contracts.PlugStateRequest) error {
+	state := ConvertToShellyState(req)
 
 	rpcReq := &RpcRequest{
 		ID:     0,
@@ -75,37 +82,32 @@ func (s *ShellyPlug) SetState(req *contracts.PlugLocalStateRequest) (*contracts.
 		},
 	}
 
-	resp, err := s.rpcCall(rpcReq)
-	if err != nil {
-		return nil, err
-	}
+	_, err := s.rpcCall(rpcReq)
 
-	var response RpcResponse
-	err = json.Unmarshal(resp, &response)
-	if err != nil {
-		return nil, err
-	}
+	return err
 
-	result, ok := response.Result.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("failed to parse response result")
-	}
+	// Shelly only returns WasOn in its response so don't need to check the payload
+	// var response RpcResponse
+	// err = json.Unmarshal(resp, &response)
+	// if err != nil {
+	// 	return err
+	// }
 
-	var stateResult SetStateResult
-	jsonData, err := json.Marshal(result)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(jsonData, &stateResult)
-	if err != nil {
-		return nil, err
-	}
+	// result, ok := response.Result.(map[string]interface{})
+	// if !ok {
+	// 	return errors.New("failed to parse response result")
+	// }
 
-	// the previous state doesn't matter. we just return the requested state
-	plugState := ConvertToPlugState(state)
-	return &contracts.PlugLocalStateResult{
-		CurrentState: plugState,
-	}, nil
+	// var stateResult SetStateResult
+	// jsonData, err := json.Marshal(result)
+	// if err != nil {
+	// 	return err
+	// }
+	// err = json.Unmarshal(jsonData, &stateResult)
+	// if err != nil {
+	// 	return err
+	// }
+
 }
 
 type SwitchGetStatusParams struct {
@@ -170,10 +172,10 @@ func (s *ShellyPlug) GetReading() (*contracts.Reading, error) {
 		return nil, err
 	}
 
-	return ConvertToReading(statusResult), nil
+	return ConvertToReading(statusResult, s.ID()), nil
 }
 
-func ConvertToReading(statusResult GetStatusResult) *contracts.Reading {
+func ConvertToReading(statusResult GetStatusResult, plugID string) *contracts.Reading {
 	state := ConvertToPlugState(statusResult.Output)
 	return &contracts.Reading{
 		State:       state,
@@ -182,6 +184,8 @@ func ConvertToReading(statusResult GetStatusResult) *contracts.Reading {
 		PowerFactor: statusResult.Pf,
 		Timestamp:   statusResult.AEnergy.MinuteTs,
 		Energy:      statusResult.AEnergy.Total,
+
+		PlugId: plugID,
 	}
 }
 
@@ -203,65 +207,4 @@ func (s *ShellyPlug) rpcCall(rpcReq *RpcRequest) ([]byte, error) {
 	}
 
 	return io.ReadAll(resp.Body)
-}
-
-type SwitchGetConfigParams struct {
-	ID int `json:"id"`
-}
-
-type GetConfigResult struct {
-	ID      int           `json:"id"`
-	Output  bool          `json:"output"`
-	APower  float64       `json:"apower"`
-	Voltage float64       `json:"voltage"`
-	Freq    float64       `json:"freq"`
-	Current float64       `json:"current"`
-	Pf      float64       `json:"pf"`
-	AEnergy ShellyAEnergy `json:"aenergy"`
-	Temp    ShellyTemp    `json:"temperature"`
-}
-
-func (s *ShellyPlug) GetConfig() (*contracts.PlugMeta, error) {
-	rpcReq := &RpcRequest{
-		ID:     0,
-		Method: "switch.getconfig",
-		Params: &SwitchGetConfigParams{
-			ID: s.SwitchNumber,
-		},
-	}
-
-	resp, err := s.rpcCall(rpcReq)
-	if err != nil {
-		return nil, err
-	}
-
-	var response RpcResponse
-	err = json.Unmarshal(resp, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	result, ok := response.Result.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("failed to parse response result")
-	}
-
-	var structuredResult GetConfigResult
-	jsonData, err := json.Marshal(result)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(jsonData, &structuredResult)
-	if err != nil {
-		return nil, err
-	}
-
-	return ConvertToConfig(structuredResult), nil
-}
-
-func ConvertToConfig(statusResult GetConfigResult) *contracts.PlugMeta {
-	// TODO: actually convert
-	return &contracts.PlugMeta{
-		Type: contracts.PlugType_PlugType_SHELLY,
-	}
 }

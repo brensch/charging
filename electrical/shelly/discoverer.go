@@ -7,12 +7,18 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/brensch/charging/plug"
+	"github.com/brensch/charging/electrical"
 
 	"github.com/hashicorp/mdns"
 )
 
-type ShellyDiscoverer struct{}
+type ShellyDiscoverer struct {
+	siteName string
+}
+
+func InitShellyDiscoverer(siteName string) *ShellyDiscoverer {
+	return &ShellyDiscoverer{siteName: siteName}
+}
 
 func findDevices() (map[string]string, error) {
 	devices := make(map[string]string)
@@ -35,16 +41,15 @@ func findDevices() (map[string]string, error) {
 	return devices, nil
 }
 
-func (d *ShellyDiscoverer) Discover() ([]plug.Plug, error) {
+func (d *ShellyDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, error) {
 	// ips is a map of IP to MAC addresses
 	ips, err := findDevices()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	fmt.Println(ips)
-
-	var plugs []plug.Plug
+	var plugs []electrical.Plug
+	var fuzes []electrical.Fuze
 
 	// Iterate over the IP addresses in the ips map
 	for ip, mac := range ips {
@@ -53,11 +58,19 @@ func (d *ShellyDiscoverer) Discover() ([]plug.Plug, error) {
 				Host:         ip,
 				Mac:          mac,
 				SwitchNumber: i,
+
+				siteID: d.siteName,
 			})
 		}
+		fuzes = append(fuzes, &ShellyFuze{
+			Host: ip,
+			Mac:  mac,
+
+			siteID: d.siteName,
+		})
 	}
 
-	return plugs, nil
+	return plugs, fuzes, nil
 }
 
 type ShellyStatus struct {

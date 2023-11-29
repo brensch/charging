@@ -6,6 +6,9 @@ import (
 	"sync"
 
 	"cloud.google.com/go/firestore"
+	"github.com/brensch/charging/electrical"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Receiver is a generic struct that listens to any type of record and makes it available locally.
@@ -22,18 +25,19 @@ const (
 	RequestsCollection = "requests"
 )
 
-func InitReceiver[T any](ctx context.Context, fs *firestore.Client, id, collectionName string) (*Receiver[T], error) {
+func InitReceiver[T any](ctx context.Context, fs *firestore.Client, ider electrical.IDer, collectionName string) (*Receiver[T], error) {
 
 	receiver := &Receiver[T]{
-		id: id,
+		id: ider.ID(),
 	}
 
 	// Set up a snapshot listener for the sitemeta document
-	docRef := fs.Collection(collectionName).Doc(id)
+	docRef := fs.Collection(collectionName).Doc(ider.ID())
 	snapshots := docRef.Snapshots(ctx)
-	defer snapshots.Stop()
 
 	go func() {
+		defer snapshots.Stop()
+
 		for {
 			snapshot, err := snapshots.Next()
 			if err != nil {
@@ -55,11 +59,32 @@ func InitReceiver[T any](ctx context.Context, fs *firestore.Client, id, collecti
 			receiver.latestMu.Lock()
 			receiver.latest = &data
 			receiver.latestMu.Unlock()
-
 		}
+
 	}()
 
-	return receiver, nil
+	// get first state
+
+	snapshot, err := docRef.Get(ctx)
+	if status.Code(err) != codes.NotFound {
+		var data T
+		err = snapshot.DataTo(&data)
+		if err != nil {
+			return receiver, err
+		}
+		receiver.latestMu.Lock()
+		defer receiver.latestMu.Unlock()
+		receiver.latest = &data
+		return receiver, nil
+	}
+
+	// create document if it doesn't exist
+	_, err = docRef.Set(ctx, map[string]string{
+		"id":      ider.ID(),
+		"site_id": ider.SiteID(),
+	})
+
+	return receiver, err
 }
 
 func (r *Receiver[T]) GetLatest() *T {

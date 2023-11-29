@@ -3,11 +3,11 @@ package shelly
 import (
 	"testing"
 
-	"github.com/brensch/charging/plug"
+	"github.com/brensch/charging/electrical"
 )
 
 func TestDiscoverDiscoverShellyDevices(t *testing.T) {
-	var discoverer plug.Discoverer
+	var discoverer electrical.Discoverer
 	_ = discoverer
 	discoverer = &ShellyDiscoverer{}
 	discoverer.Discover()
