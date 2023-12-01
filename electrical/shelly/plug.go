@@ -43,18 +43,18 @@ type RpcResponse struct {
 	Result interface{} `json:"result"`
 }
 
-func ConvertToPlugState(wasOn bool) contracts.ElectricalState {
+func ConvertToPlugState(wasOn bool) contracts.ActualState {
 	if wasOn {
-		return contracts.ElectricalState_PlugState_ON
+		return contracts.ActualState_ActualState_ON
 	}
-	return contracts.ElectricalState_PlugState_OFF
+	return contracts.ActualState_ActualState_OFF
 }
 
-func ConvertToShellyState(state contracts.PlugStateRequest) bool {
+func ConvertToShellyState(state contracts.RequestedState) bool {
 	switch state {
-	case contracts.PlugStateRequest_PlugStateRequest_ON:
+	case contracts.RequestedState_RequestedState_ON:
 		return true
-	case contracts.PlugStateRequest_PlugStateRequest_OFF:
+	case contracts.RequestedState_RequestedState_OFF:
 		return false
 	default:
 		return false
@@ -70,7 +70,7 @@ type SwitchSetParams struct {
 	State bool `json:"state"`
 }
 
-func (s *ShellyPlug) SetState(req contracts.PlugStateRequest) error {
+func (s *ShellyPlug) SetState(req contracts.RequestedState) error {
 	state := ConvertToShellyState(req)
 
 	rpcReq := &RpcRequest{

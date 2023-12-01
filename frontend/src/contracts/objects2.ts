@@ -4,89 +4,89 @@ import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "contracts";
 
-export enum PlugStateRequest {
-  /** PlugStateRequest_UNKNOWN - Default value, used as a placeholder */
-  PlugStateRequest_UNKNOWN = 0,
-  /** PlugStateRequest_ON - Relay is on */
-  PlugStateRequest_ON = 1,
-  /** PlugStateRequest_OFF - Relay is off */
-  PlugStateRequest_OFF = 2,
+export enum RequestedState {
+  /** RequestedState_UNKNOWN - Default value, used as a placeholder */
+  RequestedState_UNKNOWN = 0,
+  /** RequestedState_ON - Relay is on */
+  RequestedState_ON = 1,
+  /** RequestedState_OFF - Relay is off */
+  RequestedState_OFF = 2,
   UNRECOGNIZED = -1,
 }
 
-export function plugStateRequestFromJSON(object: any): PlugStateRequest {
+export function requestedStateFromJSON(object: any): RequestedState {
   switch (object) {
     case 0:
-    case "PlugStateRequest_UNKNOWN":
-      return PlugStateRequest.PlugStateRequest_UNKNOWN;
+    case "RequestedState_UNKNOWN":
+      return RequestedState.RequestedState_UNKNOWN;
     case 1:
-    case "PlugStateRequest_ON":
-      return PlugStateRequest.PlugStateRequest_ON;
+    case "RequestedState_ON":
+      return RequestedState.RequestedState_ON;
     case 2:
-    case "PlugStateRequest_OFF":
-      return PlugStateRequest.PlugStateRequest_OFF;
+    case "RequestedState_OFF":
+      return RequestedState.RequestedState_OFF;
     case -1:
     case "UNRECOGNIZED":
     default:
-      return PlugStateRequest.UNRECOGNIZED;
+      return RequestedState.UNRECOGNIZED;
   }
 }
 
-export function plugStateRequestToJSON(object: PlugStateRequest): string {
+export function requestedStateToJSON(object: RequestedState): string {
   switch (object) {
-    case PlugStateRequest.PlugStateRequest_UNKNOWN:
-      return "PlugStateRequest_UNKNOWN";
-    case PlugStateRequest.PlugStateRequest_ON:
-      return "PlugStateRequest_ON";
-    case PlugStateRequest.PlugStateRequest_OFF:
-      return "PlugStateRequest_OFF";
-    case PlugStateRequest.UNRECOGNIZED:
+    case RequestedState.RequestedState_UNKNOWN:
+      return "RequestedState_UNKNOWN";
+    case RequestedState.RequestedState_ON:
+      return "RequestedState_ON";
+    case RequestedState.RequestedState_OFF:
+      return "RequestedState_OFF";
+    case RequestedState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
 }
 
-export enum PlugStateRequestReason {
-  /** PlugStateRequestReason_UNKNOWN - Default value, used as a placeholder */
-  PlugStateRequestReason_UNKNOWN = 0,
-  PlugStateRequestReason_PRICE = 1,
-  PlugStateRequestReason_USER = 2,
-  PlugStateRequestReason_CREDIT = 3,
+export enum RequestedStateReason {
+  /** RequestedStateReason_UNKNOWN - Default value, used as a placeholder */
+  RequestedStateReason_UNKNOWN = 0,
+  RequestedStateReason_PRICE = 1,
+  RequestedStateReason_USER = 2,
+  RequestedStateReason_CREDIT = 3,
   UNRECOGNIZED = -1,
 }
 
-export function plugStateRequestReasonFromJSON(object: any): PlugStateRequestReason {
+export function requestedStateReasonFromJSON(object: any): RequestedStateReason {
   switch (object) {
     case 0:
-    case "PlugStateRequestReason_UNKNOWN":
-      return PlugStateRequestReason.PlugStateRequestReason_UNKNOWN;
+    case "RequestedStateReason_UNKNOWN":
+      return RequestedStateReason.RequestedStateReason_UNKNOWN;
     case 1:
-    case "PlugStateRequestReason_PRICE":
-      return PlugStateRequestReason.PlugStateRequestReason_PRICE;
+    case "RequestedStateReason_PRICE":
+      return RequestedStateReason.RequestedStateReason_PRICE;
     case 2:
-    case "PlugStateRequestReason_USER":
-      return PlugStateRequestReason.PlugStateRequestReason_USER;
+    case "RequestedStateReason_USER":
+      return RequestedStateReason.RequestedStateReason_USER;
     case 3:
-    case "PlugStateRequestReason_CREDIT":
-      return PlugStateRequestReason.PlugStateRequestReason_CREDIT;
+    case "RequestedStateReason_CREDIT":
+      return RequestedStateReason.RequestedStateReason_CREDIT;
     case -1:
     case "UNRECOGNIZED":
     default:
-      return PlugStateRequestReason.UNRECOGNIZED;
+      return RequestedStateReason.UNRECOGNIZED;
   }
 }
 
-export function plugStateRequestReasonToJSON(object: PlugStateRequestReason): string {
+export function requestedStateReasonToJSON(object: RequestedStateReason): string {
   switch (object) {
-    case PlugStateRequestReason.PlugStateRequestReason_UNKNOWN:
-      return "PlugStateRequestReason_UNKNOWN";
-    case PlugStateRequestReason.PlugStateRequestReason_PRICE:
-      return "PlugStateRequestReason_PRICE";
-    case PlugStateRequestReason.PlugStateRequestReason_USER:
-      return "PlugStateRequestReason_USER";
-    case PlugStateRequestReason.PlugStateRequestReason_CREDIT:
-      return "PlugStateRequestReason_CREDIT";
-    case PlugStateRequestReason.UNRECOGNIZED:
+    case RequestedStateReason.RequestedStateReason_UNKNOWN:
+      return "RequestedStateReason_UNKNOWN";
+    case RequestedStateReason.RequestedStateReason_PRICE:
+      return "RequestedStateReason_PRICE";
+    case RequestedStateReason.RequestedStateReason_USER:
+      return "RequestedStateReason_USER";
+    case RequestedStateReason.RequestedStateReason_CREDIT:
+      return "RequestedStateReason_CREDIT";
+    case RequestedStateReason.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -132,57 +132,57 @@ export function fuzeStateToJSON(object: FuzeState): string {
   }
 }
 
-export enum ElectricalState {
-  /** PlugState_UNKNOWN - Default value, used as a placeholder */
-  PlugState_UNKNOWN = 0,
-  /** PlugState_ON - Relay is on */
-  PlugState_ON = 1,
-  /** PlugState_OFF - Relay is off */
-  PlugState_OFF = 2,
-  /** PlugState_MIA - Not available or missing */
-  PlugState_MIA = 3,
-  /** PlugState_OVERCURRENT - Overcurrent detected */
-  PlugState_OVERCURRENT = 4,
+export enum ActualState {
+  /** ActualState_UNKNOWN - Default value, used as a placeholder */
+  ActualState_UNKNOWN = 0,
+  /** ActualState_ON - Relay is on */
+  ActualState_ON = 1,
+  /** ActualState_OFF - Relay is off */
+  ActualState_OFF = 2,
+  /** ActualState_MIA - Not available or missing */
+  ActualState_MIA = 3,
+  /** ActualState_OVERCURRENT - Overcurrent detected */
+  ActualState_OVERCURRENT = 4,
   UNRECOGNIZED = -1,
 }
 
-export function electricalStateFromJSON(object: any): ElectricalState {
+export function actualStateFromJSON(object: any): ActualState {
   switch (object) {
     case 0:
-    case "PlugState_UNKNOWN":
-      return ElectricalState.PlugState_UNKNOWN;
+    case "ActualState_UNKNOWN":
+      return ActualState.ActualState_UNKNOWN;
     case 1:
-    case "PlugState_ON":
-      return ElectricalState.PlugState_ON;
+    case "ActualState_ON":
+      return ActualState.ActualState_ON;
     case 2:
-    case "PlugState_OFF":
-      return ElectricalState.PlugState_OFF;
+    case "ActualState_OFF":
+      return ActualState.ActualState_OFF;
     case 3:
-    case "PlugState_MIA":
-      return ElectricalState.PlugState_MIA;
+    case "ActualState_MIA":
+      return ActualState.ActualState_MIA;
     case 4:
-    case "PlugState_OVERCURRENT":
-      return ElectricalState.PlugState_OVERCURRENT;
+    case "ActualState_OVERCURRENT":
+      return ActualState.ActualState_OVERCURRENT;
     case -1:
     case "UNRECOGNIZED":
     default:
-      return ElectricalState.UNRECOGNIZED;
+      return ActualState.UNRECOGNIZED;
   }
 }
 
-export function electricalStateToJSON(object: ElectricalState): string {
+export function actualStateToJSON(object: ActualState): string {
   switch (object) {
-    case ElectricalState.PlugState_UNKNOWN:
-      return "PlugState_UNKNOWN";
-    case ElectricalState.PlugState_ON:
-      return "PlugState_ON";
-    case ElectricalState.PlugState_OFF:
-      return "PlugState_OFF";
-    case ElectricalState.PlugState_MIA:
-      return "PlugState_MIA";
-    case ElectricalState.PlugState_OVERCURRENT:
-      return "PlugState_OVERCURRENT";
-    case ElectricalState.UNRECOGNIZED:
+    case ActualState.ActualState_UNKNOWN:
+      return "ActualState_UNKNOWN";
+    case ActualState.ActualState_ON:
+      return "ActualState_ON";
+    case ActualState.ActualState_OFF:
+      return "ActualState_OFF";
+    case ActualState.ActualState_MIA:
+      return "ActualState_MIA";
+    case ActualState.ActualState_OVERCURRENT:
+      return "ActualState_OVERCURRENT";
+    case ActualState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -205,8 +205,15 @@ export interface PlugSettings {
   current_limit: number;
   site_id: string;
   owner_ids: string[];
-  state_request: PlugStateRequest;
-  state_request_reason: PlugStateRequestReason;
+}
+
+export interface PlugCommand {
+  requested_state: RequestedState;
+  reason: RequestedStateReason;
+  time: number;
+  requestor: string;
+  command_id: string;
+  plug_id: string;
 }
 
 export interface FuzeLocalState {
@@ -218,11 +225,12 @@ export interface FuzeLocalState {
 export interface PlugLocalState {
   id: string;
   latest_reading: Reading | undefined;
+  latest_command_id: string;
 }
 
 export interface Reading {
   /** Indicates if the relay is currently on, off, MIA, etc. */
-  state: ElectricalState;
+  state: ActualState;
   /** The current power reading in watts */
   current: number;
   /** The voltage reading in volts */
@@ -234,6 +242,7 @@ export interface Reading {
   /** The energy reading in kWh */
   energy: number;
   plug_id: string;
+  fuze_id: string;
 }
 
 export interface ReadingChunk {
@@ -354,7 +363,7 @@ export const FuzeSettings = {
 };
 
 function createBasePlugSettings(): PlugSettings {
-  return { id: "", name: "", current_limit: 0, site_id: "", owner_ids: [], state_request: 0, state_request_reason: 0 };
+  return { id: "", name: "", current_limit: 0, site_id: "", owner_ids: [] };
 }
 
 export const PlugSettings = {
@@ -373,12 +382,6 @@ export const PlugSettings = {
     }
     for (const v of message.owner_ids) {
       writer.uint32(42).string(v!);
-    }
-    if (message.state_request !== 0) {
-      writer.uint32(48).int32(message.state_request);
-    }
-    if (message.state_request_reason !== 0) {
-      writer.uint32(56).int32(message.state_request_reason);
     }
     return writer;
   },
@@ -425,20 +428,6 @@ export const PlugSettings = {
 
           message.owner_ids.push(reader.string());
           continue;
-        case 6:
-          if (tag !== 48) {
-            break;
-          }
-
-          message.state_request = reader.int32() as any;
-          continue;
-        case 7:
-          if (tag !== 56) {
-            break;
-          }
-
-          message.state_request_reason = reader.int32() as any;
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -457,10 +446,6 @@ export const PlugSettings = {
       owner_ids: globalThis.Array.isArray(object?.owner_ids)
         ? object.owner_ids.map((e: any) => globalThis.String(e))
         : [],
-      state_request: isSet(object.state_request) ? plugStateRequestFromJSON(object.state_request) : 0,
-      state_request_reason: isSet(object.state_request_reason)
-        ? plugStateRequestReasonFromJSON(object.state_request_reason)
-        : 0,
     };
   },
 
@@ -481,12 +466,6 @@ export const PlugSettings = {
     if (message.owner_ids?.length) {
       obj.owner_ids = message.owner_ids;
     }
-    if (message.state_request !== 0) {
-      obj.state_request = plugStateRequestToJSON(message.state_request);
-    }
-    if (message.state_request_reason !== 0) {
-      obj.state_request_reason = plugStateRequestReasonToJSON(message.state_request_reason);
-    }
     return obj;
   },
 
@@ -500,8 +479,140 @@ export const PlugSettings = {
     message.current_limit = object.current_limit ?? 0;
     message.site_id = object.site_id ?? "";
     message.owner_ids = object.owner_ids?.map((e) => e) || [];
-    message.state_request = object.state_request ?? 0;
-    message.state_request_reason = object.state_request_reason ?? 0;
+    return message;
+  },
+};
+
+function createBasePlugCommand(): PlugCommand {
+  return { requested_state: 0, reason: 0, time: 0, requestor: "", command_id: "", plug_id: "" };
+}
+
+export const PlugCommand = {
+  encode(message: PlugCommand, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.requested_state !== 0) {
+      writer.uint32(8).int32(message.requested_state);
+    }
+    if (message.reason !== 0) {
+      writer.uint32(16).int32(message.reason);
+    }
+    if (message.time !== 0) {
+      writer.uint32(24).int64(message.time);
+    }
+    if (message.requestor !== "") {
+      writer.uint32(34).string(message.requestor);
+    }
+    if (message.command_id !== "") {
+      writer.uint32(42).string(message.command_id);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(50).string(message.plug_id);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): PlugCommand {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePlugCommand();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.requested_state = reader.int32() as any;
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.reason = reader.int32() as any;
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.time = longToNumber(reader.int64() as Long);
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.requestor = reader.string();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.command_id = reader.string();
+          continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PlugCommand {
+    return {
+      requested_state: isSet(object.requested_state) ? requestedStateFromJSON(object.requested_state) : 0,
+      reason: isSet(object.reason) ? requestedStateReasonFromJSON(object.reason) : 0,
+      time: isSet(object.time) ? globalThis.Number(object.time) : 0,
+      requestor: isSet(object.requestor) ? globalThis.String(object.requestor) : "",
+      command_id: isSet(object.command_id) ? globalThis.String(object.command_id) : "",
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+    };
+  },
+
+  toJSON(message: PlugCommand): unknown {
+    const obj: any = {};
+    if (message.requested_state !== 0) {
+      obj.requested_state = requestedStateToJSON(message.requested_state);
+    }
+    if (message.reason !== 0) {
+      obj.reason = requestedStateReasonToJSON(message.reason);
+    }
+    if (message.time !== 0) {
+      obj.time = Math.round(message.time);
+    }
+    if (message.requestor !== "") {
+      obj.requestor = message.requestor;
+    }
+    if (message.command_id !== "") {
+      obj.command_id = message.command_id;
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PlugCommand>, I>>(base?: I): PlugCommand {
+    return PlugCommand.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PlugCommand>, I>>(object: I): PlugCommand {
+    const message = createBasePlugCommand();
+    message.requested_state = object.requested_state ?? 0;
+    message.reason = object.reason ?? 0;
+    message.time = object.time ?? 0;
+    message.requestor = object.requestor ?? "";
+    message.command_id = object.command_id ?? "";
+    message.plug_id = object.plug_id ?? "";
     return message;
   },
 };
@@ -596,7 +707,7 @@ export const FuzeLocalState = {
 };
 
 function createBasePlugLocalState(): PlugLocalState {
-  return { id: "", latest_reading: undefined };
+  return { id: "", latest_reading: undefined, latest_command_id: "" };
 }
 
 export const PlugLocalState = {
@@ -606,6 +717,9 @@ export const PlugLocalState = {
     }
     if (message.latest_reading !== undefined) {
       Reading.encode(message.latest_reading, writer.uint32(18).fork()).ldelim();
+    }
+    if (message.latest_command_id !== "") {
+      writer.uint32(26).string(message.latest_command_id);
     }
     return writer;
   },
@@ -631,6 +745,13 @@ export const PlugLocalState = {
 
           message.latest_reading = Reading.decode(reader, reader.uint32());
           continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.latest_command_id = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -644,6 +765,7 @@ export const PlugLocalState = {
     return {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
       latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
+      latest_command_id: isSet(object.latest_command_id) ? globalThis.String(object.latest_command_id) : "",
     };
   },
 
@@ -654,6 +776,9 @@ export const PlugLocalState = {
     }
     if (message.latest_reading !== undefined) {
       obj.latest_reading = Reading.toJSON(message.latest_reading);
+    }
+    if (message.latest_command_id !== "") {
+      obj.latest_command_id = message.latest_command_id;
     }
     return obj;
   },
@@ -667,12 +792,13 @@ export const PlugLocalState = {
     message.latest_reading = (object.latest_reading !== undefined && object.latest_reading !== null)
       ? Reading.fromPartial(object.latest_reading)
       : undefined;
+    message.latest_command_id = object.latest_command_id ?? "";
     return message;
   },
 };
 
 function createBaseReading(): Reading {
-  return { state: 0, current: 0, voltage: 0, power_factor: 0, timestamp: 0, energy: 0, plug_id: "" };
+  return { state: 0, current: 0, voltage: 0, power_factor: 0, timestamp: 0, energy: 0, plug_id: "", fuze_id: "" };
 }
 
 export const Reading = {
@@ -697,6 +823,9 @@ export const Reading = {
     }
     if (message.plug_id !== "") {
       writer.uint32(58).string(message.plug_id);
+    }
+    if (message.fuze_id !== "") {
+      writer.uint32(66).string(message.fuze_id);
     }
     return writer;
   },
@@ -757,6 +886,13 @@ export const Reading = {
 
           message.plug_id = reader.string();
           continue;
+        case 8:
+          if (tag !== 66) {
+            break;
+          }
+
+          message.fuze_id = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -768,20 +904,21 @@ export const Reading = {
 
   fromJSON(object: any): Reading {
     return {
-      state: isSet(object.state) ? electricalStateFromJSON(object.state) : 0,
+      state: isSet(object.state) ? actualStateFromJSON(object.state) : 0,
       current: isSet(object.current) ? globalThis.Number(object.current) : 0,
       voltage: isSet(object.voltage) ? globalThis.Number(object.voltage) : 0,
       power_factor: isSet(object.power_factor) ? globalThis.Number(object.power_factor) : 0,
       timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
       energy: isSet(object.energy) ? globalThis.Number(object.energy) : 0,
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      fuze_id: isSet(object.fuze_id) ? globalThis.String(object.fuze_id) : "",
     };
   },
 
   toJSON(message: Reading): unknown {
     const obj: any = {};
     if (message.state !== 0) {
-      obj.state = electricalStateToJSON(message.state);
+      obj.state = actualStateToJSON(message.state);
     }
     if (message.current !== 0) {
       obj.current = message.current;
@@ -801,6 +938,9 @@ export const Reading = {
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
     }
+    if (message.fuze_id !== "") {
+      obj.fuze_id = message.fuze_id;
+    }
     return obj;
   },
 
@@ -816,6 +956,7 @@ export const Reading = {
     message.timestamp = object.timestamp ?? 0;
     message.energy = object.energy ?? 0;
     message.plug_id = object.plug_id ?? "";
+    message.fuze_id = object.fuze_id ?? "";
     return message;
   },
 };

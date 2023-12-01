@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -157,8 +158,13 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(10 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
+		cmd := randomPlugCommand(plugs[len(plugs)-1].ID())
+		_, _, err := fs.Collection(plugCommandsCollection).Add(ctx, cmd)
+		if err != nil {
+			log.Printf("Failed to add command: %v", err)
+		}
 		ControlLoop(localPlugs, localFuzes, readingsCHAN)
 		select {
 		case <-ticker.C:
@@ -166,4 +172,25 @@ func main() {
 		}
 	}
 
+}
+
+func randomPlugCommand(plugID string) contracts.PlugCommand {
+	rand.Seed(time.Now().UnixNano())
+	return contracts.PlugCommand{
+		RequestedState: contracts.RequestedState(rand.Intn(3)),       // Random state from 0 to 2.
+		Reason:         contracts.RequestedStateReason(rand.Intn(4)), // Random reason from 0 to 3.
+		Time:           time.Now().Unix(),
+		Requestor:      "User_" + randomString(5),
+		CommandId:      "Cmd_" + randomString(10),
+		PlugId:         plugID,
+	}
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	s := make([]byte, n)
+	for i := range s {
+		s[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(s)
 }

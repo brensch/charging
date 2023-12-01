@@ -19,21 +19,28 @@ message PlugSettings {
   double current_limit = 3;
   string site_id = 4;
   repeated string owner_ids = 5;
-  PlugStateRequest state_request = 6;
-  PlugStateRequestReason state_request_reason = 7;
 }
 
-enum PlugStateRequest {
-  PlugStateRequest_UNKNOWN = 0;  // Default value, used as a placeholder
-  PlugStateRequest_ON = 1;       // Relay is on
-  PlugStateRequest_OFF = 2;      // Relay is off
+message PlugCommand {
+  RequestedState requested_state = 1;
+  RequestedStateReason reason = 2;
+  int64 time = 3;
+  string requestor = 4;
+  string command_id = 5;
+  string plug_id = 6;
 }
 
-enum PlugStateRequestReason {
-  PlugStateRequestReason_UNKNOWN = 0;  // Default value, used as a placeholder
-  PlugStateRequestReason_PRICE = 1;
-  PlugStateRequestReason_USER = 2;
-  PlugStateRequestReason_CREDIT = 3;
+enum RequestedState {
+  RequestedState_UNKNOWN = 0;  // Default value, used as a placeholder
+  RequestedState_ON = 1;       // Relay is on
+  RequestedState_OFF = 2;      // Relay is off
+}
+
+enum RequestedStateReason {
+  RequestedStateReason_UNKNOWN = 0;  // Default value, used as a placeholder
+  RequestedStateReason_PRICE = 1;
+  RequestedStateReason_USER = 2;
+  RequestedStateReason_CREDIT = 3;
 }
 
 message FuzeLocalState {
@@ -51,19 +58,20 @@ enum FuzeState {
 message PlugLocalState {
   string id = 1;
   Reading latest_reading = 2;
+  string latest_command_id = 3;
 }
 
-enum ElectricalState {
-  PlugState_UNKNOWN = 0;      // Default value, used as a placeholder
-  PlugState_ON = 1;           // Relay is on
-  PlugState_OFF = 2;          // Relay is off
-  PlugState_MIA = 3;          // Not available or missing
-  PlugState_OVERCURRENT = 4;  // Overcurrent detected
+enum ActualState {
+  ActualState_UNKNOWN = 0;      // Default value, used as a placeholder
+  ActualState_ON = 1;           // Relay is on
+  ActualState_OFF = 2;          // Relay is off
+  ActualState_MIA = 3;          // Not available or missing
+  ActualState_OVERCURRENT = 4;  // Overcurrent detected
   // TODO: decide how we represent off for cost reasons etc
 }
 
 message Reading {
-  ElectricalState state =
+  ActualState state =
       1;               // Indicates if the relay is currently on, off, MIA, etc.
   double current = 2;  // The current power reading in watts
   double voltage = 3;  // The voltage reading in volts
@@ -71,6 +79,7 @@ message Reading {
   int64 timestamp = 5;      // Timestamp of the reading in seconds since epoch
   double energy = 6;        // The energy reading in kWh
   string plug_id = 7;
+  string fuze_id = 8;
 }
 
 message ReadingChunk {

@@ -25,7 +25,7 @@ func (s *Plug) SiteID() string {
 	return s.siteID
 }
 
-func (s *Plug) SetState(req contracts.PlugStateRequest) error {
+func (s *Plug) SetState(req contracts.RequestedState) error {
 	return nil
 }
 
@@ -33,7 +33,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	// Generate random values for each field
-	state := contracts.ElectricalState(rand.Intn(4)) // Assuming there are 4 states (0 to 3)
+	state := contracts.ActualState(rand.Intn(4) + 1) // Assuming there are 4 states (0 to 3)
 	current := rand.Float64() * 100                  // Random current in watts
 	voltage := rand.Float64() * 240                  // Random voltage in volts
 	powerFactor := rand.Float64()*2 - 1              // Random power factor between -1 and 1
