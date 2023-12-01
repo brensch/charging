@@ -30,7 +30,7 @@ const (
 	// keyFile   = secretDir + "remote-device-sa-key.json"
 	keyFile = "./testprovision.key"
 
-	readingsBufferSize = 100
+	readingsBufferSize = 500
 	readingsCollection = "readings"
 )
 
@@ -157,7 +157,7 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
 	for {
 		ControlLoop(localPlugs, localFuzes, readingsCHAN)
 		select {

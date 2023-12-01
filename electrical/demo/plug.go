@@ -3,7 +3,6 @@ package demo
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
@@ -40,7 +39,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 	powerFactor := rand.Float64()*2 - 1              // Random power factor between -1 and 1
 	timestamp := time.Now().Unix()                   // Current timestamp
 	energy := rand.Float64() * 1000                  // Random energy in kWh
-	plugId := "plug-" + strconv.Itoa(rand.Intn(100)) // Random plug ID
+	plugId := s.ID()
 
 	return &contracts.Reading{
 		State:       state,
