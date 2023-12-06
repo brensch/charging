@@ -1,0 +1,35 @@
+# Start with a Go base image for building Go dependencies
+FROM golang:1.16-buster as go_builder
+
+# Enable Go modules
+ENV GO111MODULE=on
+
+# Create a temporary directory for the Go module
+WORKDIR /tmp/gobuild
+RUN go mod init temp
+
+# Install the Go packages
+RUN go get google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0 \
+    && go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0 \
+    && go get github.com/srikrsna/protoc-gen-gotag@v0.6.2
+
+# Now start with a Node.js base image for the final build
+FROM node:current-buster
+
+# Install protoc
+RUN apt update && apt install -y protobuf-compiler
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install ts-protoc-gen
+RUN npm install -g ts-protoc-gen
+
+# Copy Go binaries from the Go builder image
+COPY --from=go_builder /go/bin/* /usr/local/bin/
+
+# Switch to the user with the default user id
+USER node
+
+# The script and output directories are expected to be mounted,
+# so no CMD is specified here
