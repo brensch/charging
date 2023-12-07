@@ -43,6 +43,13 @@ enum RequestedStateReason {
   RequestedStateReason_CREDIT = 3;
 }
 
+message PlugAction {
+  int64 time = 3;
+  string command_id = 5;
+  string plug_id = 6;
+  string action_id = 7;
+}
+
 message FuzeLocalState {
   string id = 1;
   double current = 2;
@@ -59,6 +66,7 @@ message PlugLocalState {
   string id = 1;
   Reading latest_reading = 2;
   string latest_command_id = 3;
+  string latest_action_id = 4;
 }
 
 enum ActualState {

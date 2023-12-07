@@ -54,15 +54,25 @@ func (p *PlugLocalState) listenForPlugCommands(ctx context.Context, fs *firestor
 
 		// Process each document change in the snapshot.
 		for _, doc := range snapshot.Changes {
-			if doc.Kind == firestore.DocumentAdded {
-				var cmd contracts.PlugCommand
-				if err := doc.Doc.DataTo(&cmd); err != nil {
-					log.Printf("Error decoding plug command: %v", err)
-					continue
-				}
-				// Process the plug command here.
-				fmt.Println("got plug command")
+			if doc.Kind != firestore.DocumentAdded {
+				continue
 			}
+
+			var cmd contracts.PlugCommand
+			err := doc.Doc.DataTo(&cmd)
+			if err != nil {
+				log.Printf("Error decoding plug command: %v", err)
+				continue
+			}
+			// Process the plug command here.
+			fmt.Println("got plug command")
+
+			err = p.plug.SetState(cmd.GetRequestedState())
+			if err != nil {
+				log.Printf("Error setting state: %v", err)
+				continue
+			}
+
 		}
 	}
 }
