@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
-	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/api/option"
@@ -35,35 +33,10 @@ const (
 	readingsCollection = "readings"
 )
 
-type Secret struct {
-	Type         string `json:"type"`
-	ProjectID    string `json:"project_id"`
-	PrivateKeyID string `json:"private_key_id"`
-	PrivateKey   string `json:"private_key"`
-	ClientEmail  string `json:"client_email"`
-	// TODO: confirm that clientID is unique to every key
-	ClientID string `json:"client_id"`
-}
-
-func extractProjectAndClientID(filePath string) (string, string, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", "", err
-	}
-
-	var secret Secret
-	err = json.Unmarshal(data, &secret)
-	if err != nil {
-		return "", "", err
-	}
-
-	return secret.ProjectID, secret.ClientID, nil
-}
-
 func main() {
 	ctx := context.Background()
 
-	projectID, clientID, err := extractProjectAndClientID(keyFile)
+	projectID, clientID, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
 		log.Fatalf("Failed to get identity: %v", err)
 	}
@@ -84,7 +57,7 @@ func main() {
 
 	discoverers := []electrical.Discoverer{
 		shelly.InitShellyDiscoverer(clientID),
-		demo.InitDiscoverer(clientID),
+		// demo.InitDiscoverer(clientID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 
@@ -151,11 +124,7 @@ func main() {
 
 	ticker := time.NewTicker(1 * time.Second)
 	for {
-		cmd := randomPlugCommand(plugs[len(plugs)-1].ID())
-		_, _, err := fs.Collection(plugCommandsCollection).Add(ctx, cmd)
-		if err != nil {
-			log.Printf("Failed to add command: %v", err)
-		}
+
 		ControlLoop(localPlugs, localFuzes, readingsCHAN)
 		select {
 		case <-ticker.C:
@@ -163,18 +132,6 @@ func main() {
 		}
 	}
 
-}
-
-func randomPlugCommand(plugID string) contracts.PlugCommand {
-	rand.Seed(time.Now().UnixNano())
-	return contracts.PlugCommand{
-		RequestedState: contracts.RequestedState(rand.Intn(3)),       // Random state from 0 to 2.
-		Reason:         contracts.RequestedStateReason(rand.Intn(4)), // Random reason from 0 to 3.
-		Time:           time.Now().Unix(),
-		Requestor:      "User_" + randomString(5),
-		CommandId:      "Cmd_" + randomString(10),
-		PlugId:         plugID,
-	}
 }
 
 func randomString(n int) string {

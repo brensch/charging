@@ -38,7 +38,7 @@ const plugCommandsCollection = "plug_commands"
 
 func (p *PlugLocalState) listenForPlugCommands(ctx context.Context, fs *firestore.Client) {
 	// Query documents where 'plug_id' matches the current plug's ID.
-	query := fs.Collection(plugCommandsCollection).Where("plug_id", "==", p.settingsReceiver.GetLatest().Id).Snapshots(ctx)
+	query := fs.Collection(plugCommandsCollection).Where("plug_id", "==", p.plug.ID()).Snapshots(ctx)
 
 	for {
 		// Get the next snapshot.
