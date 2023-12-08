@@ -10,6 +10,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
+	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/api/option"
@@ -57,7 +58,7 @@ func main() {
 
 	discoverers := []electrical.Discoverer{
 		shelly.InitShellyDiscoverer(clientID),
-		// demo.InitDiscoverer(clientID),
+		demo.InitDiscoverer(clientID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 
@@ -73,9 +74,9 @@ func main() {
 	}
 
 	// generate the local versions of plugs
-	var localPlugs []*PlugLocalState
+	var localPlugs []*LocalPlugState
 	for _, plug := range plugs {
-		localPlug, err := InitPlugLocalState(ctx, fs, plug)
+		localPlug, err := InitLocalPlugState(ctx, fs, plug)
 		if err != nil {
 			log.Fatalf("failed to init local plug: %+v", err)
 		}
@@ -83,9 +84,9 @@ func main() {
 	}
 
 	// generate the local versions of plugs
-	var localFuzes []*FuzeLocalState
+	var localFuzes []*LocalFuzeState
 	for _, fuze := range fuzes {
-		localFuze, err := InitFuzeLocalState(ctx, fs, fuze)
+		localFuze, err := InitLocalFuzeState(ctx, fs, fuze)
 		if err != nil {
 			log.Fatalf("failed to init local fuze: %+v", err)
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/brensch/charging/electrical"
@@ -13,18 +14,19 @@ import (
 
 const PlugSettingsCollection = "plug_settings"
 
-type PlugLocalState struct {
+type LocalPlugState struct {
 	plug             electrical.Plug
 	settingsReceiver *Receiver[contracts.PlugSettings]
+	siteID           string
 }
 
-func InitPlugLocalState(ctx context.Context, fs *firestore.Client, plug electrical.Plug) (*PlugLocalState, error) {
+func InitLocalPlugState(ctx context.Context, fs *firestore.Client, plug electrical.Plug) (*LocalPlugState, error) {
 	receiver, err := InitReceiver[contracts.PlugSettings](ctx, fs, plug, PlugSettingsCollection)
 	if err != nil {
 		return nil, err
 	}
 
-	plugLocal := &PlugLocalState{
+	plugLocal := &LocalPlugState{
 		plug:             plug,
 		settingsReceiver: receiver,
 	}
@@ -36,9 +38,12 @@ func InitPlugLocalState(ctx context.Context, fs *firestore.Client, plug electric
 
 const plugCommandsCollection = "plug_commands"
 
-func (p *PlugLocalState) listenForPlugCommands(ctx context.Context, fs *firestore.Client) {
+func (p *LocalPlugState) listenForPlugCommands(ctx context.Context, fs *firestore.Client) {
 	// Query documents where 'plug_id' matches the current plug's ID.
-	query := fs.Collection(plugCommandsCollection).Where("plug_id", "==", p.plug.ID()).Snapshots(ctx)
+	query := fs.Collection(plugCommandsCollection).
+		Where("plug_id", "==", p.plug.ID()).
+		Where("acked_at_ms", "==", 0).
+		Snapshots(ctx)
 
 	for {
 		// Get the next snapshot.
@@ -49,6 +54,8 @@ func (p *PlugLocalState) listenForPlugCommands(ctx context.Context, fs *firestor
 		}
 		if err != nil {
 			log.Printf("Error listening for plug commands: %v", err)
+			// TODO: proper backoff
+			time.Sleep(100 * time.Millisecond)
 			continue // Skip to the next iteration on error.
 		}
 
@@ -65,13 +72,19 @@ func (p *PlugLocalState) listenForPlugCommands(ctx context.Context, fs *firestor
 				continue
 			}
 			// Process the plug command here.
-			fmt.Println("got plug command")
+			fmt.Println("got plug command: ", cmd.PlugId, cmd.RequestedState)
 
 			err = p.plug.SetState(cmd.GetRequestedState())
 			if err != nil {
 				log.Printf("Error setting state: %v", err)
 				continue
 			}
+
+			// ack the message
+			doc.Doc.Ref.Set(ctx, map[string]interface{}{
+				"acked_at_ms":  time.Now().UnixMilli(),
+				"acked_by_key": p.plug.SiteID(),
+			})
 
 		}
 	}

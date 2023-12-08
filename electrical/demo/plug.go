@@ -2,6 +2,7 @@ package demo
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -26,6 +27,7 @@ func (s *Plug) SiteID() string {
 }
 
 func (s *Plug) SetState(req contracts.RequestedState) error {
+	log.Println("setting demo plug state: ", req.String())
 	return nil
 }
 

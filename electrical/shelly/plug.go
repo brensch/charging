@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -72,6 +73,7 @@ type SwitchSetParams struct {
 
 func (s *ShellyPlug) SetState(req contracts.RequestedState) error {
 	state := ConvertToShellyState(req)
+	log.Println("setting shelly state to: ", state)
 
 	rpcReq := &RpcRequest{
 		ID:     0,

@@ -7,7 +7,7 @@ import (
 	"github.com/brensch/charging/gen/go/contracts"
 )
 
-func ControlLoop(localPlugs []*PlugLocalState, localFuzes []*FuzeLocalState, readingsCHAN chan *contracts.Reading) {
+func ControlLoop(localPlugs []*LocalPlugState, localFuzes []*LocalFuzeState, readingsCHAN chan *contracts.Reading) {
 	fmt.Println("running control loop")
 
 	// get all plug readings

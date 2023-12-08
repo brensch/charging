@@ -22,12 +22,17 @@ message PlugSettings {
 }
 
 message PlugCommand {
+  // request component
   RequestedState requested_state = 1;
   RequestedStateReason reason = 2;
   int64 time = 3;
   string requestor = 4;
   string command_id = 5;
   string plug_id = 6;
+
+  // used to ack by the rpi
+  int64 acked_at_ms = 7;
+  string acked_by_key = 8;
 }
 
 enum RequestedState {
@@ -41,13 +46,6 @@ enum RequestedStateReason {
   RequestedStateReason_PRICE = 1;
   RequestedStateReason_USER = 2;
   RequestedStateReason_CREDIT = 3;
-}
-
-message PlugAction {
-  int64 time = 3;
-  string command_id = 5;
-  string plug_id = 6;
-  string action_id = 7;
 }
 
 message FuzeLocalState {

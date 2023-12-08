@@ -10,17 +10,17 @@ import (
 
 const FuzeSettingsCollection = "fuze_settings"
 
-type FuzeLocalState struct {
+type LocalFuzeState struct {
 	fuze             electrical.Fuze
 	settingsReceiver *Receiver[contracts.FuzeSettings]
 }
 
-func InitFuzeLocalState(ctx context.Context, fs *firestore.Client, fuze electrical.Fuze) (*FuzeLocalState, error) {
+func InitLocalFuzeState(ctx context.Context, fs *firestore.Client, fuze electrical.Fuze) (*LocalFuzeState, error) {
 	receiver, err := InitReceiver[contracts.FuzeSettings](ctx, fs, fuze, FuzeSettingsCollection)
 	if err != nil {
 		return nil, err
 	}
-	return &FuzeLocalState{
+	return &LocalFuzeState{
 		fuze:             fuze,
 		settingsReceiver: receiver,
 	}, nil

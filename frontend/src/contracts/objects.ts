@@ -208,12 +208,16 @@ export interface PlugSettings {
 }
 
 export interface PlugCommand {
+  /** request component */
   requested_state: RequestedState;
   reason: RequestedStateReason;
   time: number;
   requestor: string;
   command_id: string;
   plug_id: string;
+  /** used to ack by the rpi */
+  acked_at_ms: number;
+  acked_by_key: string;
 }
 
 export interface FuzeLocalState {
@@ -226,6 +230,7 @@ export interface PlugLocalState {
   id: string;
   latest_reading: Reading | undefined;
   latest_command_id: string;
+  latest_action_id: string;
 }
 
 export interface Reading {
@@ -484,7 +489,16 @@ export const PlugSettings = {
 };
 
 function createBasePlugCommand(): PlugCommand {
-  return { requested_state: 0, reason: 0, time: 0, requestor: "", command_id: "", plug_id: "" };
+  return {
+    requested_state: 0,
+    reason: 0,
+    time: 0,
+    requestor: "",
+    command_id: "",
+    plug_id: "",
+    acked_at_ms: 0,
+    acked_by_key: "",
+  };
 }
 
 export const PlugCommand = {
@@ -506,6 +520,12 @@ export const PlugCommand = {
     }
     if (message.plug_id !== "") {
       writer.uint32(50).string(message.plug_id);
+    }
+    if (message.acked_at_ms !== 0) {
+      writer.uint32(56).int64(message.acked_at_ms);
+    }
+    if (message.acked_by_key !== "") {
+      writer.uint32(66).string(message.acked_by_key);
     }
     return writer;
   },
@@ -559,6 +579,20 @@ export const PlugCommand = {
 
           message.plug_id = reader.string();
           continue;
+        case 7:
+          if (tag !== 56) {
+            break;
+          }
+
+          message.acked_at_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 8:
+          if (tag !== 66) {
+            break;
+          }
+
+          message.acked_by_key = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -576,6 +610,8 @@ export const PlugCommand = {
       requestor: isSet(object.requestor) ? globalThis.String(object.requestor) : "",
       command_id: isSet(object.command_id) ? globalThis.String(object.command_id) : "",
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      acked_at_ms: isSet(object.acked_at_ms) ? globalThis.Number(object.acked_at_ms) : 0,
+      acked_by_key: isSet(object.acked_by_key) ? globalThis.String(object.acked_by_key) : "",
     };
   },
 
@@ -599,6 +635,12 @@ export const PlugCommand = {
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
     }
+    if (message.acked_at_ms !== 0) {
+      obj.acked_at_ms = Math.round(message.acked_at_ms);
+    }
+    if (message.acked_by_key !== "") {
+      obj.acked_by_key = message.acked_by_key;
+    }
     return obj;
   },
 
@@ -613,6 +655,8 @@ export const PlugCommand = {
     message.requestor = object.requestor ?? "";
     message.command_id = object.command_id ?? "";
     message.plug_id = object.plug_id ?? "";
+    message.acked_at_ms = object.acked_at_ms ?? 0;
+    message.acked_by_key = object.acked_by_key ?? "";
     return message;
   },
 };
@@ -707,7 +751,7 @@ export const FuzeLocalState = {
 };
 
 function createBasePlugLocalState(): PlugLocalState {
-  return { id: "", latest_reading: undefined, latest_command_id: "" };
+  return { id: "", latest_reading: undefined, latest_command_id: "", latest_action_id: "" };
 }
 
 export const PlugLocalState = {
@@ -720,6 +764,9 @@ export const PlugLocalState = {
     }
     if (message.latest_command_id !== "") {
       writer.uint32(26).string(message.latest_command_id);
+    }
+    if (message.latest_action_id !== "") {
+      writer.uint32(34).string(message.latest_action_id);
     }
     return writer;
   },
@@ -752,6 +799,13 @@ export const PlugLocalState = {
 
           message.latest_command_id = reader.string();
           continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.latest_action_id = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -766,6 +820,7 @@ export const PlugLocalState = {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
       latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
       latest_command_id: isSet(object.latest_command_id) ? globalThis.String(object.latest_command_id) : "",
+      latest_action_id: isSet(object.latest_action_id) ? globalThis.String(object.latest_action_id) : "",
     };
   },
 
@@ -780,6 +835,9 @@ export const PlugLocalState = {
     if (message.latest_command_id !== "") {
       obj.latest_command_id = message.latest_command_id;
     }
+    if (message.latest_action_id !== "") {
+      obj.latest_action_id = message.latest_action_id;
+    }
     return obj;
   },
 
@@ -793,6 +851,7 @@ export const PlugLocalState = {
       ? Reading.fromPartial(object.latest_reading)
       : undefined;
     message.latest_command_id = object.latest_command_id ?? "";
+    message.latest_action_id = object.latest_action_id ?? "";
     return message;
   },
 };
