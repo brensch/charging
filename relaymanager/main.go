@@ -32,6 +32,8 @@ const (
 
 	readingsBufferSize = 500
 	readingsCollection = "readings"
+
+	CollectionSiteSettings = "site_settings"
 )
 
 func main() {
@@ -51,9 +53,9 @@ func main() {
 	}
 	defer fs.Close()
 
-	_, err = fs.Collection("sitemeta").Doc(clientID).Set(ctx, struct{}{})
+	err = ensureSiteSettingsDoc(ctx, fs, clientID)
 	if err != nil {
-		log.Fatalf("Failed to write to sitemeta: %v", err)
+		log.Fatalf("failed to ensure site settings: %+v", err)
 	}
 
 	discoverers := []electrical.Discoverer{
