@@ -63,7 +63,7 @@ function Page() {
     <>
       {/* <Box bg="#69d2e7" position="relative"> */}
       {/* <Box bg="#e3a018" position="relative"> */}
-      <Box bg="#ffb2ef" position="relative">
+      <Box bg="#b2fba2" position="relative">
         <Container maxW="4xl" p={4}>
           <Text fontSize="3xl">Charge your car off peak for less.</Text>
           {/* <Image

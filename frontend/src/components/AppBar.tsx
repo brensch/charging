@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from "react"
-import { Box, Flex, Container, Heading, Input } from "@chakra-ui/react"
+import {
+  Box,
+  Flex,
+  Container,
+  Heading,
+  Input,
+  Text,
+  Button,
+  Icon,
+} from "@chakra-ui/react"
 import { useNavigate, useParams } from "react-router-dom"
 import { signOut } from "firebase/auth"
 import { auth } from "../firebase"
+import { MdPower } from "react-icons/md"
 
 interface AppBarProps {}
 
 const AppBar: React.FC<AppBarProps> = () => {
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
-  const [inputValue, setInputValue] = useState(id || "")
 
-  useEffect(() => {
-    if (id) {
-      setInputValue(id)
-    }
-  }, [id])
-
-  useEffect(() => {
-    // If inputValue length is 5, navigate
-    if (inputValue.length >= 5) {
-      navigate(`/plug/${inputValue}`)
-    }
-  }, [inputValue, navigate])
+  console.log(auth.currentUser?.uid)
 
   return (
     <Box
@@ -31,28 +28,35 @@ const AppBar: React.FC<AppBarProps> = () => {
       borderBottomColor="black"
       width="100%"
     >
-      <Container maxW="4xl" paddingTop={"1.5rem"} paddingBottom={"1.5rem"}>
+      <Container maxW="4xl" paddingTop={"1rem"} paddingBottom={"1rem"}>
         <Flex
           as="form"
           alignItems="center"
           justifyContent="space-between"
           width="100%"
-          onSubmit={(e) => e.preventDefault()} // Prevent form submission
+          onSubmit={(e) => e.preventDefault()}
         >
-          <Heading marginRight="2rem" onClick={() => navigate("/")}>
-            Charging
-          </Heading>
-          <Input
-            placeholder="Plug ID"
-            size="lg"
-            height="55px"
-            variant="outline"
-            borderColor="black"
-            width="200px"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            // maxLength={5} // Limit input to 5 characters
-          />
+          <Text fontSize="2xl" fontWeight="bold" onClick={() => navigate("/")}>
+            SparkPlugs
+          </Text>
+          <Flex>
+            <Button
+              onClick={() => {
+                navigate("/account")
+              }}
+              marginRight="2"
+            >
+              Account
+            </Button>
+            <Button
+              onClick={() => {
+                navigate("/plug")
+              }}
+            >
+              {/* Replace 'MdPower' with your plug icon */}
+              <Icon as={MdPower} />
+            </Button>
+          </Flex>
         </Flex>
       </Container>
     </Box>

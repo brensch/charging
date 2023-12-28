@@ -7,89 +7,36 @@ import (
 
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
-	"github.com/stripe/stripe-go/v76/customer"
 	"github.com/stripe/stripe-go/v76/paymentintent"
 	"github.com/stripe/stripe-go/v76/paymentmethod"
 )
 
 var (
-	customerID = "cus_PB8hQDgj04WIIp"
+	customerID = "cus_PEXXEakMP5rBQ0"
+	addr       = "localhost:4242"
 )
 
 func main() {
 	// This is your test secret API key.
-	stripe.Key = "redacto"
+	stripe.Key = "sk_test_51OKyPREiJxehnemBUXuQv5NDjqkPqwozTyEwxUegS5kiCCUWhgw9C6A6HCGNR9ouAwEdym9CCvZL0Spnw34cVAow00Q67ZTEyH"
 
 	http.Handle("/", http.FileServer(http.Dir("public")))
 	// http.HandleFunc("/checkout", createCheckoutSession)
 	http.HandleFunc("/create", handleCreateCheckoutSession)
 	http.HandleFunc("/charge", handleChargeCustomer)
-	addr := "localhost:4242"
-	log.Printf("Listening on %s", addr)
+	http.HandleFunc("/hook", HandleHooks)
+	log.Printf("Listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
-// func createCheckoutSession(w http.ResponseWriter, r *http.Request) {
-// 	domain := "http://localhost:4242"
-
-// 	// Create a new customer object
-// 	cusParams := &stripe.CustomerParams{
-// 		Description: stripe.String("cool customer "),
-// 	}
-// 	cus, err := customer.New(cusParams)
-// 	if err != nil {
-// 		log.Printf("customer.New: %v", err)
-// 		return
-// 	}
-
-// 	// Configure the checkout session
-// 	params := &stripe.CheckoutSessionParams{
-// 		Customer: stripe.String(cus.ID),
-// 		LineItems: []*stripe.CheckoutSessionLineItemParams{
-// 			{
-// 				Price:    stripe.String("price_1OKykiEiJxehnemBIECNlyoM"),
-// 				Quantity: stripe.Int64(10),
-// 			},
-// 		},
-// 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-// 		SuccessURL: stripe.String(domain + "/success"),
-// 		CancelURL:  stripe.String(domain + "/cancel"),
-// 		PaymentMethodTypes: stripe.StringSlice([]string{
-// 			"card",
-// 		}),
-// 		// Save the payment method to the customer for future usage
-// 		// SetupFutureUsage: stripe.String(string(stripe.CheckoutSessionSetupFutureUsageOffSession)),
-// 	}
-
-// 	s, err := session.New(params)
-// 	if err != nil {
-// 		log.Printf("session.New: %v", err)
-// 		return
-// 	}
-
-// 	http.Redirect(w, r, s.URL, http.StatusSeeOther)
-// }
-
 func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
-
-	// Create a new customer object
-	cusParams := &stripe.CustomerParams{
-		Description: stripe.String("cool customer "),
-	}
-	cus, err := customer.New(cusParams)
-	if err != nil {
-		log.Printf("customer.New: %v", err)
-		return
-	}
-	customerID = cus.ID
 
 	params := &stripe.CheckoutSessionParams{
 		Customer: stripe.String(customerID),
 
-		// PaymentMethodTypes: stripe.StringSlice([]string{"card"}),
 		Currency:   stripe.String("aud"),
 		Mode:       stripe.String(string(stripe.CheckoutSessionModeSetup)),
-		SuccessURL: stripe.String("https://example.com/success"),
+		SuccessURL: stripe.String(fmt.Sprintf("http://%s", addr)),
 		CancelURL:  stripe.String("https://example.com/cancel"),
 	}
 
