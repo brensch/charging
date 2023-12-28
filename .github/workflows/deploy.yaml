@@ -35,20 +35,49 @@ jobs:
       contents: "read"
       id-token: "write"
     steps:
-      - id: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v3
-      - id: "Auth"
-        uses: "google-github-actions/auth@v1"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0.2.0
         with:
-          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
-          service_account: ${{ needs.setup.outputs.service_account }}
-      - name: "Deploy"
-        uses: "google-github-actions/deploy-cloudrun@v1"
-        with:
-          source: "./"
-          service: "payments"
-          region: "australia-southeast1"
-          entrypoint: "./payments"
+          project_id: ${{ needs.setup.outputs.project_id }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Build and Push Docker image to Google Container Registry
+        run: |
+          gcloud builds submit --tag gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest --file dockerfile.payments
+
+      - name: Deploy to Google Cloud Run
+        run: |
+          gcloud run deploy payments \
+            --image gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest \
+            --platform managed \
+            --region australia-southeast1 \
+            --allow-unauthenticated
+
+  # deploy-payment:
+  #   needs: setup
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: "read"
+  #     id-token: "write"
+  #   steps:
+  #     - id: "Checkout"
+  #       uses: actions/checkout@v3
+  #     - id: "Auth"
+  #       uses: "google-github-actions/auth@v1"
+  #       with:
+  #         workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
+  #         service_account: ${{ needs.setup.outputs.service_account }}
+  #     - name: "Deploy"
+  #       uses: "google-github-actions/deploy-cloudrun@v1"
+  #       with:
+  #         source: "./"
+  #         service: "payments"
+  #         region: "australia-southeast1"
+  #         entrypoint: "./payments"
 
   # deploy-backend:
   #   needs: setup
