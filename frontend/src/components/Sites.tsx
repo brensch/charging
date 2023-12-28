@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { firestore } from "../firebase"
 import { collection, onSnapshot } from "firebase/firestore"
-import { Site } from "../contracts/objects"
+import { SiteSettings, fuzeStateFromJSON } from "../contracts/objects"
 
 const SitesList: React.FC = () => {
-  const [sites, setSites] = useState<Site[]>([])
+  const [siteSettings, setSiteSettings] = useState<SiteSettings[]>([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -13,12 +13,12 @@ const SitesList: React.FC = () => {
 
     // Listen for real-time updates
     const unsubscribe = onSnapshot(sitesCollectionRef, (querySnapshot) => {
-      const sitesData: Site[] = []
+      const sitesData: SiteSettings[] = []
       querySnapshot.forEach((doc) => {
-        const site = doc.data() as Site
+        const site = SiteSettings.fromJSON(doc.data())
         sitesData.push(site)
       })
-      setSites(sitesData)
+      setSiteSettings(sitesData)
       console.log(sitesData)
     })
 
@@ -30,12 +30,9 @@ const SitesList: React.FC = () => {
     <div>
       <h1>Sites List</h1>
       <ul>
-        {sites.map((site) => (
-          <li
-            key={site.site_id}
-            onClick={() => navigate(`/site/${site.site_id}`)}
-          >
-            {site.site_id}
+        {siteSettings.map((site) => (
+          <li key={site.id} onClick={() => navigate(`/site/${site.id}`)}>
+            {site.id}
           </li>
         ))}
       </ul>

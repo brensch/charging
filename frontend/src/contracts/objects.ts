@@ -1,904 +1,1367 @@
 /* eslint-disable */
-import Long from "long";
-import _m0 from "protobufjs/minimal";
+import Long from "long"
+import _m0 from "protobufjs/minimal"
 
-export const protobufPackage = "contracts";
+export const protobufPackage = "contracts"
 
-export enum SiteState {
-  /** SiteState_UNKNOWN - Default value, used as a placeholder */
-  SiteState_UNKNOWN = 0,
-  /** SiteState_ONLINE - Relay is on */
-  SiteState_ONLINE = 1,
-  /** SiteState_OFFLINE - Relay is off */
-  SiteState_OFFLINE = 2,
-  /** SiteState_ERROR - Not available or missing */
-  SiteState_ERROR = 3,
+export enum RequestedState {
+  /** RequestedState_UNKNOWN - Default value, used as a placeholder */
+  RequestedState_UNKNOWN = 0,
+  /** RequestedState_ON - Relay is on */
+  RequestedState_ON = 1,
+  /** RequestedState_OFF - Relay is off */
+  RequestedState_OFF = 2,
   UNRECOGNIZED = -1,
 }
 
-export function siteStateFromJSON(object: any): SiteState {
+export function requestedStateFromJSON(object: any): RequestedState {
   switch (object) {
     case 0:
-    case "SiteState_UNKNOWN":
-      return SiteState.SiteState_UNKNOWN;
+    case "RequestedState_UNKNOWN":
+      return RequestedState.RequestedState_UNKNOWN
     case 1:
-    case "SiteState_ONLINE":
-      return SiteState.SiteState_ONLINE;
+    case "RequestedState_ON":
+      return RequestedState.RequestedState_ON
     case 2:
-    case "SiteState_OFFLINE":
-      return SiteState.SiteState_OFFLINE;
-    case 3:
-    case "SiteState_ERROR":
-      return SiteState.SiteState_ERROR;
+    case "RequestedState_OFF":
+      return RequestedState.RequestedState_OFF
     case -1:
     case "UNRECOGNIZED":
     default:
-      return SiteState.UNRECOGNIZED;
+      return RequestedState.UNRECOGNIZED
   }
 }
 
-export function siteStateToJSON(object: SiteState): string {
+export function requestedStateToJSON(object: RequestedState): string {
   switch (object) {
-    case SiteState.SiteState_UNKNOWN:
-      return "SiteState_UNKNOWN";
-    case SiteState.SiteState_ONLINE:
-      return "SiteState_ONLINE";
-    case SiteState.SiteState_OFFLINE:
-      return "SiteState_OFFLINE";
-    case SiteState.SiteState_ERROR:
-      return "SiteState_ERROR";
-    case SiteState.UNRECOGNIZED:
+    case RequestedState.RequestedState_UNKNOWN:
+      return "RequestedState_UNKNOWN"
+    case RequestedState.RequestedState_ON:
+      return "RequestedState_ON"
+    case RequestedState.RequestedState_OFF:
+      return "RequestedState_OFF"
+    case RequestedState.UNRECOGNIZED:
     default:
-      return "UNRECOGNIZED";
+      return "UNRECOGNIZED"
   }
 }
 
-export enum PlugState {
-  /** PlugState_UNKNOWN - Default value, used as a placeholder */
-  PlugState_UNKNOWN = 0,
-  /** PlugState_ON - Relay is on */
-  PlugState_ON = 1,
-  /** PlugState_OFF - Relay is off */
-  PlugState_OFF = 2,
-  /** PlugState_MIA - Not available or missing */
-  PlugState_MIA = 3,
-  /** PlugState_OVERCURRENT - Overcurrent detected */
-  PlugState_OVERCURRENT = 4,
+export enum RequestedStateReason {
+  /** RequestedStateReason_UNKNOWN - Default value, used as a placeholder */
+  RequestedStateReason_UNKNOWN = 0,
+  RequestedStateReason_PRICE = 1,
+  RequestedStateReason_USER = 2,
+  RequestedStateReason_CREDIT = 3,
   UNRECOGNIZED = -1,
 }
 
-export function plugStateFromJSON(object: any): PlugState {
+export function requestedStateReasonFromJSON(
+  object: any,
+): RequestedStateReason {
   switch (object) {
     case 0:
-    case "PlugState_UNKNOWN":
-      return PlugState.PlugState_UNKNOWN;
+    case "RequestedStateReason_UNKNOWN":
+      return RequestedStateReason.RequestedStateReason_UNKNOWN
     case 1:
-    case "PlugState_ON":
-      return PlugState.PlugState_ON;
+    case "RequestedStateReason_PRICE":
+      return RequestedStateReason.RequestedStateReason_PRICE
     case 2:
-    case "PlugState_OFF":
-      return PlugState.PlugState_OFF;
+    case "RequestedStateReason_USER":
+      return RequestedStateReason.RequestedStateReason_USER
     case 3:
-    case "PlugState_MIA":
-      return PlugState.PlugState_MIA;
+    case "RequestedStateReason_CREDIT":
+      return RequestedStateReason.RequestedStateReason_CREDIT
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return RequestedStateReason.UNRECOGNIZED
+  }
+}
+
+export function requestedStateReasonToJSON(
+  object: RequestedStateReason,
+): string {
+  switch (object) {
+    case RequestedStateReason.RequestedStateReason_UNKNOWN:
+      return "RequestedStateReason_UNKNOWN"
+    case RequestedStateReason.RequestedStateReason_PRICE:
+      return "RequestedStateReason_PRICE"
+    case RequestedStateReason.RequestedStateReason_USER:
+      return "RequestedStateReason_USER"
+    case RequestedStateReason.RequestedStateReason_CREDIT:
+      return "RequestedStateReason_CREDIT"
+    case RequestedStateReason.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED"
+  }
+}
+
+export enum FuzeState {
+  /** FuzeState_UNKNOWN - Default value, used as a placeholder */
+  FuzeState_UNKNOWN = 0,
+  FuzeState_OK = 1,
+  FuzeState_LIMITING = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function fuzeStateFromJSON(object: any): FuzeState {
+  switch (object) {
+    case 0:
+    case "FuzeState_UNKNOWN":
+      return FuzeState.FuzeState_UNKNOWN
+    case 1:
+    case "FuzeState_OK":
+      return FuzeState.FuzeState_OK
+    case 2:
+    case "FuzeState_LIMITING":
+      return FuzeState.FuzeState_LIMITING
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return FuzeState.UNRECOGNIZED
+  }
+}
+
+export function fuzeStateToJSON(object: FuzeState): string {
+  switch (object) {
+    case FuzeState.FuzeState_UNKNOWN:
+      return "FuzeState_UNKNOWN"
+    case FuzeState.FuzeState_OK:
+      return "FuzeState_OK"
+    case FuzeState.FuzeState_LIMITING:
+      return "FuzeState_LIMITING"
+    case FuzeState.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED"
+  }
+}
+
+export enum ActualState {
+  /** ActualState_UNKNOWN - Default value, used as a placeholder */
+  ActualState_UNKNOWN = 0,
+  /** ActualState_ON - Relay is on */
+  ActualState_ON = 1,
+  /** ActualState_OFF - Relay is off */
+  ActualState_OFF = 2,
+  /** ActualState_MIA - Not available or missing */
+  ActualState_MIA = 3,
+  /** ActualState_OVERCURRENT - Overcurrent detected */
+  ActualState_OVERCURRENT = 4,
+  UNRECOGNIZED = -1,
+}
+
+export function actualStateFromJSON(object: any): ActualState {
+  switch (object) {
+    case 0:
+    case "ActualState_UNKNOWN":
+      return ActualState.ActualState_UNKNOWN
+    case 1:
+    case "ActualState_ON":
+      return ActualState.ActualState_ON
+    case 2:
+    case "ActualState_OFF":
+      return ActualState.ActualState_OFF
+    case 3:
+    case "ActualState_MIA":
+      return ActualState.ActualState_MIA
     case 4:
-    case "PlugState_OVERCURRENT":
-      return PlugState.PlugState_OVERCURRENT;
+    case "ActualState_OVERCURRENT":
+      return ActualState.ActualState_OVERCURRENT
     case -1:
     case "UNRECOGNIZED":
     default:
-      return PlugState.UNRECOGNIZED;
+      return ActualState.UNRECOGNIZED
   }
 }
 
-export function plugStateToJSON(object: PlugState): string {
+export function actualStateToJSON(object: ActualState): string {
   switch (object) {
-    case PlugState.PlugState_UNKNOWN:
-      return "PlugState_UNKNOWN";
-    case PlugState.PlugState_ON:
-      return "PlugState_ON";
-    case PlugState.PlugState_OFF:
-      return "PlugState_OFF";
-    case PlugState.PlugState_MIA:
-      return "PlugState_MIA";
-    case PlugState.PlugState_OVERCURRENT:
-      return "PlugState_OVERCURRENT";
-    case PlugState.UNRECOGNIZED:
+    case ActualState.ActualState_UNKNOWN:
+      return "ActualState_UNKNOWN"
+    case ActualState.ActualState_ON:
+      return "ActualState_ON"
+    case ActualState.ActualState_OFF:
+      return "ActualState_OFF"
+    case ActualState.ActualState_MIA:
+      return "ActualState_MIA"
+    case ActualState.ActualState_OVERCURRENT:
+      return "ActualState_OVERCURRENT"
+    case ActualState.UNRECOGNIZED:
     default:
-      return "UNRECOGNIZED";
+      return "UNRECOGNIZED"
   }
 }
 
-export interface Plug {
-  /** The plug ID */
-  plug_id: string;
-  /** The reading for the plug */
-  reading: Reading | undefined;
+/**
+ * FuzeGroup represents a collection of plugs that need to obey an electrical
+ * limit, ie all four plugs in a shelly 4pro.
+ */
+export interface FuzeSettings {
+  id: string
+  name: string
+  current_limit: number
+  site_id: string
 }
 
 export interface PlugSettings {
-  /** The name of the plug */
-  name: string;
-  /** The plug ID */
-  plug_id: string;
-  /** The strategy for the plug */
-  strategy: PlugStrategy | undefined;
+  id: string
+  name: string
+  current_limit: number
+  site_id: string
+  owner_ids: string[]
 }
 
-export interface PlugStrategy {
-  /** Whether the plug requires the user to turn it on */
-  always_on: boolean;
-  /** People sign up to be owners if there's a strategy that requires it */
-  owner_ids: string[];
-  /** The duration the user is signing up to pay for the plug for */
-  duration_ms: number;
+export interface PlugCommand {
+  /** request component */
+  requested_state: RequestedState
+  reason: RequestedStateReason
+  time: number
+  requestor: string
+  command_id: string
+  plug_id: string
+  /** used to ack by the rpi */
+  acked_at_ms: number
+  acked_by_key: string
 }
 
-export interface Site {
-  /** The site ID */
-  site_id: string;
-  /** The state of the site */
-  state: SiteState;
-  /** The plugs at the site */
-  plugs: Plug[];
-  /** The IDs of the plugs at the site, used for firestore queries */
-  plug_ids: string[];
-  /** The timestamp of the last update in milliseconds since epoch */
-  last_updated_ms: number;
+export interface FuzeLocalState {
+  id: string
+  current: number
+  state: FuzeState
 }
 
-export interface SiteSetting {
-  /** The name of the site */
-  name: string;
-  /** The description of the site */
-  description: string;
-  /** The site ID */
-  site_id: string;
-  /** People who have admin control over the site */
-  owner_ids: string[];
-  /** The strategy for the site */
-  strategy:
-    | SiteStrategy
-    | undefined;
-  /** The settings for the plugs */
-  plugs: PlugSettings[];
-  /** Tags for the site */
-  tags: string[];
-}
-
-/** may need to capture the strategy for the site as a whole */
-export interface SiteStrategy {
+export interface PlugLocalState {
+  id: string
+  latest_reading: Reading | undefined
+  latest_command_id: string
+  latest_action_id: string
 }
 
 export interface Reading {
   /** Indicates if the relay is currently on, off, MIA, etc. */
-  state: PlugState;
+  state: ActualState
   /** The current power reading in watts */
-  current: number;
+  current: number
   /** The voltage reading in volts */
-  voltage: number;
+  voltage: number
   /** Power factor, typically a value between -1 and 1 */
-  power_factor: number;
+  power_factor: number
   /** Timestamp of the reading in seconds since epoch */
-  timestamp: number;
+  timestamp: number
+  /** The energy reading in kWh */
+  energy: number
+  plug_id: string
+  fuze_id: string
 }
 
-function createBasePlug(): Plug {
-  return { plug_id: "", reading: undefined };
+export interface ReadingChunk {
+  site_id: string
+  readings: Reading[]
 }
 
-export const Plug = {
-  encode(message: Plug, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.plug_id !== "") {
-      writer.uint32(10).string(message.plug_id);
+export interface SiteSettings {
+  id: string
+  name: string
+  description: string
+  owner_ids: string[]
+  tags: string[]
+}
+
+function createBaseFuzeSettings(): FuzeSettings {
+  return { id: "", name: "", current_limit: 0, site_id: "" }
+}
+
+export const FuzeSettings = {
+  encode(
+    message: FuzeSettings,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id)
     }
-    if (message.reading !== undefined) {
-      Reading.encode(message.reading, writer.uint32(18).fork()).ldelim();
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name)
     }
-    return writer;
+    if (message.current_limit !== 0) {
+      writer.uint32(25).double(message.current_limit)
+    }
+    if (message.site_id !== "") {
+      writer.uint32(34).string(message.site_id)
+    }
+    return writer
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): Plug {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlug();
+  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeSettings {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseFuzeSettings()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1:
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.plug_id = reader.string();
-          continue;
+          message.id = reader.string()
+          continue
         case 2:
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.reading = Reading.decode(reader, reader.uint32());
-          continue;
+          message.name = reader.string()
+          continue
+        case 3:
+          if (tag !== 25) {
+            break
+          }
+
+          message.current_limit = reader.double()
+          continue
+        case 4:
+          if (tag !== 34) {
+            break
+          }
+
+          message.site_id = reader.string()
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
-  fromJSON(object: any): Plug {
+  fromJSON(object: any): FuzeSettings {
     return {
-      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      reading: isSet(object.reading) ? Reading.fromJSON(object.reading) : undefined,
-    };
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      current_limit: isSet(object.current_limit)
+        ? globalThis.Number(object.current_limit)
+        : 0,
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+    }
   },
 
-  toJSON(message: Plug): unknown {
-    const obj: any = {};
-    if (message.plug_id !== "") {
-      obj.plug_id = message.plug_id;
+  toJSON(message: FuzeSettings): unknown {
+    const obj: any = {}
+    if (message.id !== "") {
+      obj.id = message.id
     }
-    if (message.reading !== undefined) {
-      obj.reading = Reading.toJSON(message.reading);
+    if (message.name !== "") {
+      obj.name = message.name
     }
-    return obj;
+    if (message.current_limit !== 0) {
+      obj.current_limit = message.current_limit
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id
+    }
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<Plug>, I>>(base?: I): Plug {
-    return Plug.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<FuzeSettings>, I>>(
+    base?: I,
+  ): FuzeSettings {
+    return FuzeSettings.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<Plug>, I>>(object: I): Plug {
-    const message = createBasePlug();
-    message.plug_id = object.plug_id ?? "";
-    message.reading = (object.reading !== undefined && object.reading !== null)
-      ? Reading.fromPartial(object.reading)
-      : undefined;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<FuzeSettings>, I>>(
+    object: I,
+  ): FuzeSettings {
+    const message = createBaseFuzeSettings()
+    message.id = object.id ?? ""
+    message.name = object.name ?? ""
+    message.current_limit = object.current_limit ?? 0
+    message.site_id = object.site_id ?? ""
+    return message
   },
-};
+}
 
 function createBasePlugSettings(): PlugSettings {
-  return { name: "", plug_id: "", strategy: undefined };
+  return { id: "", name: "", current_limit: 0, site_id: "", owner_ids: [] }
 }
 
 export const PlugSettings = {
-  encode(message: PlugSettings, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(
+    message: PlugSettings,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id)
+    }
     if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+      writer.uint32(18).string(message.name)
     }
-    if (message.plug_id !== "") {
-      writer.uint32(18).string(message.plug_id);
+    if (message.current_limit !== 0) {
+      writer.uint32(25).double(message.current_limit)
     }
-    if (message.strategy !== undefined) {
-      PlugStrategy.encode(message.strategy, writer.uint32(26).fork()).ldelim();
+    if (message.site_id !== "") {
+      writer.uint32(34).string(message.site_id)
     }
-    return writer;
+    for (const v of message.owner_ids) {
+      writer.uint32(42).string(v!)
+    }
+    return writer
   },
 
   decode(input: _m0.Reader | Uint8Array, length?: number): PlugSettings {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlugSettings();
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBasePlugSettings()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1:
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.name = reader.string();
-          continue;
+          message.id = reader.string()
+          continue
         case 2:
           if (tag !== 18) {
-            break;
+            break
           }
 
-          message.plug_id = reader.string();
-          continue;
+          message.name = reader.string()
+          continue
         case 3:
-          if (tag !== 26) {
-            break;
+          if (tag !== 25) {
+            break
           }
 
-          message.strategy = PlugStrategy.decode(reader, reader.uint32());
-          continue;
+          message.current_limit = reader.double()
+          continue
+        case 4:
+          if (tag !== 34) {
+            break
+          }
+
+          message.site_id = reader.string()
+          continue
+        case 5:
+          if (tag !== 42) {
+            break
+          }
+
+          message.owner_ids.push(reader.string())
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): PlugSettings {
     return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
       name: isSet(object.name) ? globalThis.String(object.name) : "",
-      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      strategy: isSet(object.strategy) ? PlugStrategy.fromJSON(object.strategy) : undefined,
-    };
+      current_limit: isSet(object.current_limit)
+        ? globalThis.Number(object.current_limit)
+        : 0,
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      owner_ids: globalThis.Array.isArray(object?.owner_ids)
+        ? object.owner_ids.map((e: any) => globalThis.String(e))
+        : [],
+    }
   },
 
   toJSON(message: PlugSettings): unknown {
-    const obj: any = {};
+    const obj: any = {}
+    if (message.id !== "") {
+      obj.id = message.id
+    }
     if (message.name !== "") {
-      obj.name = message.name;
+      obj.name = message.name
     }
-    if (message.plug_id !== "") {
-      obj.plug_id = message.plug_id;
+    if (message.current_limit !== 0) {
+      obj.current_limit = message.current_limit
     }
-    if (message.strategy !== undefined) {
-      obj.strategy = PlugStrategy.toJSON(message.strategy);
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id
     }
-    return obj;
+    if (message.owner_ids?.length) {
+      obj.owner_ids = message.owner_ids
+    }
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<PlugSettings>, I>>(base?: I): PlugSettings {
-    return PlugSettings.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<PlugSettings>, I>>(
+    base?: I,
+  ): PlugSettings {
+    return PlugSettings.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<PlugSettings>, I>>(object: I): PlugSettings {
-    const message = createBasePlugSettings();
-    message.name = object.name ?? "";
-    message.plug_id = object.plug_id ?? "";
-    message.strategy = (object.strategy !== undefined && object.strategy !== null)
-      ? PlugStrategy.fromPartial(object.strategy)
-      : undefined;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<PlugSettings>, I>>(
+    object: I,
+  ): PlugSettings {
+    const message = createBasePlugSettings()
+    message.id = object.id ?? ""
+    message.name = object.name ?? ""
+    message.current_limit = object.current_limit ?? 0
+    message.site_id = object.site_id ?? ""
+    message.owner_ids = object.owner_ids?.map((e) => e) || []
+    return message
   },
-};
-
-function createBasePlugStrategy(): PlugStrategy {
-  return { always_on: false, owner_ids: [], duration_ms: 0 };
 }
 
-export const PlugStrategy = {
-  encode(message: PlugStrategy, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.always_on === true) {
-      writer.uint32(8).bool(message.always_on);
+function createBasePlugCommand(): PlugCommand {
+  return {
+    requested_state: 0,
+    reason: 0,
+    time: 0,
+    requestor: "",
+    command_id: "",
+    plug_id: "",
+    acked_at_ms: 0,
+    acked_by_key: "",
+  }
+}
+
+export const PlugCommand = {
+  encode(
+    message: PlugCommand,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.requested_state !== 0) {
+      writer.uint32(8).int32(message.requested_state)
     }
-    for (const v of message.owner_ids) {
-      writer.uint32(18).string(v!);
+    if (message.reason !== 0) {
+      writer.uint32(16).int32(message.reason)
     }
-    if (message.duration_ms !== 0) {
-      writer.uint32(24).int64(message.duration_ms);
+    if (message.time !== 0) {
+      writer.uint32(24).int64(message.time)
     }
-    return writer;
+    if (message.requestor !== "") {
+      writer.uint32(34).string(message.requestor)
+    }
+    if (message.command_id !== "") {
+      writer.uint32(42).string(message.command_id)
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(50).string(message.plug_id)
+    }
+    if (message.acked_at_ms !== 0) {
+      writer.uint32(56).int64(message.acked_at_ms)
+    }
+    if (message.acked_by_key !== "") {
+      writer.uint32(66).string(message.acked_by_key)
+    }
+    return writer
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): PlugStrategy {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlugStrategy();
+  decode(input: _m0.Reader | Uint8Array, length?: number): PlugCommand {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBasePlugCommand()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1:
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.always_on = reader.bool();
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.owner_ids.push(reader.string());
-          continue;
-        case 3:
-          if (tag !== 24) {
-            break;
-          }
-
-          message.duration_ms = longToNumber(reader.int64() as Long);
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): PlugStrategy {
-    return {
-      always_on: isSet(object.always_on) ? globalThis.Boolean(object.always_on) : false,
-      owner_ids: globalThis.Array.isArray(object?.owner_ids)
-        ? object.owner_ids.map((e: any) => globalThis.String(e))
-        : [],
-      duration_ms: isSet(object.duration_ms) ? globalThis.Number(object.duration_ms) : 0,
-    };
-  },
-
-  toJSON(message: PlugStrategy): unknown {
-    const obj: any = {};
-    if (message.always_on === true) {
-      obj.always_on = message.always_on;
-    }
-    if (message.owner_ids?.length) {
-      obj.owner_ids = message.owner_ids;
-    }
-    if (message.duration_ms !== 0) {
-      obj.duration_ms = Math.round(message.duration_ms);
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<PlugStrategy>, I>>(base?: I): PlugStrategy {
-    return PlugStrategy.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<PlugStrategy>, I>>(object: I): PlugStrategy {
-    const message = createBasePlugStrategy();
-    message.always_on = object.always_on ?? false;
-    message.owner_ids = object.owner_ids?.map((e) => e) || [];
-    message.duration_ms = object.duration_ms ?? 0;
-    return message;
-  },
-};
-
-function createBaseSite(): Site {
-  return { site_id: "", state: 0, plugs: [], plug_ids: [], last_updated_ms: 0 };
-}
-
-export const Site = {
-  encode(message: Site, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.site_id !== "") {
-      writer.uint32(10).string(message.site_id);
-    }
-    if (message.state !== 0) {
-      writer.uint32(16).int32(message.state);
-    }
-    for (const v of message.plugs) {
-      Plug.encode(v!, writer.uint32(26).fork()).ldelim();
-    }
-    for (const v of message.plug_ids) {
-      writer.uint32(34).string(v!);
-    }
-    if (message.last_updated_ms !== 0) {
-      writer.uint32(40).int64(message.last_updated_ms);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): Site {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSite();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.site_id = reader.string();
-          continue;
+          message.requested_state = reader.int32() as any
+          continue
         case 2:
           if (tag !== 16) {
-            break;
+            break
           }
 
-          message.state = reader.int32() as any;
-          continue;
+          message.reason = reader.int32() as any
+          continue
         case 3:
-          if (tag !== 26) {
-            break;
+          if (tag !== 24) {
+            break
           }
 
-          message.plugs.push(Plug.decode(reader, reader.uint32()));
-          continue;
+          message.time = longToNumber(reader.int64() as Long)
+          continue
         case 4:
           if (tag !== 34) {
-            break;
+            break
           }
 
-          message.plug_ids.push(reader.string());
-          continue;
+          message.requestor = reader.string()
+          continue
         case 5:
-          if (tag !== 40) {
-            break;
+          if (tag !== 42) {
+            break
           }
 
-          message.last_updated_ms = longToNumber(reader.int64() as Long);
-          continue;
+          message.command_id = reader.string()
+          continue
+        case 6:
+          if (tag !== 50) {
+            break
+          }
+
+          message.plug_id = reader.string()
+          continue
+        case 7:
+          if (tag !== 56) {
+            break
+          }
+
+          message.acked_at_ms = longToNumber(reader.int64() as Long)
+          continue
+        case 8:
+          if (tag !== 66) {
+            break
+          }
+
+          message.acked_by_key = reader.string()
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
-  fromJSON(object: any): Site {
+  fromJSON(object: any): PlugCommand {
     return {
-      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      state: isSet(object.state) ? siteStateFromJSON(object.state) : 0,
-      plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => Plug.fromJSON(e)) : [],
-      plug_ids: globalThis.Array.isArray(object?.plug_ids) ? object.plug_ids.map((e: any) => globalThis.String(e)) : [],
-      last_updated_ms: isSet(object.last_updated_ms) ? globalThis.Number(object.last_updated_ms) : 0,
-    };
+      requested_state: isSet(object.requested_state)
+        ? requestedStateFromJSON(object.requested_state)
+        : 0,
+      reason: isSet(object.reason)
+        ? requestedStateReasonFromJSON(object.reason)
+        : 0,
+      time: isSet(object.time) ? globalThis.Number(object.time) : 0,
+      requestor: isSet(object.requestor)
+        ? globalThis.String(object.requestor)
+        : "",
+      command_id: isSet(object.command_id)
+        ? globalThis.String(object.command_id)
+        : "",
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      acked_at_ms: isSet(object.acked_at_ms)
+        ? globalThis.Number(object.acked_at_ms)
+        : 0,
+      acked_by_key: isSet(object.acked_by_key)
+        ? globalThis.String(object.acked_by_key)
+        : "",
+    }
   },
 
-  toJSON(message: Site): unknown {
-    const obj: any = {};
-    if (message.site_id !== "") {
-      obj.site_id = message.site_id;
+  toJSON(message: PlugCommand): unknown {
+    const obj: any = {}
+    if (message.requested_state !== 0) {
+      obj.requested_state = requestedStateToJSON(message.requested_state)
     }
-    if (message.state !== 0) {
-      obj.state = siteStateToJSON(message.state);
+    if (message.reason !== 0) {
+      obj.reason = requestedStateReasonToJSON(message.reason)
     }
-    if (message.plugs?.length) {
-      obj.plugs = message.plugs.map((e) => Plug.toJSON(e));
+    if (message.time !== 0) {
+      obj.time = Math.round(message.time)
     }
-    if (message.plug_ids?.length) {
-      obj.plug_ids = message.plug_ids;
+    if (message.requestor !== "") {
+      obj.requestor = message.requestor
     }
-    if (message.last_updated_ms !== 0) {
-      obj.last_updated_ms = Math.round(message.last_updated_ms);
+    if (message.command_id !== "") {
+      obj.command_id = message.command_id
     }
-    return obj;
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id
+    }
+    if (message.acked_at_ms !== 0) {
+      obj.acked_at_ms = Math.round(message.acked_at_ms)
+    }
+    if (message.acked_by_key !== "") {
+      obj.acked_by_key = message.acked_by_key
+    }
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<Site>, I>>(base?: I): Site {
-    return Site.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<PlugCommand>, I>>(base?: I): PlugCommand {
+    return PlugCommand.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<Site>, I>>(object: I): Site {
-    const message = createBaseSite();
-    message.site_id = object.site_id ?? "";
-    message.state = object.state ?? 0;
-    message.plugs = object.plugs?.map((e) => Plug.fromPartial(e)) || [];
-    message.plug_ids = object.plug_ids?.map((e) => e) || [];
-    message.last_updated_ms = object.last_updated_ms ?? 0;
-    return message;
+  fromPartial<I extends Exact<DeepPartial<PlugCommand>, I>>(
+    object: I,
+  ): PlugCommand {
+    const message = createBasePlugCommand()
+    message.requested_state = object.requested_state ?? 0
+    message.reason = object.reason ?? 0
+    message.time = object.time ?? 0
+    message.requestor = object.requestor ?? ""
+    message.command_id = object.command_id ?? ""
+    message.plug_id = object.plug_id ?? ""
+    message.acked_at_ms = object.acked_at_ms ?? 0
+    message.acked_by_key = object.acked_by_key ?? ""
+    return message
   },
-};
-
-function createBaseSiteSetting(): SiteSetting {
-  return { name: "", description: "", site_id: "", owner_ids: [], strategy: undefined, plugs: [], tags: [] };
 }
 
-export const SiteSetting = {
-  encode(message: SiteSetting, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.name !== "") {
-      writer.uint32(10).string(message.name);
+function createBaseFuzeLocalState(): FuzeLocalState {
+  return { id: "", current: 0, state: 0 }
+}
+
+export const FuzeLocalState = {
+  encode(
+    message: FuzeLocalState,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id)
     }
-    if (message.description !== "") {
-      writer.uint32(18).string(message.description);
+    if (message.current !== 0) {
+      writer.uint32(17).double(message.current)
     }
-    if (message.site_id !== "") {
-      writer.uint32(26).string(message.site_id);
+    if (message.state !== 0) {
+      writer.uint32(24).int32(message.state)
     }
-    for (const v of message.owner_ids) {
-      writer.uint32(34).string(v!);
-    }
-    if (message.strategy !== undefined) {
-      SiteStrategy.encode(message.strategy, writer.uint32(42).fork()).ldelim();
-    }
-    for (const v of message.plugs) {
-      PlugSettings.encode(v!, writer.uint32(50).fork()).ldelim();
-    }
-    for (const v of message.tags) {
-      writer.uint32(58).string(v!);
-    }
-    return writer;
+    return writer
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): SiteSetting {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSiteSetting();
+  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeLocalState {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseFuzeLocalState()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1:
           if (tag !== 10) {
-            break;
+            break
           }
 
-          message.name = reader.string();
-          continue;
+          message.id = reader.string()
+          continue
         case 2:
-          if (tag !== 18) {
-            break;
+          if (tag !== 17) {
+            break
           }
 
-          message.description = reader.string();
-          continue;
+          message.current = reader.double()
+          continue
         case 3:
-          if (tag !== 26) {
-            break;
+          if (tag !== 24) {
+            break
           }
 
-          message.site_id = reader.string();
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.owner_ids.push(reader.string());
-          continue;
-        case 5:
-          if (tag !== 42) {
-            break;
-          }
-
-          message.strategy = SiteStrategy.decode(reader, reader.uint32());
-          continue;
-        case 6:
-          if (tag !== 50) {
-            break;
-          }
-
-          message.plugs.push(PlugSettings.decode(reader, reader.uint32()));
-          continue;
-        case 7:
-          if (tag !== 58) {
-            break;
-          }
-
-          message.tags.push(reader.string());
-          continue;
+          message.state = reader.int32() as any
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
-  fromJSON(object: any): SiteSetting {
+  fromJSON(object: any): FuzeLocalState {
     return {
-      name: isSet(object.name) ? globalThis.String(object.name) : "",
-      description: isSet(object.description) ? globalThis.String(object.description) : "",
-      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      owner_ids: globalThis.Array.isArray(object?.owner_ids)
-        ? object.owner_ids.map((e: any) => globalThis.String(e))
-        : [],
-      strategy: isSet(object.strategy) ? SiteStrategy.fromJSON(object.strategy) : undefined,
-      plugs: globalThis.Array.isArray(object?.plugs) ? object.plugs.map((e: any) => PlugSettings.fromJSON(e)) : [],
-      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
-    };
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      current: isSet(object.current) ? globalThis.Number(object.current) : 0,
+      state: isSet(object.state) ? fuzeStateFromJSON(object.state) : 0,
+    }
   },
 
-  toJSON(message: SiteSetting): unknown {
-    const obj: any = {};
-    if (message.name !== "") {
-      obj.name = message.name;
+  toJSON(message: FuzeLocalState): unknown {
+    const obj: any = {}
+    if (message.id !== "") {
+      obj.id = message.id
     }
-    if (message.description !== "") {
-      obj.description = message.description;
+    if (message.current !== 0) {
+      obj.current = message.current
     }
-    if (message.site_id !== "") {
-      obj.site_id = message.site_id;
+    if (message.state !== 0) {
+      obj.state = fuzeStateToJSON(message.state)
     }
-    if (message.owner_ids?.length) {
-      obj.owner_ids = message.owner_ids;
-    }
-    if (message.strategy !== undefined) {
-      obj.strategy = SiteStrategy.toJSON(message.strategy);
-    }
-    if (message.plugs?.length) {
-      obj.plugs = message.plugs.map((e) => PlugSettings.toJSON(e));
-    }
-    if (message.tags?.length) {
-      obj.tags = message.tags;
-    }
-    return obj;
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<SiteSetting>, I>>(base?: I): SiteSetting {
-    return SiteSetting.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<FuzeLocalState>, I>>(
+    base?: I,
+  ): FuzeLocalState {
+    return FuzeLocalState.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<SiteSetting>, I>>(object: I): SiteSetting {
-    const message = createBaseSiteSetting();
-    message.name = object.name ?? "";
-    message.description = object.description ?? "";
-    message.site_id = object.site_id ?? "";
-    message.owner_ids = object.owner_ids?.map((e) => e) || [];
-    message.strategy = (object.strategy !== undefined && object.strategy !== null)
-      ? SiteStrategy.fromPartial(object.strategy)
-      : undefined;
-    message.plugs = object.plugs?.map((e) => PlugSettings.fromPartial(e)) || [];
-    message.tags = object.tags?.map((e) => e) || [];
-    return message;
+  fromPartial<I extends Exact<DeepPartial<FuzeLocalState>, I>>(
+    object: I,
+  ): FuzeLocalState {
+    const message = createBaseFuzeLocalState()
+    message.id = object.id ?? ""
+    message.current = object.current ?? 0
+    message.state = object.state ?? 0
+    return message
   },
-};
-
-function createBaseSiteStrategy(): SiteStrategy {
-  return {};
 }
 
-export const SiteStrategy = {
-  encode(_: SiteStrategy, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    return writer;
+function createBasePlugLocalState(): PlugLocalState {
+  return {
+    id: "",
+    latest_reading: undefined,
+    latest_command_id: "",
+    latest_action_id: "",
+  }
+}
+
+export const PlugLocalState = {
+  encode(
+    message: PlugLocalState,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id)
+    }
+    if (message.latest_reading !== undefined) {
+      Reading.encode(message.latest_reading, writer.uint32(18).fork()).ldelim()
+    }
+    if (message.latest_command_id !== "") {
+      writer.uint32(26).string(message.latest_command_id)
+    }
+    if (message.latest_action_id !== "") {
+      writer.uint32(34).string(message.latest_action_id)
+    }
+    return writer
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): SiteStrategy {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSiteStrategy();
+  decode(input: _m0.Reader | Uint8Array, length?: number): PlugLocalState {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBasePlugLocalState()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break
+          }
+
+          message.id = reader.string()
+          continue
+        case 2:
+          if (tag !== 18) {
+            break
+          }
+
+          message.latest_reading = Reading.decode(reader, reader.uint32())
+          continue
+        case 3:
+          if (tag !== 26) {
+            break
+          }
+
+          message.latest_command_id = reader.string()
+          continue
+        case 4:
+          if (tag !== 34) {
+            break
+          }
+
+          message.latest_action_id = reader.string()
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
-  fromJSON(_: any): SiteStrategy {
-    return {};
+  fromJSON(object: any): PlugLocalState {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      latest_reading: isSet(object.latest_reading)
+        ? Reading.fromJSON(object.latest_reading)
+        : undefined,
+      latest_command_id: isSet(object.latest_command_id)
+        ? globalThis.String(object.latest_command_id)
+        : "",
+      latest_action_id: isSet(object.latest_action_id)
+        ? globalThis.String(object.latest_action_id)
+        : "",
+    }
   },
 
-  toJSON(_: SiteStrategy): unknown {
-    const obj: any = {};
-    return obj;
+  toJSON(message: PlugLocalState): unknown {
+    const obj: any = {}
+    if (message.id !== "") {
+      obj.id = message.id
+    }
+    if (message.latest_reading !== undefined) {
+      obj.latest_reading = Reading.toJSON(message.latest_reading)
+    }
+    if (message.latest_command_id !== "") {
+      obj.latest_command_id = message.latest_command_id
+    }
+    if (message.latest_action_id !== "") {
+      obj.latest_action_id = message.latest_action_id
+    }
+    return obj
   },
 
-  create<I extends Exact<DeepPartial<SiteStrategy>, I>>(base?: I): SiteStrategy {
-    return SiteStrategy.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<PlugLocalState>, I>>(
+    base?: I,
+  ): PlugLocalState {
+    return PlugLocalState.fromPartial(base ?? ({} as any))
   },
-  fromPartial<I extends Exact<DeepPartial<SiteStrategy>, I>>(_: I): SiteStrategy {
-    const message = createBaseSiteStrategy();
-    return message;
+  fromPartial<I extends Exact<DeepPartial<PlugLocalState>, I>>(
+    object: I,
+  ): PlugLocalState {
+    const message = createBasePlugLocalState()
+    message.id = object.id ?? ""
+    message.latest_reading =
+      object.latest_reading !== undefined && object.latest_reading !== null
+        ? Reading.fromPartial(object.latest_reading)
+        : undefined
+    message.latest_command_id = object.latest_command_id ?? ""
+    message.latest_action_id = object.latest_action_id ?? ""
+    return message
   },
-};
+}
 
 function createBaseReading(): Reading {
-  return { state: 0, current: 0, voltage: 0, power_factor: 0, timestamp: 0 };
+  return {
+    state: 0,
+    current: 0,
+    voltage: 0,
+    power_factor: 0,
+    timestamp: 0,
+    energy: 0,
+    plug_id: "",
+    fuze_id: "",
+  }
 }
 
 export const Reading = {
-  encode(message: Reading, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(
+    message: Reading,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
     if (message.state !== 0) {
-      writer.uint32(8).int32(message.state);
+      writer.uint32(8).int32(message.state)
     }
     if (message.current !== 0) {
-      writer.uint32(17).double(message.current);
+      writer.uint32(17).double(message.current)
     }
     if (message.voltage !== 0) {
-      writer.uint32(25).double(message.voltage);
+      writer.uint32(25).double(message.voltage)
     }
     if (message.power_factor !== 0) {
-      writer.uint32(33).double(message.power_factor);
+      writer.uint32(33).double(message.power_factor)
     }
     if (message.timestamp !== 0) {
-      writer.uint32(40).int64(message.timestamp);
+      writer.uint32(40).int64(message.timestamp)
     }
-    return writer;
+    if (message.energy !== 0) {
+      writer.uint32(49).double(message.energy)
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(58).string(message.plug_id)
+    }
+    if (message.fuze_id !== "") {
+      writer.uint32(66).string(message.fuze_id)
+    }
+    return writer
   },
 
   decode(input: _m0.Reader | Uint8Array, length?: number): Reading {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseReading();
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseReading()
     while (reader.pos < end) {
-      const tag = reader.uint32();
+      const tag = reader.uint32()
       switch (tag >>> 3) {
         case 1:
           if (tag !== 8) {
-            break;
+            break
           }
 
-          message.state = reader.int32() as any;
-          continue;
+          message.state = reader.int32() as any
+          continue
         case 2:
           if (tag !== 17) {
-            break;
+            break
           }
 
-          message.current = reader.double();
-          continue;
+          message.current = reader.double()
+          continue
         case 3:
           if (tag !== 25) {
-            break;
+            break
           }
 
-          message.voltage = reader.double();
-          continue;
+          message.voltage = reader.double()
+          continue
         case 4:
           if (tag !== 33) {
-            break;
+            break
           }
 
-          message.power_factor = reader.double();
-          continue;
+          message.power_factor = reader.double()
+          continue
         case 5:
           if (tag !== 40) {
-            break;
+            break
           }
 
-          message.timestamp = longToNumber(reader.int64() as Long);
-          continue;
+          message.timestamp = longToNumber(reader.int64() as Long)
+          continue
+        case 6:
+          if (tag !== 49) {
+            break
+          }
+
+          message.energy = reader.double()
+          continue
+        case 7:
+          if (tag !== 58) {
+            break
+          }
+
+          message.plug_id = reader.string()
+          continue
+        case 8:
+          if (tag !== 66) {
+            break
+          }
+
+          message.fuze_id = reader.string()
+          continue
       }
       if ((tag & 7) === 4 || tag === 0) {
-        break;
+        break
       }
-      reader.skipType(tag & 7);
+      reader.skipType(tag & 7)
     }
-    return message;
+    return message
   },
 
   fromJSON(object: any): Reading {
     return {
-      state: isSet(object.state) ? plugStateFromJSON(object.state) : 0,
+      state: isSet(object.state) ? actualStateFromJSON(object.state) : 0,
       current: isSet(object.current) ? globalThis.Number(object.current) : 0,
       voltage: isSet(object.voltage) ? globalThis.Number(object.voltage) : 0,
-      power_factor: isSet(object.power_factor) ? globalThis.Number(object.power_factor) : 0,
-      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
-    };
+      power_factor: isSet(object.power_factor)
+        ? globalThis.Number(object.power_factor)
+        : 0,
+      timestamp: isSet(object.timestamp)
+        ? globalThis.Number(object.timestamp)
+        : 0,
+      energy: isSet(object.energy) ? globalThis.Number(object.energy) : 0,
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      fuze_id: isSet(object.fuze_id) ? globalThis.String(object.fuze_id) : "",
+    }
   },
 
   toJSON(message: Reading): unknown {
-    const obj: any = {};
+    const obj: any = {}
     if (message.state !== 0) {
-      obj.state = plugStateToJSON(message.state);
+      obj.state = actualStateToJSON(message.state)
     }
     if (message.current !== 0) {
-      obj.current = message.current;
+      obj.current = message.current
     }
     if (message.voltage !== 0) {
-      obj.voltage = message.voltage;
+      obj.voltage = message.voltage
     }
     if (message.power_factor !== 0) {
-      obj.power_factor = message.power_factor;
+      obj.power_factor = message.power_factor
     }
     if (message.timestamp !== 0) {
-      obj.timestamp = Math.round(message.timestamp);
+      obj.timestamp = Math.round(message.timestamp)
     }
-    return obj;
+    if (message.energy !== 0) {
+      obj.energy = message.energy
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id
+    }
+    if (message.fuze_id !== "") {
+      obj.fuze_id = message.fuze_id
+    }
+    return obj
   },
 
   create<I extends Exact<DeepPartial<Reading>, I>>(base?: I): Reading {
-    return Reading.fromPartial(base ?? ({} as any));
+    return Reading.fromPartial(base ?? ({} as any))
   },
   fromPartial<I extends Exact<DeepPartial<Reading>, I>>(object: I): Reading {
-    const message = createBaseReading();
-    message.state = object.state ?? 0;
-    message.current = object.current ?? 0;
-    message.voltage = object.voltage ?? 0;
-    message.power_factor = object.power_factor ?? 0;
-    message.timestamp = object.timestamp ?? 0;
-    return message;
+    const message = createBaseReading()
+    message.state = object.state ?? 0
+    message.current = object.current ?? 0
+    message.voltage = object.voltage ?? 0
+    message.power_factor = object.power_factor ?? 0
+    message.timestamp = object.timestamp ?? 0
+    message.energy = object.energy ?? 0
+    message.plug_id = object.plug_id ?? ""
+    message.fuze_id = object.fuze_id ?? ""
+    return message
   },
-};
+}
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+function createBaseReadingChunk(): ReadingChunk {
+  return { site_id: "", readings: [] }
+}
 
-export type DeepPartial<T> = T extends Builtin ? T
-  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
-  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
-  : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
-  : Partial<T>;
+export const ReadingChunk = {
+  encode(
+    message: ReadingChunk,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.site_id !== "") {
+      writer.uint32(10).string(message.site_id)
+    }
+    for (const v of message.readings) {
+      Reading.encode(v!, writer.uint32(18).fork()).ldelim()
+    }
+    return writer
+  },
 
-type KeysOfUnion<T> = T extends T ? keyof T : never;
-export type Exact<P, I extends P> = P extends Builtin ? P
-  : P & { [K in keyof P]: Exact<P[K], I[K]> } & { [K in Exclude<keyof I, KeysOfUnion<P>>]: never };
+  decode(input: _m0.Reader | Uint8Array, length?: number): ReadingChunk {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseReadingChunk()
+    while (reader.pos < end) {
+      const tag = reader.uint32()
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break
+          }
+
+          message.site_id = reader.string()
+          continue
+        case 2:
+          if (tag !== 18) {
+            break
+          }
+
+          message.readings.push(Reading.decode(reader, reader.uint32()))
+          continue
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break
+      }
+      reader.skipType(tag & 7)
+    }
+    return message
+  },
+
+  fromJSON(object: any): ReadingChunk {
+    return {
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      readings: globalThis.Array.isArray(object?.readings)
+        ? object.readings.map((e: any) => Reading.fromJSON(e))
+        : [],
+    }
+  },
+
+  toJSON(message: ReadingChunk): unknown {
+    const obj: any = {}
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id
+    }
+    if (message.readings?.length) {
+      obj.readings = message.readings.map((e) => Reading.toJSON(e))
+    }
+    return obj
+  },
+
+  create<I extends Exact<DeepPartial<ReadingChunk>, I>>(
+    base?: I,
+  ): ReadingChunk {
+    return ReadingChunk.fromPartial(base ?? ({} as any))
+  },
+  fromPartial<I extends Exact<DeepPartial<ReadingChunk>, I>>(
+    object: I,
+  ): ReadingChunk {
+    const message = createBaseReadingChunk()
+    message.site_id = object.site_id ?? ""
+    message.readings = object.readings?.map((e) => Reading.fromPartial(e)) || []
+    return message
+  },
+}
+
+function createBaseSiteSettings(): SiteSettings {
+  return { id: "", name: "", description: "", owner_ids: [], tags: [] }
+}
+
+export const SiteSettings = {
+  encode(
+    message: SiteSettings,
+    writer: _m0.Writer = _m0.Writer.create(),
+  ): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id)
+    }
+    if (message.name !== "") {
+      writer.uint32(18).string(message.name)
+    }
+    if (message.description !== "") {
+      writer.uint32(26).string(message.description)
+    }
+    for (const v of message.owner_ids) {
+      writer.uint32(34).string(v!)
+    }
+    for (const v of message.tags) {
+      writer.uint32(50).string(v!)
+    }
+    return writer
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): SiteSettings {
+    const reader =
+      input instanceof _m0.Reader ? input : _m0.Reader.create(input)
+    let end = length === undefined ? reader.len : reader.pos + length
+    const message = createBaseSiteSettings()
+    while (reader.pos < end) {
+      const tag = reader.uint32()
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break
+          }
+
+          message.id = reader.string()
+          continue
+        case 2:
+          if (tag !== 18) {
+            break
+          }
+
+          message.name = reader.string()
+          continue
+        case 3:
+          if (tag !== 26) {
+            break
+          }
+
+          message.description = reader.string()
+          continue
+        case 4:
+          if (tag !== 34) {
+            break
+          }
+
+          message.owner_ids.push(reader.string())
+          continue
+        case 6:
+          if (tag !== 50) {
+            break
+          }
+
+          message.tags.push(reader.string())
+          continue
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break
+      }
+      reader.skipType(tag & 7)
+    }
+    return message
+  },
+
+  fromJSON(object: any): SiteSettings {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      name: isSet(object.name) ? globalThis.String(object.name) : "",
+      description: isSet(object.description)
+        ? globalThis.String(object.description)
+        : "",
+      owner_ids: globalThis.Array.isArray(object?.owner_ids)
+        ? object.owner_ids.map((e: any) => globalThis.String(e))
+        : [],
+      tags: globalThis.Array.isArray(object?.tags)
+        ? object.tags.map((e: any) => globalThis.String(e))
+        : [],
+    }
+  },
+
+  toJSON(message: SiteSettings): unknown {
+    const obj: any = {}
+    if (message.id !== "") {
+      obj.id = message.id
+    }
+    if (message.name !== "") {
+      obj.name = message.name
+    }
+    if (message.description !== "") {
+      obj.description = message.description
+    }
+    if (message.owner_ids?.length) {
+      obj.owner_ids = message.owner_ids
+    }
+    if (message.tags?.length) {
+      obj.tags = message.tags
+    }
+    return obj
+  },
+
+  create<I extends Exact<DeepPartial<SiteSettings>, I>>(
+    base?: I,
+  ): SiteSettings {
+    return SiteSettings.fromPartial(base ?? ({} as any))
+  },
+  fromPartial<I extends Exact<DeepPartial<SiteSettings>, I>>(
+    object: I,
+  ): SiteSettings {
+    const message = createBaseSiteSettings()
+    message.id = object.id ?? ""
+    message.name = object.name ?? ""
+    message.description = object.description ?? ""
+    message.owner_ids = object.owner_ids?.map((e) => e) || []
+    message.tags = object.tags?.map((e) => e) || []
+    return message
+  },
+}
+
+type Builtin =
+  | Date
+  | Function
+  | Uint8Array
+  | string
+  | number
+  | boolean
+  | undefined
+
+export type DeepPartial<T> = T extends Builtin
+  ? T
+  : T extends globalThis.Array<infer U>
+  ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U>
+  ? ReadonlyArray<DeepPartial<U>>
+  : T extends {}
+  ? { [K in keyof T]?: DeepPartial<T[K]> }
+  : Partial<T>
+
+type KeysOfUnion<T> = T extends T ? keyof T : never
+export type Exact<P, I extends P> = P extends Builtin
+  ? P
+  : P & { [K in keyof P]: Exact<P[K], I[K]> } & {
+      [K in Exclude<keyof I, KeysOfUnion<P>>]: never
+    }
 
 function longToNumber(long: Long): number {
   if (long.gt(globalThis.Number.MAX_SAFE_INTEGER)) {
-    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER")
   }
-  return long.toNumber();
+  return long.toNumber()
 }
 
 if (_m0.util.Long !== Long) {
-  _m0.util.Long = Long as any;
-  _m0.configure();
+  _m0.util.Long = Long as any
+  _m0.configure()
 }
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined;
+  return value !== null && value !== undefined
 }

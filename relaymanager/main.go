@@ -2,178 +2,146 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
-	"os"
 	"time"
 
+	"cloud.google.com/go/firestore"
+	"github.com/brensch/charging/common"
+	"github.com/brensch/charging/electrical"
+	"github.com/brensch/charging/electrical/demo"
+	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/gen/go/contracts"
-	"google.golang.org/api/idtoken"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 const siteName = "brendo pi"
 const configFile = "./siteSettings.json"
 
 const (
-	// address = "mothership-yufwwel26a-km.a.run.app"
-	address = "localhost"
+	address = "mothership-yufwwel26a-km.a.run.app"
+	// address = "localhost"
 
-	port = ":50051"
-	// port    = ":443"
-	keyPath = "./remote-device-sa-key.json"
+	// port = ":50051"
+	port      = ":443"
+	configDir = "./config/"
+	secretDir = "./secrets/"
+	// keyFile   = secretDir + "remote-device-sa-key.json"
+	keyFile = "./testprovision.key"
+
+	readingsBufferSize = 500
+	readingsCollection = "readings"
+
+	CollectionSiteSettings = "site_settings"
 )
-
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(result)
-}
 
 func main() {
 	ctx := context.Background()
 
-	key, err := os.ReadFile(keyPath)
+	projectID, clientID, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
-		log.Fatalf("Failed to load key: %v", err)
+		log.Fatalf("Failed to get identity: %v", err)
 	}
 
-	// connect to grpc server
-	tokenSource, err := idtoken.NewTokenSource(ctx, "https://"+address, option.WithCredentialsJSON(key))
+	fmt.Println(clientID, projectID)
+
+	// Set up Firestore client
+	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
-		log.Fatalf("new token source: %v", err)
+		log.Fatalf("Failed to create Firestore client: %v", err)
 	}
-	config := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	creds := credentials.NewTLS(config)
-	conn, err := grpc.Dial(
-		address+port,
-		grpc.WithTransportCredentials(creds),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: tokenSource}),
-	)
+	defer fs.Close()
+
+	err = ensureSiteSettingsDoc(ctx, fs, clientID)
 	if err != nil {
-		log.Fatalf("Did not connect: %v", err)
-	}
-	defer conn.Close()
-
-	c := contracts.NewUpdateServiceClient(conn)
-
-	// Check for the presence of config file and load it if it exists
-	var loadedSiteSettings *contracts.SiteSetting
-	if _, err := os.Stat(configFile); err == nil {
-		data, err := os.ReadFile(configFile)
-		if err != nil {
-			log.Fatalf("Failed to read config file: %v", err)
-		}
-		err = json.Unmarshal(data, &loadedSiteSettings)
-		if err != nil {
-			log.Fatalf("Failed to unmarshal config file: %v", err)
-		}
+		log.Fatalf("failed to ensure site settings: %+v", err)
 	}
 
-	if loadedSiteSettings == nil {
-		// Create a Site with static name
-		createSiteRes, err := c.CreateSite(ctx, &contracts.CreateSiteRequest{
-			Name: siteName,
-		})
-		if err != nil {
-			log.Fatalf("Failed to create site: %v", err)
-		}
-		log.Printf("Created Site with ID: %s", createSiteRes.SiteId)
+	discoverers := []electrical.Discoverer{
+		shelly.InitShellyDiscoverer(clientID),
+		demo.InitDiscoverer(clientID),
+		// as we make more plug brands we can add their discoverers here.
+	}
 
-		// Generate Multiple Plugs for that Site locally
-		numberOfPlugs := rand.Intn(10) + 1
-		plugs := make([]*contracts.Plug, numberOfPlugs)
-		plugSettings := make([]*contracts.PlugSettings, numberOfPlugs)
-		for i := 0; i < numberOfPlugs; i++ {
-			plugID := generateRandomString(5) // Assuming plug IDs are also random strings
-			plugs[i] = &contracts.Plug{
-				PlugId: plugID,
-				Reading: &contracts.Reading{
-					State:       contracts.PlugState(rand.Intn(5)),
-					Current:     rand.Float64() * 1000,
-					Voltage:     110 + rand.Float64()*10,
-					PowerFactor: rand.Float64()*2 - 1,
-					Timestamp:   time.Now().Unix(),
-				},
+	plugs := make([]electrical.Plug, 0)
+	fuzes := make([]electrical.Fuze, 0)
+	for _, discoverer := range discoverers {
+		discoveredPlugs, discoveredFuzes, err := discoverer.Discover()
+		if err != nil {
+			log.Fatalf("Failed to discover plugs: %v", err)
+		}
+		plugs = append(plugs, discoveredPlugs...)
+		fuzes = append(fuzes, discoveredFuzes...)
+	}
+
+	// generate the local versions of plugs
+	var localPlugs []*LocalPlugState
+	for _, plug := range plugs {
+		localPlug, err := InitLocalPlugState(ctx, fs, plug)
+		if err != nil {
+			log.Fatalf("failed to init local plug: %+v", err)
+		}
+		localPlugs = append(localPlugs, localPlug)
+	}
+
+	// generate the local versions of plugs
+	var localFuzes []*LocalFuzeState
+	for _, fuze := range fuzes {
+		localFuze, err := InitLocalFuzeState(ctx, fs, fuze)
+		if err != nil {
+			log.Fatalf("failed to init local fuze: %+v", err)
+		}
+		localFuzes = append(localFuzes, localFuze)
+	}
+
+	// TODO: check if there are any plugs we don't have locally that do exist in firestore
+
+	// sends data to firestore once we get enough readings
+	readingsCHAN := make(chan *contracts.Reading, 10)
+	go func() {
+		var readings []*contracts.Reading
+		for reading := range readingsCHAN {
+			readings = append(readings, reading)
+
+			if len(readings) < readingsBufferSize {
+				continue
 			}
-			plugSettings[i] = &contracts.PlugSettings{
-				Name:     "name me",
-				PlugId:   plugID,
-				Strategy: &contracts.PlugStrategy{}, // This needs to be set properly
+
+			// if we've hit chunk size, flush to fs and reset list
+			readingChunk := &contracts.ReadingChunk{
+				SiteId:   clientID,
+				Readings: readings,
 			}
-			log.Printf("Generated Plug with ID: %s for Site: %s", plugID, createSiteRes.SiteId)
-		}
-		// Save SiteSetting to disk
-		siteSettings := &contracts.SiteSetting{
-			Name:   siteName,
-			SiteId: createSiteRes.SiteId,
-			Plugs:  plugSettings,
-		}
+			_, _, err := fs.Collection(readingsCollection).Add(ctx, readingChunk)
+			if err != nil {
+				log.Println("failed to flush reading chunk", err)
+				continue
+			}
+			log.Println("flushed reading chunk")
 
-		data, err := json.Marshal(siteSettings)
-		if err != nil {
-			log.Fatalf("Failed to marshal site settings: %v", err)
+			readings = []*contracts.Reading{}
+
 		}
-		err = os.WriteFile(configFile, data, 0644)
-		if err != nil {
-			log.Fatalf("Failed to write site settings to disk: %v", err)
-		}
+	}()
 
-		loadedSiteSettings = siteSettings
-	} else {
-		log.Printf("Loaded site settings from disk for Site ID: %s", loadedSiteSettings.SiteId)
-	}
-
-	res, err := c.UpdateSiteSetting(ctx, &contracts.UpdateSiteSettingsRequest{SiteSettings: loadedSiteSettings})
-	if err != nil {
-		log.Fatalf("Failed to store site settings: %v", err)
-	}
-	log.Print("saved response: ", res)
-
-	// Continuous loop generating random readings for all plugs and updating the site
+	ticker := time.NewTicker(1 * time.Second)
 	for {
-		plugs := make([]*contracts.Plug, len(loadedSiteSettings.Plugs))
 
-		for i, plugSetting := range loadedSiteSettings.Plugs {
-			reading := &contracts.Reading{
-				State:       contracts.PlugState(rand.Intn(5)),
-				Current:     rand.Float64() * 1000,
-				Voltage:     110 + rand.Float64()*10,
-				PowerFactor: rand.Float64()*2 - 1,
-				Timestamp:   time.Now().Unix(),
-			}
-
-			plugs[i] = &contracts.Plug{
-				PlugId:  plugSetting.PlugId,
-				Reading: reading,
-			}
-
-			log.Printf("Generated Reading for Plug ID: %s, Current: %f, Voltage: %f", plugSetting.PlugId, reading.Current, reading.Voltage)
+		ControlLoop(localPlugs, localFuzes, readingsCHAN)
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
 		}
-
-		site := &contracts.Site{
-			SiteId: loadedSiteSettings.SiteId,
-			Plugs:  plugs,
-			State:  contracts.SiteState_SiteState_ONLINE,
-		}
-
-		_, err := c.UpdateSite(ctx, &contracts.UpdateSiteRequest{UpdatedSite: site})
-		if err != nil {
-			log.Fatalf("Failed to update site: %v", err)
-		}
-
-		log.Printf("Updated Site with ID: %s with new plug readings", loadedSiteSettings.SiteId)
-
-		time.Sleep(10 * time.Second)
 	}
+
+}
+
+func randomString(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	s := make([]byte, n)
+	for i := range s {
+		s[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(s)
 }

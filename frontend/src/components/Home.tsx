@@ -2,68 +2,68 @@ import { Box, Container, Grid, Text } from "@chakra-ui/react"
 import { collection, onSnapshot } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate } from "react-router-dom"
-import { Site, SiteSetting } from "../contracts/objects"
+// import { Site, SiteSetting } from "../contracts/objects"
 import { firestore } from "../firebase"
 import SiteCard from "./SiteCard"
 
 function Page() {
   const navigate = useNavigate()
-  const [sites, setSites] = useState<Site[]>([])
+  // const [sites, setSites] = useState<Site[]>([])
 
-  useEffect(() => {
-    const sitesCollectionRef = collection(firestore, "sites") // Reference to the sites collection
+  // useEffect(() => {
+  //   const sitesCollectionRef = collection(firestore, "sites") // Reference to the sites collection
 
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(sitesCollectionRef, (querySnapshot) => {
-      const sitesData: Site[] = []
-      querySnapshot.forEach((doc) => {
-        const site = Site.fromJSON(doc.data())
-        sitesData.push(site)
-      })
-      setSites(sitesData)
-      console.log(sitesData)
-    })
+  //   // Listen for real-time updates
+  //   const unsubscribe = onSnapshot(sitesCollectionRef, (querySnapshot) => {
+  //     const sitesData: Site[] = []
+  //     querySnapshot.forEach((doc) => {
+  //       const site = Site.fromJSON(doc.data())
+  //       sitesData.push(site)
+  //     })
+  //     setSites(sitesData)
+  //     console.log(sitesData)
+  //   })
 
-    // Clean up the listener on component unmount
-    return () => unsubscribe()
-  }, [])
+  //   // Clean up the listener on component unmount
+  //   return () => unsubscribe()
+  // }, [])
 
-  const [siteSettings, setSiteSettings] = useState<SiteSetting[]>([])
+  // const [siteSettings, setSiteSettings] = useState<SiteSetting[]>([])
 
-  useEffect(() => {
-    const siteSettingsCollectionRef = collection(firestore, "sitesettings") // Reference to the site settings collection
+  // useEffect(() => {
+  //   const siteSettingsCollectionRef = collection(firestore, "sitesettings") // Reference to the site settings collection
 
-    // Listen for real-time updates
-    const unsubscribe = onSnapshot(
-      siteSettingsCollectionRef,
-      (querySnapshot) => {
-        const sitesData: SiteSetting[] = []
-        querySnapshot.forEach((doc) => {
-          const siteSetting = SiteSetting.fromJSON(doc.data())
-          sitesData.push(siteSetting)
-        })
-        setSiteSettings(sitesData)
-      },
-    )
+  //   // Listen for real-time updates
+  //   const unsubscribe = onSnapshot(
+  //     siteSettingsCollectionRef,
+  //     (querySnapshot) => {
+  //       const sitesData: SiteSetting[] = []
+  //       querySnapshot.forEach((doc) => {
+  //         const siteSetting = SiteSetting.fromJSON(doc.data())
+  //         sitesData.push(siteSetting)
+  //       })
+  //       setSiteSettings(sitesData)
+  //     },
+  //   )
 
-    // Clean up the listener on component unmount
-    return () => unsubscribe()
-  }, [])
+  //   // Clean up the listener on component unmount
+  //   return () => unsubscribe()
+  // }, [])
 
-  // Helper function to get the SiteSetting for a given Site
-  const getSiteSettingForSite = (site: Site) => {
-    return siteSettings.find(
-      (siteSetting) => siteSetting.site_id === site.site_id,
-    )
-  }
+  // // Helper function to get the SiteSetting for a given Site
+  // const getSiteSettingForSite = (site: Site) => {
+  //   return siteSettings.find(
+  //     (siteSetting) => siteSetting.site_id === site.site_id,
+  //   )
+  // }
 
-  console.log(siteSettings)
+  // console.log(siteSettings)
 
   return (
     <>
       {/* <Box bg="#69d2e7" position="relative"> */}
       {/* <Box bg="#e3a018" position="relative"> */}
-      <Box bg="#ffb2ef" position="relative">
+      <Box bg="#b2fba2" position="relative">
         <Container maxW="4xl" p={4}>
           <Text fontSize="3xl">Charge your car off peak for less.</Text>
           {/* <Image
@@ -79,7 +79,7 @@ function Page() {
       </Box>
       <Outlet />
       <Box borderBottom="1px solid" borderColor="black" />
-      <Container maxW="4xl" p={4}>
+      {/* <Container maxW="4xl" p={4}>
         <Text fontSize="xl" align={"right"}>
           Here's some places that have signed up.
         </Text>
@@ -92,7 +92,7 @@ function Page() {
             />
           ))}
         </Grid>
-      </Container>
+      </Container> */}
     </>
   )
 }

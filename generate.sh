@@ -11,11 +11,6 @@ rm -rf ./frontend/src/contracts
 mkdir -p ./gen/go
 mkdir -p ./frontend/src/contracts
 
-npm install -g ts-protoc-gen
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-go install github.com/srikrsna/protoc-gen-gotag@latest
-
 # Step 1: Generate Go code
 protoc \
   -I=. \
@@ -29,7 +24,6 @@ protoc \
   --gotag_out=auto="firestore-as-snake",outdir="./gen":./ \
   contracts/*.proto
 
-
 # Generate JavaScript and TypeScript code
 # Note: For TypeScript generation, you need the protoc-gen-ts plugin.
 # You can install it using npm.
@@ -39,8 +33,4 @@ protoc \
   --ts_proto_out="service=grpc-web:./frontend/src" \
   --ts_proto_opt=esModuleInterop=true,snakeToCamel=false \
   contracts/*.proto
-  
 
-
-# Navigate back to the root
-cd ..

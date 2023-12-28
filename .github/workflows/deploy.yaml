@@ -28,7 +28,7 @@ jobs:
           echo "::set-output name=service_account::$SERVICE_ACCOUNT"
           echo "::set-output name=workload_identity_provider::$WORKLOAD_IDENTITY_PROVIDER"
 
-  deploy-backend:
+  deploy-payment:
     needs: setup
     runs-on: ubuntu-latest
     permissions:
@@ -45,9 +45,30 @@ jobs:
       - name: "Deploy"
         uses: "google-github-actions/deploy-cloudrun@v1"
         with:
-          source: "./mothership"
-          service: "mothership"
+          source: "./payments"
+          service: "payments"
           region: "australia-southeast2"
+
+  # deploy-backend:
+  #   needs: setup
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: "read"
+  #     id-token: "write"
+  #   steps:
+  #     - id: "Checkout"
+  #       uses: actions/checkout@v3
+  #     - id: "Auth"
+  #       uses: "google-github-actions/auth@v1"
+  #       with:
+  #         workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
+  #         service_account: ${{ needs.setup.outputs.service_account }}
+  #     - name: "Deploy"
+  #       uses: "google-github-actions/deploy-cloudrun@v1"
+  #       with:
+  #         source: "./mothership"
+  #         service: "mothership"
+  #         region: "australia-southeast2"
 
   # deploy-to-firebase:
   #   needs: setup
