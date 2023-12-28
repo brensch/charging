@@ -47,7 +47,7 @@ jobs:
         with:
           source: "./payments"
           service: "payments"
-          region: "australia-southeast2"
+          region: "australia-southeast1"
 
   # deploy-backend:
   #   needs: setup
