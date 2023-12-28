@@ -47,7 +47,7 @@ jobs:
 
       - name: Build and Push Docker image to Google Container Registry
         run: |
-          gcloud builds submit --tag gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest --file dockerfile.payments
+          gcloud builds submit --config cloudbuild.yaml --substitutions=_PROJECT_ID=${{ needs.setup.outputs.project_id }}
 
       - name: Deploy to Google Cloud Run
         run: |
