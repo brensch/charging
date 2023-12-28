@@ -45,9 +45,10 @@ jobs:
       - name: "Deploy"
         uses: "google-github-actions/deploy-cloudrun@v1"
         with:
-          source: "./payments"
+          source: "./"
           service: "payments"
           region: "australia-southeast1"
+          entrypoint: "./payments"
 
   # deploy-backend:
   #   needs: setup
