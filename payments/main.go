@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
@@ -13,7 +14,6 @@ import (
 
 var (
 	customerID = "cus_PEXXEakMP5rBQ0"
-	addr       = "localhost:4242"
 )
 
 func main() {
@@ -25,6 +25,12 @@ func main() {
 	http.HandleFunc("/create", handleCreateCheckoutSession)
 	http.HandleFunc("/charge", handleChargeCustomer)
 	http.HandleFunc("/hook", HandleHooks)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "4242" // default port if not specified
+	}
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
 	log.Printf("Listening on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
@@ -36,7 +42,7 @@ func handleCreateCheckoutSession(w http.ResponseWriter, r *http.Request) {
 
 		Currency:   stripe.String("aud"),
 		Mode:       stripe.String(string(stripe.CheckoutSessionModeSetup)),
-		SuccessURL: stripe.String(fmt.Sprintf("http://%s", addr)),
+		SuccessURL: stripe.String("https://sparkplugs.io/success"),
 		CancelURL:  stripe.String("https://example.com/cancel"),
 	}
 
