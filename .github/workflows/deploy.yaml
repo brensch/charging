@@ -46,20 +46,20 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ needs.setup.outputs.project_id }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          # service_account_key: ${{ secrets.GCP_SA_KEY }}
+          # export_default_credentials: true
 
       - name: Build and Push Docker image to Google Container Registry
         run: |
           gcloud builds submit --config cloudbuild.yaml --substitutions=_PROJECT_ID=${{ needs.setup.outputs.project_id }}
 
-      # - name: Deploy to Google Cloud Run
-      #   run: |
-      #     gcloud run deploy payments \
-      #       --image gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest \
-      #       --platform managed \
-      #       --region australia-southeast1 \
-      #       --allow-unauthenticated
+      - name: Deploy to Google Cloud Run
+        run: |
+          gcloud run deploy payments \
+            --image gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest \
+            --platform managed \
+            --region australia-southeast1 \
+            --allow-unauthenticated
 
       # Deploy to Google Cloud Functions
       - name: Deploy to Google Cloud Functions
@@ -67,7 +67,6 @@ jobs:
           gcloud functions deploy OnUserCreated \
             --entry-point OnUserCreated \
             --runtime go116 \
-            --trigger-event providers/cloud.firestore/eventTypes/document.create \
-            --trigger-resource "projects/${{ needs.setup.outputs.project_id }}/databases/(default)/documents/users/{userId}" \
-            --image gcr.io/${{ needs.setup.outputs.project_id }}/payments:latest \
+            --trigger-event providers/firebase.auth/eventTypes/user.create \
+            --source=./payments/functions \
             --region australia-southeast1
