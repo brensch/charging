@@ -1,59 +1,43 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 
-	"github.com/stripe/stripe-go/v76"
+	"github.com/gin-gonic/gin"
+	"github.com/stripe/stripe-go/v76/webhook"
 )
 
-func HandleHooks(w http.ResponseWriter, req *http.Request) {
+func handleWebhook(c *gin.Context) {
 	const MaxBodyBytes = int64(65536)
-	req.Body = http.MaxBytesReader(w, req.Body, MaxBodyBytes)
-	payload, err := ioutil.ReadAll(req.Body)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodyBytes)
+
+	payload, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading request body: %v\n", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
+		log.Printf("Error reading request body: %v\n", err)
+		c.Status(http.StatusServiceUnavailable)
 		return
 	}
 
-	event := stripe.Event{}
+	// This is your Stripe CLI webhook secret for testing your endpoint locally.
+	endpointSecret := "whsec_990f93f7953a6fa0bd59e0bf51f9df2f0b3055581b9f4cf1fe70675e5be99df9"
 
-	if err := json.Unmarshal(payload, &event); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse webhook body json: %v\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+	event, err := webhook.ConstructEvent(payload, c.GetHeader("Stripe-Signature"), endpointSecret)
+	if err != nil {
+		log.Printf("Error verifying webhook signature: %v\n", err)
+		c.Status(http.StatusBadRequest) // Return a 400 error on a bad signature
 		return
 	}
 
 	// Unmarshal the event data into an appropriate struct depending on its Type
 	switch event.Type {
 	case "payment_intent.succeeded":
-		var paymentIntent stripe.PaymentIntent
-		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		// Then define and call a func to handle the successful payment intent.
-		// handlePaymentIntentSucceeded(paymentIntent)
-	case "payment_method.attached":
-		var paymentMethod stripe.PaymentMethod
-		err := json.Unmarshal(event.Data.Raw, &paymentMethod)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		// Then define and call a func to handle the successful attachment of a PaymentMethod.
-		// handlePaymentMethodAttached(paymentMethod)
-	// ... handle other event types
+		// Then define and call a function to handle the event payment_intent.succeeded
+		// ... handle other event types
 	default:
-		fmt.Fprintf(os.Stderr, "Unhandled event type: %s\n", event.Type)
+		log.Printf("Unhandled event type: %s\n", event.Type)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	c.Status(http.StatusOK)
 }

@@ -41,10 +41,8 @@ function Page() {
   }
 
   const handleAutoTopUpConfirm = () => {
-    console.log(
-      `Auto top up when below: $${autoTopUpTrigger}, top up with: $${autoTopUpAmount}`,
-    )
-    // Implement the auto top up functionality here
+    const url = `http://localhost:4242/enrol/${auth.currentUser?.uid}`
+    window.open(url, "_blank")
   }
 
   return (
