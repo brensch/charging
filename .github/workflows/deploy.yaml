@@ -37,6 +37,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - id: "Auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
+          service_account: ${{ needs.setup.outputs.service_account }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v0.2.0
