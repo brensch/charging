@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	cloud.google.com/go/firestore v1.13.0
-	cloud.google.com/go/functions v1.15.1
+	firebase.google.com/go v3.13.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/hashicorp/mdns v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -19,7 +19,9 @@ require (
 	cloud.google.com/go v0.110.8 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/iam v1.1.2 // indirect
 	cloud.google.com/go/longrunning v0.5.1 // indirect
+	cloud.google.com/go/storage v1.30.1 // indirect
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
