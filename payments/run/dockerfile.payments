@@ -7,7 +7,7 @@ COPY . .
 
 # Compile the application
 # Disable CGO and statically link the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o payments ./payments
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o payments ./payments/run
 
 # Final image
 FROM alpine:latest  
