@@ -73,14 +73,7 @@ func ReceiveCustomerCharge(ctx context.Context, fs *firestore.Client, e stripe.E
 	if !ok {
 		return fmt.Errorf("'amount_received' field not in object")
 	}
-	fmt.Println("yooooooooo", int64(amountReceived))
-	// // Use reflection to find out the type of amountReceivedInt
-	// amountReceivedType := reflect.TypeOf(amountReceivedInt)
-	// fmt.Println("Type of 'amount_received':", amountReceivedType)
-	// amountReceived, ok := amountReceivedInt
-	// if !ok {
-	// 	return fmt.Errorf("'amount_received' field not int32")
-	// }
+
 	customerID, ok := e.Data.Object["customer"].(string)
 	if !ok {
 		return fmt.Errorf("'customer' field not in object")
@@ -127,6 +120,7 @@ func RecordTransaction(ctx context.Context, fs *firestore.Client, t *contracts.T
 	// Start a Firestore transaction
 	err := fs.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 		// Step 1: Add the transaction record
+		t.CompletedMs = time.Now().UnixMilli()
 		transactionRef := fs.Collection(FsCollTransactions).NewDoc()
 		err := tx.Set(transactionRef, t)
 		if err != nil {
