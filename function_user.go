@@ -7,13 +7,10 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/payments"
 
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/customer"
-)
-
-const (
-	FsCollStripeCustomers = "stripe_customers"
 )
 
 func init() {
@@ -53,14 +50,28 @@ func OnUserCreated(ctx context.Context, e AuthEvent) error {
 		return err
 	}
 
+	// create the stripe customer object
 	stripeCustomer := &contracts.StripeCustomer{
 		StripeId:    c.ID,
 		FirestoreId: e.UID,
 	}
 
-	_, err = fs.Collection(FsCollStripeCustomers).Doc(e.UID).Set(ctx, stripeCustomer)
+	_, err = fs.Collection(payments.FsCollStripeCustomers).Doc(e.UID).Set(ctx, stripeCustomer)
 	if err != nil {
-		slog.Error("failed to save to firestore", err)
+		slog.Error("failed to create stripe customer object", err)
+		return err
+	}
+
+	// create the balance object
+	customerBalance := &contracts.CustomerBalance{
+		FirestoreId:  e.UID,
+		AmountAud:    0,
+		LastUpdateMs: time.Now().UnixMilli(),
+	}
+
+	_, err = fs.Collection(payments.FsCollCustomerBalances).Doc(e.UID).Set(ctx, customerBalance)
+	if err != nil {
+		slog.Error("failed to create customer balance object", err)
 		return err
 	}
 

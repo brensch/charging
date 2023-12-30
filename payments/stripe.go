@@ -2,55 +2,92 @@ package payments
 
 import (
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 
+	"cloud.google.com/go/firestore"
+	"github.com/brensch/charging/common"
+	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
-	"github.com/stripe/stripe-go/v76/webhook"
 )
 
-func HandleWebhook(c *gin.Context) {
+const (
+	FsCollStripeCustomers = "stripe_customers"
+)
+
+type Handler struct {
+	fs *firestore.Client
+}
+
+func InitHandler(fs *firestore.Client) *Handler {
+	return &Handler{
+		fs: fs,
+	}
+}
+
+func (h *Handler) HandleWebhook(c *gin.Context) {
 	const MaxBodyBytes = int64(65536)
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodyBytes)
 
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		log.Printf("Error reading request body: %v\n", err)
+		slog.Error("Error reading request body", "error", err)
 		c.Status(http.StatusServiceUnavailable)
 		return
 	}
 
-	// This is your Stripe CLI webhook secret for testing your endpoint locally.
-	endpointSecret := "whsec_990f93f7953a6fa0bd59e0bf51f9df2f0b3055581b9f4cf1fe70675e5be99df9"
+	signature := c.GetHeader("Stripe-Signature")
 
-	event, err := webhook.ConstructEvent(payload, c.GetHeader("Stripe-Signature"), endpointSecret)
+	event, err := DecodeEvent(payload, endpointSecret, signature)
 	if err != nil {
-		log.Printf("Error verifying webhook signature: %v\n", err)
+		slog.Error("Error decoding event", "error", err)
 		c.Status(http.StatusBadRequest) // Return a 400 error on a bad signature
 		return
 	}
 
-	// Unmarshal the event data into an appropriate struct depending on its Type
-	switch event.Type {
-	case "payment_intent.succeeded":
-		// Then define and call a function to handle the event payment_intent.succeeded
-		// ... handle other event types
-	default:
-		log.Printf("Unhandled event type: %s\n", event.Type)
+	err = RouteEvent(c.Request.Context(), h.fs, event)
+	if err != nil {
+		slog.Error("Error handling event", "error", err)
+		c.Status(http.StatusBadRequest) // Return a 400 error on a bad signature
+		return
 	}
 
 	c.Status(http.StatusOK)
 }
 
-func HandleEnrolCustomer(c *gin.Context) {
+func (h *Handler) HandleEnrolCustomer(c *gin.Context) {
+
 	// Extract the customerID from the URL
 	customerID := c.Param("customerID")
 
+	// get the stripecustomer doc for that customer
+	fs, err := common.InitFirestore(c.Request.Context())
+	if err != nil {
+		slog.Error("error creating firestore client", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	doc, err := fs.Collection(FsCollStripeCustomers).Doc(customerID).Get(c.Request.Context())
+	if err != nil {
+		slog.Error("error retrieving customer info", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	var stripeCustomer *contracts.StripeCustomer
+	err = doc.DataTo(&stripeCustomer)
+	if err != nil {
+		slog.Error("error decoding stripe customer", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
 	// The Setup mode is not a transaction, it's just to setup payment intent
 	params := &stripe.CheckoutSessionParams{
-		Customer:   stripe.String(customerID),
+		Customer:   stripe.String(stripeCustomer.StripeId),
 		Currency:   stripe.String("aud"),
 		Mode:       stripe.String(string(stripe.CheckoutSessionModeSetup)),
 		SuccessURL: stripe.String("https://sparkplugs.io/success"),
@@ -59,8 +96,8 @@ func HandleEnrolCustomer(c *gin.Context) {
 
 	s, err := session.New(params)
 	if err != nil {
-		log.Printf("session.New: %v", err)
-		c.String(http.StatusInternalServerError, err.Error())
+		slog.Error("error creating new stripe session", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 

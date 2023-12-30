@@ -25,8 +25,9 @@ type StripeCustomer struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StripeId    string `protobuf:"bytes,1,opt,name=stripe_id,json=stripeId,proto3" json:"stripe_id,omitempty" firestore:"stripe_id"`
-	FirestoreId string `protobuf:"bytes,2,opt,name=firestore_id,json=firestoreId,proto3" json:"firestore_id,omitempty" firestore:"firestore_id"`
+	StripeId       string   `protobuf:"bytes,1,opt,name=stripe_id,json=stripeId,proto3" json:"stripe_id,omitempty" firestore:"stripe_id"`
+	FirestoreId    string   `protobuf:"bytes,2,opt,name=firestore_id,json=firestoreId,proto3" json:"firestore_id,omitempty" firestore:"firestore_id"`
+	PaymentMethods []string `protobuf:"bytes,3,rep,name=payment_methods,json=paymentMethods,proto3" json:"payment_methods,omitempty" firestore:"payment_methods"`
 }
 
 func (x *StripeCustomer) Reset() {
@@ -75,18 +76,249 @@ func (x *StripeCustomer) GetFirestoreId() string {
 	return ""
 }
 
+func (x *StripeCustomer) GetPaymentMethods() []string {
+	if x != nil {
+		return x.PaymentMethods
+	}
+	return nil
+}
+
+type PaymentRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FirestoreId string `protobuf:"bytes,1,opt,name=firestore_id,json=firestoreId,proto3" json:"firestore_id,omitempty" firestore:"firestore_id"`
+	AmountAud   int64  `protobuf:"varint,2,opt,name=amount_aud,json=amountAud,proto3" json:"amount_aud,omitempty" firestore:"amount_aud"`
+}
+
+func (x *PaymentRequest) Reset() {
+	*x = PaymentRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_contracts_stripe_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PaymentRequest) ProtoMessage() {}
+
+func (x *PaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_stripe_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PaymentRequest.ProtoReflect.Descriptor instead.
+func (*PaymentRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_stripe_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PaymentRequest) GetFirestoreId() string {
+	if x != nil {
+		return x.FirestoreId
+	}
+	return ""
+}
+
+func (x *PaymentRequest) GetAmountAud() int64 {
+	if x != nil {
+		return x.AmountAud
+	}
+	return 0
+}
+
+type Transaction struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FirestoreId   string `protobuf:"bytes,1,opt,name=firestore_id,json=firestoreId,proto3" json:"firestore_id,omitempty" firestore:"firestore_id"`
+	PaymentMethod string `protobuf:"bytes,2,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty" firestore:"payment_method"`
+	AmountAud     int64  `protobuf:"varint,3,opt,name=amount_aud,json=amountAud,proto3" json:"amount_aud,omitempty" firestore:"amount_aud"`
+	CompletedMs   int64  `protobuf:"varint,4,opt,name=completed_ms,json=completedMs,proto3" json:"completed_ms,omitempty" firestore:"completed_ms"`
+	PaymentId     string `protobuf:"bytes,5,opt,name=payment_id,json=paymentId,proto3" json:"payment_id,omitempty" firestore:"payment_id"`
+}
+
+func (x *Transaction) Reset() {
+	*x = Transaction{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_contracts_stripe_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Transaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Transaction) ProtoMessage() {}
+
+func (x *Transaction) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_stripe_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Transaction.ProtoReflect.Descriptor instead.
+func (*Transaction) Descriptor() ([]byte, []int) {
+	return file_contracts_stripe_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Transaction) GetFirestoreId() string {
+	if x != nil {
+		return x.FirestoreId
+	}
+	return ""
+}
+
+func (x *Transaction) GetPaymentMethod() string {
+	if x != nil {
+		return x.PaymentMethod
+	}
+	return ""
+}
+
+func (x *Transaction) GetAmountAud() int64 {
+	if x != nil {
+		return x.AmountAud
+	}
+	return 0
+}
+
+func (x *Transaction) GetCompletedMs() int64 {
+	if x != nil {
+		return x.CompletedMs
+	}
+	return 0
+}
+
+func (x *Transaction) GetPaymentId() string {
+	if x != nil {
+		return x.PaymentId
+	}
+	return ""
+}
+
+type CustomerBalance struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	FirestoreId  string `protobuf:"bytes,1,opt,name=firestore_id,json=firestoreId,proto3" json:"firestore_id,omitempty" firestore:"firestore_id"`
+	AmountAud    int64  `protobuf:"varint,2,opt,name=amount_aud,json=amountAud,proto3" json:"amount_aud,omitempty" firestore:"amount_aud"` // 1000 = 1
+	LastUpdateMs int64  `protobuf:"varint,3,opt,name=last_update_ms,json=lastUpdateMs,proto3" json:"last_update_ms,omitempty" firestore:"last_update_ms"`
+}
+
+func (x *CustomerBalance) Reset() {
+	*x = CustomerBalance{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_contracts_stripe_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CustomerBalance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerBalance) ProtoMessage() {}
+
+func (x *CustomerBalance) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_stripe_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerBalance.ProtoReflect.Descriptor instead.
+func (*CustomerBalance) Descriptor() ([]byte, []int) {
+	return file_contracts_stripe_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CustomerBalance) GetFirestoreId() string {
+	if x != nil {
+		return x.FirestoreId
+	}
+	return ""
+}
+
+func (x *CustomerBalance) GetAmountAud() int64 {
+	if x != nil {
+		return x.AmountAud
+	}
+	return 0
+}
+
+func (x *CustomerBalance) GetLastUpdateMs() int64 {
+	if x != nil {
+		return x.LastUpdateMs
+	}
+	return 0
+}
+
 var File_contracts_stripe_proto protoreflect.FileDescriptor
 
 var file_contracts_stripe_proto_rawDesc = []byte{
 	0x0a, 0x16, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x73, 0x2f, 0x73, 0x74, 0x72, 0x69,
 	0x70, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x09, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61,
-	0x63, 0x74, 0x73, 0x22, 0x50, 0x0a, 0x0e, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x43, 0x75, 0x73,
+	0x63, 0x74, 0x73, 0x22, 0x79, 0x0a, 0x0e, 0x53, 0x74, 0x72, 0x69, 0x70, 0x65, 0x43, 0x75, 0x73,
 	0x74, 0x6f, 0x6d, 0x65, 0x72, 0x12, 0x1b, 0x0a, 0x09, 0x73, 0x74, 0x72, 0x69, 0x70, 0x65, 0x5f,
 	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x73, 0x74, 0x72, 0x69, 0x70, 0x65,
 	0x49, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x5f,
 	0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74,
-	0x6f, 0x72, 0x65, 0x49, 0x64, 0x42, 0x0e, 0x5a, 0x0c, 0x67, 0x6f, 0x2f, 0x63, 0x6f, 0x6e, 0x74,
-	0x72, 0x61, 0x63, 0x74, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x72, 0x65, 0x49, 0x64, 0x12, 0x27, 0x0a, 0x0f, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74,
+	0x5f, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x0e,
+	0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x73, 0x22, 0x52,
+	0x0a, 0x0e, 0x50, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x21, 0x0a, 0x0c, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72,
+	0x65, 0x49, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x61, 0x75,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x41,
+	0x75, 0x64, 0x22, 0xb8, 0x01, 0x0a, 0x0b, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x21, 0x0a, 0x0c, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x5f,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74,
+	0x6f, 0x72, 0x65, 0x49, 0x64, 0x12, 0x25, 0x0a, 0x0e, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74,
+	0x5f, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x70,
+	0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x1d, 0x0a, 0x0a,
+	0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x61, 0x75, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x09, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x41, 0x75, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x63,
+	0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x5f, 0x6d, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x03, 0x52, 0x0b, 0x63, 0x6f, 0x6d, 0x70, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x4d, 0x73, 0x12, 0x1d,
+	0x0a, 0x0a, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x22, 0x79, 0x0a,
+	0x0f, 0x43, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x65, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65,
+	0x12, 0x21, 0x0a, 0x0c, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x66, 0x69, 0x72, 0x65, 0x73, 0x74, 0x6f, 0x72,
+	0x65, 0x49, 0x64, 0x12, 0x1d, 0x0a, 0x0a, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x61, 0x75,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x41,
+	0x75, 0x64, 0x12, 0x24, 0x0a, 0x0e, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x5f, 0x6d, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x03, 0x52, 0x0c, 0x6c, 0x61, 0x73, 0x74,
+	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x73, 0x42, 0x0e, 0x5a, 0x0c, 0x67, 0x6f, 0x2f, 0x63,
+	0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -101,9 +333,12 @@ func file_contracts_stripe_proto_rawDescGZIP() []byte {
 	return file_contracts_stripe_proto_rawDescData
 }
 
-var file_contracts_stripe_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_contracts_stripe_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_contracts_stripe_proto_goTypes = []interface{}{
-	(*StripeCustomer)(nil), // 0: contracts.StripeCustomer
+	(*StripeCustomer)(nil),  // 0: contracts.StripeCustomer
+	(*PaymentRequest)(nil),  // 1: contracts.PaymentRequest
+	(*Transaction)(nil),     // 2: contracts.Transaction
+	(*CustomerBalance)(nil), // 3: contracts.CustomerBalance
 }
 var file_contracts_stripe_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -131,6 +366,42 @@ func file_contracts_stripe_proto_init() {
 				return nil
 			}
 		}
+		file_contracts_stripe_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PaymentRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_contracts_stripe_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Transaction); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_contracts_stripe_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CustomerBalance); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -138,7 +409,7 @@ func file_contracts_stripe_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_contracts_stripe_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
