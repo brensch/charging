@@ -1,19 +1,21 @@
-package main
+package payments
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stripe/stripe-go/v76"
+	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
 )
 
-func handleWebhook(c *gin.Context) {
+func HandleWebhook(c *gin.Context) {
 	const MaxBodyBytes = int64(65536)
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxBodyBytes)
 
-	payload, err := ioutil.ReadAll(c.Request.Body)
+	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Printf("Error reading request body: %v\n", err)
 		c.Status(http.StatusServiceUnavailable)
@@ -40,4 +42,27 @@ func handleWebhook(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func HandleEnrolCustomer(c *gin.Context) {
+	// Extract the customerID from the URL
+	customerID := c.Param("customerID")
+
+	// The Setup mode is not a transaction, it's just to setup payment intent
+	params := &stripe.CheckoutSessionParams{
+		Customer:   stripe.String(customerID),
+		Currency:   stripe.String("aud"),
+		Mode:       stripe.String(string(stripe.CheckoutSessionModeSetup)),
+		SuccessURL: stripe.String("https://sparkplugs.io/success"),
+		CancelURL:  stripe.String("https://example.com/cancel"),
+	}
+
+	s, err := session.New(params)
+	if err != nil {
+		log.Printf("session.New: %v", err)
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, s.URL)
 }

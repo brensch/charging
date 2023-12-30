@@ -68,5 +68,5 @@ jobs:
             --entry-point OnUserCreated \
             --runtime go121 \
             --trigger-event providers/firebase.auth/eventTypes/user.create \
-            --source=./payments/functions \
+            --source=. \
             --region australia-southeast1

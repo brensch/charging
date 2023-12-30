@@ -12,7 +12,7 @@ watch-relaymanager:
 	reflex -r '\.go$$' -s -- sh -c 'go build -o relaymanager-bin ./relaymanager && ./relaymanager-bin'
 
 build-proto-generator:
-	docker build -f dockerfile.generateproto -t protogen .
+	docker build -f ./contracts/dockerfile.generateproto -t protogen .
 
 generate-proto:
 	docker run -v $(PWD):/app protogen /bin/bash /app/generate.sh
