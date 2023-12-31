@@ -41,7 +41,7 @@ function Page() {
     <Container maxW="4xl" p={4}>
       {customerBalance && (
         <Text fontSize="lg">
-          Total Credit: ${customerBalance?.amount_aud / 100}
+          Total Credit: ${customerBalance?.cents_aud / 100}
         </Text>
       )}
       {stripeCustomer?.payment_methods.length === 0 ? (

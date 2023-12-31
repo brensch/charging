@@ -67,7 +67,7 @@ const AppBar: React.FC<AppBarProps> = () => {
               {/* Replace 'MdPower' with your plug icon */}
               <Icon as={MdPower} />
             </Button>
-            {customerBalance && `$${customerBalance?.amount_aud / 100}`}
+            {customerBalance && `$${customerBalance?.cents_aud / 100}`}
           </Flex>
         </Flex>
       </Container>
