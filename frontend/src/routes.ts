@@ -1,10 +1,6 @@
-// routes.ts
-
 import Home from "./components/Home"
 import Account from "./components/Account"
-import AccountProfile from "./components/AccountProfile"
-import AccountBilling from "./components/AccountBilling"
-import AccountDelete from "./components/AccountDelete"
+import AccountTopupPreferences from "./components/AccountTopupPreferences"
 import Sites from "./components/Sites"
 import SiteDetails from "./components/SiteDetails"
 import NetworkNewPlug from "./components/NetworkNewPlug"
@@ -29,20 +25,10 @@ const routes: RouteConfig[] = [
   {
     path: "account",
     component: Account,
-    children: [
-      {
-        path: "profile",
-        component: AccountProfile,
-      },
-      {
-        path: "billing",
-        component: AccountBilling,
-      },
-      {
-        path: "delete",
-        component: AccountDelete,
-      },
-    ],
+  },
+  {
+    path: "autotopup",
+    component: AccountTopupPreferences,
   },
   {
     path: "sites",

@@ -8,11 +8,12 @@ import {
   Text,
   Button,
   Icon,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { useNavigate, useParams } from "react-router-dom"
 import { signOut } from "firebase/auth"
 import { auth } from "../firebase"
-import { MdPower } from "react-icons/md"
+import { MdPerson, MdPerson2, MdPower } from "react-icons/md"
 import { CustomerBalance } from "../contracts/stripe"
 import { firestore } from "../firebase"
 import {
@@ -56,18 +57,38 @@ const AppBar: React.FC<AppBarProps> = () => {
                 navigate("/account")
               }}
               marginRight="2"
+              backgroundColor="white"
+              border="1px solid black"
+              boxShadow={useColorModeValue("4px 4px 0 black", "4px 4px 0 cyan")}
+              _hover={{
+                boxShadow: useColorModeValue(
+                  "6px 6px 0 black",
+                  "6px 6px 0 cyan",
+                ),
+              }}
+              borderRadius="md" // Makes the button more rounded
+              transition="box-shadow 0.2s ease-in-out" // Smooth transition for boxShadow
             >
-              Account
+              <Icon as={MdPerson} />
             </Button>
             <Button
               onClick={() => {
                 navigate("/plug")
               }}
+              backgroundColor="white"
+              border="1px solid black"
+              boxShadow={useColorModeValue("4px 4px 0 black", "4px 4px 0 cyan")}
+              _hover={{
+                boxShadow: useColorModeValue(
+                  "6px 6px 0 black",
+                  "6px 6px 0 cyan",
+                ),
+              }}
+              borderRadius="md" // Makes the button more rounded
+              transition="box-shadow 0.2s ease-in-out" // Smooth transition for boxShadow
             >
-              {/* Replace 'MdPower' with your plug icon */}
               <Icon as={MdPower} />
             </Button>
-            {customerBalance && `$${customerBalance?.cents_aud / 100}`}
           </Flex>
         </Flex>
       </Container>
