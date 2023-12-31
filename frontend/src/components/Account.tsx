@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useContext, useState } from "react"
 import { Outlet } from "react-router-dom"
 import {
   Box,
@@ -16,28 +16,18 @@ import {
 } from "@chakra-ui/react"
 import SiteCard from "./SiteCard"
 import { auth } from "../firebase"
+import { CustomerContext } from "../contexts/CustomerContext"
 
 function Page() {
-  const [topUpAmount, setTopUpAmount] = useState("")
+  // const [topUpAmount, setTopUpAmount] = useState("")
   const [autoTopUpTrigger, setAutoTopUpTrigger] = useState("")
   const [autoTopUpAmount, setAutoTopUpAmount] = useState("")
 
-  // Dummy transaction data
-  const transactions = [
-    { id: 1, description: "Top-up", amount: 50 },
-    { id: 2, description: "Purchase", amount: -20 },
-    { id: 3, description: "Top-up", amount: 30 },
-  ]
-
-  // Calculate total credit from transactions
-  const totalCredit = transactions.reduce(
-    (acc, transaction) => acc + transaction.amount,
-    0,
-  )
+  const { customerBalance, stripeCustomer } = useContext(CustomerContext)
 
   const handleTopUpSubmit = () => {
-    console.log(`Top up by: $${topUpAmount}`)
-    // Implement the top up functionality here
+    const url = `http://localhost:4242/topup/${auth.currentUser?.uid}`
+    window.open(url, "_blank")
   }
 
   const handleAutoTopUpConfirm = () => {
@@ -45,15 +35,42 @@ function Page() {
     window.open(url, "_blank")
   }
 
+  console.log(stripeCustomer)
+
   return (
     <Container maxW="4xl" p={4}>
-      <Text fontSize="lg">Total Credit: ${totalCredit.toFixed(2)}</Text>
+      {customerBalance && (
+        <Text fontSize="lg">
+          Total Credit: ${customerBalance?.amount_aud / 100}
+        </Text>
+      )}
+      {stripeCustomer?.payment_methods.length === 0 ? (
+        <Button
+          colorScheme="orange"
+          onClick={() => {
+            const url = `http://localhost:4242/manage/${auth.currentUser?.uid}`
+            window.open(url)
+          }}
+        >
+          Add payment method
+        </Button>
+      ) : (
+        <Button
+          colorScheme="orange"
+          onClick={() => {
+            const url = `http://localhost:4242/manage/${auth.currentUser?.uid}`
+            window.open(url)
+          }}
+        >
+          Manage payment methods
+        </Button>
+      )}
       <VStack spacing={4}>
         <Text fontSize="md" mt={4}>
           Once off top-up:
         </Text>
         <HStack>
-          <NumberInput
+          {/* <NumberInput
             min={0}
             value={topUpAmount}
             onChange={setTopUpAmount}
@@ -64,7 +81,7 @@ function Page() {
               <NumberIncrementStepper />
               <NumberDecrementStepper />
             </NumberInputStepper>
-          </NumberInput>
+          </NumberInput> */}
           <Button colorScheme="green" onClick={handleTopUpSubmit}>
             Top Up
           </Button>
@@ -101,7 +118,7 @@ function Page() {
           <Text fontSize="lg" mb={2}>
             Previous Transactions:
           </Text>
-          {transactions.map((transaction) => (
+          {/* {transactions.map((transaction) => (
             <HStack key={transaction.id} justify="space-between">
               <Text>{transaction.description}</Text>
               <Text>
@@ -110,7 +127,7 @@ function Page() {
                   : `-$${Math.abs(transaction.amount)}`}
               </Text>
             </HStack>
-          ))}
+          ))} */}
           <Divider my={4} />
         </Box>
       </VStack>

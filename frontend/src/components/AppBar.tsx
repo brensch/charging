@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useContext } from "react"
 import {
   Box,
   Flex,
@@ -13,13 +13,24 @@ import { useNavigate, useParams } from "react-router-dom"
 import { signOut } from "firebase/auth"
 import { auth } from "../firebase"
 import { MdPower } from "react-icons/md"
+import { CustomerBalance } from "../contracts/stripe"
+import { firestore } from "../firebase"
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore"
+import { CustomerContext } from "../contexts/CustomerContext"
 
 interface AppBarProps {}
 
 const AppBar: React.FC<AppBarProps> = () => {
   const navigate = useNavigate()
 
-  console.log(auth.currentUser?.uid)
+  const { customerBalance, stripeCustomer } = useContext(CustomerContext)
 
   return (
     <Box
@@ -56,6 +67,7 @@ const AppBar: React.FC<AppBarProps> = () => {
               {/* Replace 'MdPower' with your plug icon */}
               <Icon as={MdPower} />
             </Button>
+            {customerBalance && `$${customerBalance?.amount_aud / 100}`}
           </Flex>
         </Flex>
       </Container>

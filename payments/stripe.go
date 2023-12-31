@@ -10,11 +10,18 @@ import (
 	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v76"
+	"github.com/stripe/stripe-go/v76/billingportal/configuration"
+	billingsession "github.com/stripe/stripe-go/v76/billingportal/session"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 )
 
 const (
-	FsCollStripeCustomers = "stripe_customers"
+	FsCollStripeCustomers      = "stripe_customers"
+	FsCollAutoTopupPreferences = "autotopup_preferences"
+)
+
+var (
+	CreditPriceID = "price_1OQ3nBEiJxehnemB3la7Cjpo"
 )
 
 type Handler struct {
@@ -57,7 +64,7 @@ func (h *Handler) HandleWebhook(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (h *Handler) HandleEnrolCustomer(c *gin.Context) {
+func (h *Handler) HandleManualTopup(c *gin.Context) {
 
 	// Extract the customerID from the URL
 	customerID := c.Param("customerID")
@@ -89,10 +96,30 @@ func (h *Handler) HandleEnrolCustomer(c *gin.Context) {
 	params := &stripe.CheckoutSessionParams{
 		Customer:   stripe.String(stripeCustomer.StripeId),
 		Currency:   stripe.String("aud"),
-		Mode:       stripe.String(string(stripe.CheckoutSessionModeSetup)),
+		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
 		SuccessURL: stripe.String("https://sparkplugs.io/success"),
 		CancelURL:  stripe.String("https://example.com/cancel"),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price: &CreditPriceID,
+				AdjustableQuantity: &stripe.CheckoutSessionLineItemAdjustableQuantityParams{
+					Minimum: stripe.Int64(10),
+					Enabled: stripe.Bool(true),
+				},
+				Quantity: stripe.Int64(10),
+			},
+		},
 	}
+
+	// // if there's a payment method available, add it
+	// // need to check for either a default, or just the first in the array if it exists
+	// paymentMethod := stripeCustomer.DefaultPaymentMethod
+	// if paymentMethod == "" && len(stripeCustomer.PaymentMethods) > 0 {
+	// 	paymentMethod = stripeCustomer.PaymentMethods[0]
+	// }
+	// if paymentMethod != "" {
+	// 	params.PaymentMethodConfiguration = stripe.String(paymentMethod)
+	// }
 
 	s, err := session.New(params)
 	if err != nil {
@@ -102,4 +129,65 @@ func (h *Handler) HandleEnrolCustomer(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusSeeOther, s.URL)
+}
+
+func (h *Handler) HandleManageCustomer(c *gin.Context) {
+
+	// Extract the customerID from the URL
+	customerID := c.Param("customerID")
+
+	// get the stripecustomer doc for that customer
+	fs, err := common.InitFirestore(c.Request.Context())
+	if err != nil {
+		slog.Error("error creating firestore client", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	doc, err := fs.Collection(FsCollStripeCustomers).Doc(customerID).Get(c.Request.Context())
+	if err != nil {
+		slog.Error("error retrieving customer info", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	var stripeCustomer *contracts.StripeCustomer
+	err = doc.DataTo(&stripeCustomer)
+	if err != nil {
+		slog.Error("error decoding stripe customer", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	configParams := &stripe.BillingPortalConfigurationParams{
+		BusinessProfile: &stripe.BillingPortalConfigurationBusinessProfileParams{
+			Headline: stripe.String("SparkPlugs partners with Stripe for simplified billing."),
+		},
+		Features: &stripe.BillingPortalConfigurationFeaturesParams{
+			PaymentMethodUpdate: &stripe.BillingPortalConfigurationFeaturesPaymentMethodUpdateParams{
+				Enabled: stripe.Bool(true),
+			},
+		},
+		DefaultReturnURL: stripe.String("http://localhost:5173/account"),
+	}
+
+	s, err := configuration.New(configParams)
+	if err != nil {
+		slog.Error("error creating new stripe billing param config", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	sessionParams := &stripe.BillingPortalSessionParams{
+		Customer:      stripe.String(stripeCustomer.StripeId),
+		Configuration: &s.ID,
+	}
+	session, err := billingsession.New(sessionParams)
+	if err != nil {
+		slog.Error("error creating new stripe session", "error", err)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, session.URL)
 }

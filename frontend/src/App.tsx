@@ -16,6 +16,8 @@ import { User } from "@firebase/auth"
 import SignIn from "./components/SignIn"
 import Fonts from "./Fonts"
 import theme from "./Theme"
+import { CustomProvider } from "firebase/app-check"
+import { CustomerProvider } from "./contexts/CustomerContext"
 
 function RenderRoute(route: any) {
   if (!route.children) {
@@ -63,18 +65,26 @@ function App() {
     <ChakraProvider theme={theme}>
       <CSSReset />
       <Fonts />
-      <Box w="100vw" minHeight="100vh" m="0" p="0">
-        {user === undefined ? (
-          <Center>Loading...</Center>
-        ) : (
-          <Router>
-            <Box as="header" position="sticky" top="0" zIndex="1000" bg="white">
-              <AppBar />
-            </Box>
-            <Routes>{routes.map(RenderRoute)}</Routes>
-          </Router>
-        )}
-      </Box>
+      <CustomerProvider>
+        <Box w="100vw" minHeight="100vh" m="0" p="0">
+          {user === undefined ? (
+            <Center>Loading...</Center>
+          ) : (
+            <Router>
+              <Box
+                as="header"
+                position="sticky"
+                top="0"
+                zIndex="1000"
+                bg="white"
+              >
+                <AppBar />
+              </Box>
+              <Routes>{routes.map(RenderRoute)}</Routes>
+            </Router>
+          )}
+        </Box>
+      </CustomerProvider>
     </ChakraProvider>
   )
 }

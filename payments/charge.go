@@ -49,13 +49,19 @@ func ChargeCustomer(ctx context.Context, fs *firestore.Client, req *contracts.Pa
 		return fmt.Errorf("no payment methods associated with account")
 	}
 
+	// use default payment method. if there's no default, use the first in the index
+	paymentMethod := stripeCustomer.DefaultPaymentMethod
+	if paymentMethod == "" {
+		paymentMethod = stripeCustomer.PaymentMethods[0]
+	}
+
 	intentParams := &stripe.PaymentIntentParams{
 		Amount:        stripe.Int64(req.AmountAud), // Amount in cents
-		Currency:      stripe.String(string(stripe.CurrencyUSD)),
-		Customer:      stripe.String(stripeCustomer.StripeId),          // Replace with your customer's ID
-		PaymentMethod: stripe.String(stripeCustomer.PaymentMethods[0]), // Replace with your saved payment method ID
-		OffSession:    stripe.Bool(true),                               // Indicate that the payment is happening off-session
-		Confirm:       stripe.Bool(true),                               // Automatically confirm the payment
+		Currency:      stripe.String(string(stripe.CurrencyAUD)),
+		Customer:      stripe.String(stripeCustomer.StripeId),
+		PaymentMethod: &paymentMethod,
+		OffSession:    stripe.Bool(true),
+		Confirm:       stripe.Bool(true),
 	}
 
 	pi, err := paymentintent.New(intentParams)
@@ -105,7 +111,7 @@ func ReceiveCustomerCharge(ctx context.Context, fs *firestore.Client, e stripe.E
 	transaction := &contracts.Transaction{
 		FirestoreId:   stripeCustomer.FirestoreId,
 		PaymentMethod: paymentMethod,
-		AmountAud:     int64(amountReceived),
+		CentsAud:      int64(amountReceived),
 		PaymentId:     paymentID,
 	}
 	return RecordTransaction(ctx, fs, transaction)
@@ -131,8 +137,8 @@ func RecordTransaction(ctx context.Context, fs *firestore.Client, t *contracts.T
 		customerBalanceRef := fs.Collection(FsCollCustomerBalances).Doc(t.FirestoreId)
 		err = tx.Update(customerBalanceRef, []firestore.Update{
 			{
-				Path:  "amount_aud",
-				Value: firestore.Increment(t.AmountAud),
+				Path:  "cents_aud",
+				Value: firestore.Increment(t.CentsAud),
 			},
 			{
 				Path:  "last_update_ms",

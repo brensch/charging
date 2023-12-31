@@ -25,9 +25,11 @@ func RouteEvent(ctx context.Context, fs *firestore.Client, event stripe.Event) e
 	case "payment_method.attached":
 		return PaymentMethodAttached(ctx, fs, event)
 	case "payment_method.detached":
-		return PaymentMethodDetached(ctx, event)
+		return PaymentMethodDetached(ctx, fs, event)
 	case "payment_intent.succeeded":
 		return ReceiveCustomerCharge(ctx, fs, event)
+	case "customer.updated":
+		return CustomerUpdated(ctx, fs, event)
 	default:
 		log.Printf("Unhandled event type: %s\n", event.Type)
 	}

@@ -52,10 +52,10 @@ func OnUserCreated(ctx context.Context, e AuthEvent) error {
 
 	// create the stripe customer object
 	stripeCustomer := &contracts.StripeCustomer{
-		StripeId:    c.ID,
-		FirestoreId: e.UID,
+		StripeId:             c.ID,
+		FirestoreId:          e.UID,
+		DefaultPaymentMethod: "",
 	}
-
 	_, err = fs.Collection(payments.FsCollStripeCustomers).Doc(e.UID).Set(ctx, stripeCustomer)
 	if err != nil {
 		slog.Error("failed to create stripe customer object", err)
@@ -65,11 +65,23 @@ func OnUserCreated(ctx context.Context, e AuthEvent) error {
 	// create the balance object
 	customerBalance := &contracts.CustomerBalance{
 		FirestoreId:  e.UID,
-		AmountAud:    0,
+		CentsAud:     0,
 		LastUpdateMs: time.Now().UnixMilli(),
 	}
-
 	_, err = fs.Collection(payments.FsCollCustomerBalances).Doc(e.UID).Set(ctx, customerBalance)
+	if err != nil {
+		slog.Error("failed to create customer balance object", err)
+		return err
+	}
+
+	// create the autotopup object
+	autoTopUpPreferences := &contracts.AutoTopupPreferences{
+		FirestoreId:           e.UID,
+		Enabled:               false,
+		ThresholdCents:        1000,
+		RechargeValueCentsAud: 2000,
+	}
+	_, err = fs.Collection(payments.FsCollAutoTopupPreferences).Doc(e.UID).Set(ctx, autoTopUpPreferences)
 	if err != nil {
 		slog.Error("failed to create customer balance object", err)
 		return err

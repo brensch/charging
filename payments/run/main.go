@@ -37,7 +37,8 @@ func main() {
 	handler := payments.InitHandler(fs)
 
 	// Register the Gin handlers
-	router.GET("/enrol/:customerID", handler.HandleEnrolCustomer)
+	router.GET("/topup/:customerID", handler.HandleManualTopup)
+	router.GET("/manage/:customerID", handler.HandleManageCustomer)
 	router.POST("/charge", handler.HandleChargeCustomer)
 	router.POST("/hook", handler.HandleWebhook) // Assuming handleWebhook is a POST endpoint
 
