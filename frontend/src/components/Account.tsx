@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react"
 import { auth } from "../firebase"
 import { CustomerContext } from "../contexts/CustomerContext"
+import { PaymentsAPI } from "../constants/urls"
 
 function Page() {
   let navigate = useNavigate()
@@ -23,7 +24,7 @@ function Page() {
   } = useContext(CustomerContext)
 
   const handleTopUpSubmit = () => {
-    const url = `http://localhost:4242/topup/${auth.currentUser?.uid}`
+    const url = `${PaymentsAPI}/topup/${auth.currentUser?.uid}`
     window.open(url, "_blank")
   }
 

@@ -22,6 +22,7 @@ import { CustomerContext } from "../contexts/CustomerContext"
 import { doc, updateDoc } from "firebase/firestore"
 import { AutoTopupPreferences } from "../contracts/stripe"
 import { MdArrowBack, MdBackHand } from "react-icons/md"
+import { PaymentsAPI } from "../constants/urls"
 
 function Page() {
   let navigate = useNavigate()
@@ -91,7 +92,7 @@ function Page() {
         <VStack spacing={4}>
           <Button
             onClick={() => {
-              const url = `http://localhost:4242/manage/${auth.currentUser?.uid}`
+              const url = `${PaymentsAPI}/manage/${auth.currentUser?.uid}`
               window.open(url)
             }}
           >
@@ -105,7 +106,7 @@ function Page() {
         <React.Fragment>
           <Button
             onClick={() => {
-              const url = `http://localhost:4242/manage/${auth.currentUser?.uid}`
+              const url = `${PaymentsAPI}/manage/${auth.currentUser?.uid}`
               window.open(url)
             }}
           >

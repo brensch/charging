@@ -10,12 +10,6 @@ import (
 	"github.com/stripe/stripe-go/v76/webhook"
 )
 
-var (
-
-	// TODO: derive from secret manager
-	endpointSecret = "whsec_990f93f7953a6fa0bd59e0bf51f9df2f0b3055581b9f4cf1fe70675e5be99df9"
-)
-
 func RouteEvent(ctx context.Context, fs *firestore.Client, event stripe.Event) error {
 
 	slog.Info("got stripe event", "event", event)

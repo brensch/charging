@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/payments"
 	"github.com/gin-gonic/gin"
@@ -13,17 +15,39 @@ import (
 )
 
 var (
-	customerID = "cus_PEXXEakMP5rBQ0"
+	customerID              = "cus_PEXXEakMP5rBQ0"
+	stripeKeySecretLocation = "projects/368022146565/secrets/stripe_key/versions/latest"
 )
 
 func init() {
 	slog.SetDefault(common.Logger)
+	ctx := context.Background()
+
+	// set stripe key
+	// Create the client
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		slog.Error("Failed to create secret manager client", "error", err)
+		panic(err)
+	}
+	defer client.Close()
+
+	// Build the request
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: stripeKeySecretLocation,
+	}
+
+	// Call the API
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		slog.Error("Failed to access secret version", "error", err)
+		panic(err)
+	}
+
+	stripe.Key = result.String()
 }
 
 func main() {
-
-	// This is your test secret API key.
-	stripe.Key = "sk_test_51OKyPREiJxehnemBUXuQv5NDjqkPqwozTyEwxUegS5kiCCUWhgw9C6A6HCGNR9ouAwEdym9CCvZL0Spnw34cVAow00Q67ZTEyH"
 
 	router := gin.Default()
 
@@ -32,9 +56,14 @@ func main() {
 	fs, err := common.InitFirestore(ctx)
 	if err != nil {
 		slog.Error("failed to init firestore", "error", err)
+		panic(err)
 	}
 
-	handler := payments.InitHandler(fs)
+	handler, err := payments.InitHandler(fs)
+	if err != nil {
+		slog.Error("failed to init handler", "error", err)
+		panic(err)
+	}
 
 	// Register the Gin handlers
 	router.GET("/topup/:customerID", handler.HandleManualTopup)
