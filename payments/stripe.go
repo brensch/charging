@@ -68,7 +68,7 @@ func (h *Handler) retrieveSecret(secretID string) error {
 	}
 
 	// Store the secret in the handler
-	h.hookSecret = string(result.Payload.Data)
+	h.hookSecret = string(result.GetPayload().GetData())
 	return nil
 }
 

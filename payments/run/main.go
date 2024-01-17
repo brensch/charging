@@ -46,7 +46,7 @@ func init() {
 
 	slog.Info("got secrets")
 
-	stripe.Key = result.String()
+	stripe.Key = string(result.GetPayload().GetData())
 }
 
 func main() {
