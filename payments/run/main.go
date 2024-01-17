@@ -2,28 +2,27 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/payments"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v76"
 )
 
 var (
-	customerID              = "cus_PEXXEakMP5rBQ0"
 	stripeKeySecretLocation = "projects/368022146565/secrets/stripe_key/versions/latest"
 )
 
 func init() {
 	slog.SetDefault(common.Logger)
 	ctx := context.Background()
+	slog.Info("starting payment service")
 
-	// set stripe key
 	// Create the client
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
@@ -31,6 +30,7 @@ func init() {
 		panic(err)
 	}
 	defer client.Close()
+	slog.Info("initialised secret server")
 
 	// Build the request
 	req := &secretmanagerpb.AccessSecretVersionRequest{
@@ -43,6 +43,8 @@ func init() {
 		slog.Error("Failed to access secret version", "error", err)
 		panic(err)
 	}
+
+	slog.Info("got secrets")
 
 	stripe.Key = result.String()
 }
@@ -76,6 +78,8 @@ func main() {
 	if port == "" {
 		port = "4242" // default port if not specified
 	}
-	log.Printf("Listening on http://0.0.0.0:%s", port)
-	router.Run("0.0.0.0:" + port)
+
+	addr := "0.0.0.0:" + port
+	slog.Info("Running router", "addr", addr)
+	router.Run(addr)
 }
