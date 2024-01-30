@@ -32,7 +32,6 @@ func (s *Plug) SetState(req contracts.RequestedState) error {
 }
 
 func (s *Plug) GetReading() (*contracts.Reading, error) {
-	rand.Seed(time.Now().UnixNano())
 
 	// Generate random values for each field
 	state := contracts.ActualState(rand.Intn(4) + 1) // Assuming there are 4 states (0 to 3)

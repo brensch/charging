@@ -4,6 +4,45 @@ import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "contracts";
 
+export enum StateMachineState {
+  StateMachineState_UNSPECIFIED = 0,
+  StateMachineState_ON = 1,
+  StateMachineState_OFF = 2,
+  UNRECOGNIZED = -1,
+}
+
+export function stateMachineStateFromJSON(object: any): StateMachineState {
+  switch (object) {
+    case 0:
+    case "StateMachineState_UNSPECIFIED":
+      return StateMachineState.StateMachineState_UNSPECIFIED;
+    case 1:
+    case "StateMachineState_ON":
+      return StateMachineState.StateMachineState_ON;
+    case 2:
+    case "StateMachineState_OFF":
+      return StateMachineState.StateMachineState_OFF;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return StateMachineState.UNRECOGNIZED;
+  }
+}
+
+export function stateMachineStateToJSON(object: StateMachineState): string {
+  switch (object) {
+    case StateMachineState.StateMachineState_UNSPECIFIED:
+      return "StateMachineState_UNSPECIFIED";
+    case StateMachineState.StateMachineState_ON:
+      return "StateMachineState_ON";
+    case StateMachineState.StateMachineState_OFF:
+      return "StateMachineState_OFF";
+    case StateMachineState.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export enum RequestedState {
   /** RequestedState_UNKNOWN - Default value, used as a placeholder */
   RequestedState_UNKNOWN = 0,
@@ -218,19 +257,6 @@ export interface PlugCommand {
   /** used to ack by the rpi */
   acked_at_ms: number;
   acked_by_key: string;
-}
-
-export interface FuzeLocalState {
-  id: string;
-  current: number;
-  state: FuzeState;
-}
-
-export interface PlugLocalState {
-  id: string;
-  latest_reading: Reading | undefined;
-  latest_command_id: string;
-  latest_action_id: string;
 }
 
 export interface Reading {
@@ -657,201 +683,6 @@ export const PlugCommand = {
     message.plug_id = object.plug_id ?? "";
     message.acked_at_ms = object.acked_at_ms ?? 0;
     message.acked_by_key = object.acked_by_key ?? "";
-    return message;
-  },
-};
-
-function createBaseFuzeLocalState(): FuzeLocalState {
-  return { id: "", current: 0, state: 0 };
-}
-
-export const FuzeLocalState = {
-  encode(message: FuzeLocalState, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
-    }
-    if (message.current !== 0) {
-      writer.uint32(17).double(message.current);
-    }
-    if (message.state !== 0) {
-      writer.uint32(24).int32(message.state);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): FuzeLocalState {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseFuzeLocalState();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.id = reader.string();
-          continue;
-        case 2:
-          if (tag !== 17) {
-            break;
-          }
-
-          message.current = reader.double();
-          continue;
-        case 3:
-          if (tag !== 24) {
-            break;
-          }
-
-          message.state = reader.int32() as any;
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): FuzeLocalState {
-    return {
-      id: isSet(object.id) ? globalThis.String(object.id) : "",
-      current: isSet(object.current) ? globalThis.Number(object.current) : 0,
-      state: isSet(object.state) ? fuzeStateFromJSON(object.state) : 0,
-    };
-  },
-
-  toJSON(message: FuzeLocalState): unknown {
-    const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
-    }
-    if (message.current !== 0) {
-      obj.current = message.current;
-    }
-    if (message.state !== 0) {
-      obj.state = fuzeStateToJSON(message.state);
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<FuzeLocalState>, I>>(base?: I): FuzeLocalState {
-    return FuzeLocalState.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<FuzeLocalState>, I>>(object: I): FuzeLocalState {
-    const message = createBaseFuzeLocalState();
-    message.id = object.id ?? "";
-    message.current = object.current ?? 0;
-    message.state = object.state ?? 0;
-    return message;
-  },
-};
-
-function createBasePlugLocalState(): PlugLocalState {
-  return { id: "", latest_reading: undefined, latest_command_id: "", latest_action_id: "" };
-}
-
-export const PlugLocalState = {
-  encode(message: PlugLocalState, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
-    }
-    if (message.latest_reading !== undefined) {
-      Reading.encode(message.latest_reading, writer.uint32(18).fork()).ldelim();
-    }
-    if (message.latest_command_id !== "") {
-      writer.uint32(26).string(message.latest_command_id);
-    }
-    if (message.latest_action_id !== "") {
-      writer.uint32(34).string(message.latest_action_id);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): PlugLocalState {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlugLocalState();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.id = reader.string();
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.latest_reading = Reading.decode(reader, reader.uint32());
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.latest_command_id = reader.string();
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.latest_action_id = reader.string();
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): PlugLocalState {
-    return {
-      id: isSet(object.id) ? globalThis.String(object.id) : "",
-      latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
-      latest_command_id: isSet(object.latest_command_id) ? globalThis.String(object.latest_command_id) : "",
-      latest_action_id: isSet(object.latest_action_id) ? globalThis.String(object.latest_action_id) : "",
-    };
-  },
-
-  toJSON(message: PlugLocalState): unknown {
-    const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
-    }
-    if (message.latest_reading !== undefined) {
-      obj.latest_reading = Reading.toJSON(message.latest_reading);
-    }
-    if (message.latest_command_id !== "") {
-      obj.latest_command_id = message.latest_command_id;
-    }
-    if (message.latest_action_id !== "") {
-      obj.latest_action_id = message.latest_action_id;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<PlugLocalState>, I>>(base?: I): PlugLocalState {
-    return PlugLocalState.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<PlugLocalState>, I>>(object: I): PlugLocalState {
-    const message = createBasePlugLocalState();
-    message.id = object.id ?? "";
-    message.latest_reading = (object.latest_reading !== undefined && object.latest_reading !== null)
-      ? Reading.fromPartial(object.latest_reading)
-      : undefined;
-    message.latest_command_id = object.latest_command_id ?? "";
-    message.latest_action_id = object.latest_action_id ?? "";
     return message;
   },
 };

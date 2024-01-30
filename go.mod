@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	cloud.google.com/go/firestore v1.13.0
+	cloud.google.com/go/pubsub v1.33.0
 	cloud.google.com/go/secretmanager v1.11.1
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/gin-gonic/gin v1.9.1

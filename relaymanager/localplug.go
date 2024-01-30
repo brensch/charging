@@ -15,23 +15,23 @@ import (
 const PlugSettingsCollection = "plug_settings"
 
 type LocalPlugState struct {
-	plug             electrical.Plug
-	settingsReceiver *Receiver[contracts.PlugSettings]
-	siteID           string
+	plug electrical.Plug
+	// settingsReceiver *Receiver[contracts.PlugSettings]
+	siteID string
 }
 
 func InitLocalPlugState(ctx context.Context, fs *firestore.Client, plug electrical.Plug) (*LocalPlugState, error) {
-	receiver, err := InitReceiver[contracts.PlugSettings](ctx, fs, plug, PlugSettingsCollection)
-	if err != nil {
-		return nil, err
-	}
+	// receiver, err := InitReceiver[contracts.PlugSettings](ctx, fs, plug, PlugSettingsCollection)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	plugLocal := &LocalPlugState{
-		plug:             plug,
-		settingsReceiver: receiver,
+		plug: plug,
+		// settingsReceiver: receiver,
 	}
 
-	go plugLocal.listenForPlugCommands(ctx, fs)
+	// go plugLocal.listenForPlugCommands(ctx, fs)
 
 	return plugLocal, nil
 }

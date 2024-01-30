@@ -2,7 +2,6 @@ package payments
 
 import (
 	"context"
-	"log"
 	"log/slog"
 
 	"cloud.google.com/go/firestore"
@@ -25,7 +24,7 @@ func RouteEvent(ctx context.Context, fs *firestore.Client, event stripe.Event) e
 	case "customer.updated":
 		return CustomerUpdated(ctx, fs, event)
 	default:
-		log.Printf("Unhandled event type: %s\n", event.Type)
+		slog.Debug("Unhandled event type", "type", event.Type)
 	}
 
 	return nil
