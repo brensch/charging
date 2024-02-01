@@ -9,45 +9,27 @@ import (
 	"log"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/brensch/charging/electrical"
 	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/protobuf/proto"
 )
 
-func GetReadings(ctx context.Context, localPlugs []*LocalPlugState, localFuzes []*LocalFuzeState) ([]*contracts.Reading, error) {
+func GetReadings(ctx context.Context, plugs []electrical.Plug) ([]*contracts.Reading, error) {
 	log.Println("reading meters")
 
 	// get all plug readings
 	var readings []*contracts.Reading
 	var finalErr error
-	for _, localPlug := range localPlugs {
+	for _, plug := range plugs {
 
-		reading, err := localPlug.plug.GetReading()
+		reading, err := plug.GetReading()
 		if err != nil {
 			log.Println("failed to get reading", err)
 			finalErr = errors.Join(finalErr, err)
 		}
 
 		readings = append(readings, reading)
-		// publish to chan for immediate flushing if required
-
 	}
-
-	// // find fuzes exceeding limits
-	// for _, fuze := range localFuzes {
-	// 	// sum current from all readings belonging to a fuze
-	// 	fuzeTotalCurrent := 0.0
-	// 	for _, reading := range readings {
-	// 		if reading.GetFuzeId() != fuze.fuze.ID() {
-	// 			continue
-	// 		}
-	// 		fuzeTotalCurrent += reading.Current
-	// 	}
-
-	// 	if fuzeTotalCurrent > fuze.settingsReceiver.GetLatest().CurrentLimit {
-	// 		// TODO: figure out what to do when fuze exceeded
-	// 		log.Printf("fuze %s exceeded current limit of %f with current of %f", fuze.fuze.ID(), fuze.settingsReceiver.GetLatest().CurrentLimit, fuzeTotalCurrent)
-	// 	}
-	// }
 
 	return readings, finalErr
 
