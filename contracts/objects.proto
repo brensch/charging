@@ -19,6 +19,14 @@ enum StateMachineState {
   StateMachineState_OFF = 2;
 }
 
+message StateMachineTransition {
+  string id = 1;
+  StateMachineState state = 2;
+  string reason = 3;
+  int64 time_ms = 4;
+  string plug_id = 5;
+}
+
 message PlugSettings {
   string id = 1;
   string name = 2;

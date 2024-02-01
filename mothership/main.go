@@ -8,16 +8,21 @@ import (
 	"io"
 	"log"
 	"sync"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
 	keyFile        = "./testprovision.key"
 	subscriptionID = "test_topic-sub"
+
+	secondsToStore = 10
+	statesToStore  = 100
 )
 
 type SiteStateMachine struct {
@@ -26,15 +31,48 @@ type SiteStateMachine struct {
 }
 
 type PlugStateMachine struct {
-	plugID            string
-	lastReadingTimeMs int64
-	reading           *contracts.Reading
-	state             contracts.StateMachineState
+	plugID string
+
+	latestReadingPtr int
+	latestReadings   []*contracts.Reading
+
+	latestStatePtr int
+	state          contracts.StateMachineState
+	transitions    []*contracts.StateMachineTransition
 }
 
-func (p *PlugStateMachine) NextState() contracts.StateMachineState {
-	log.Println("updating state of plug", p.plugID, p.state, p.reading.Current)
-	return contracts.StateMachineState_StateMachineState_ON
+func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition {
+	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
+
+	// swap state if haven't transitioned in 5 minutes
+	if p.transitions[p.latestStatePtr] == nil {
+		id := uuid.New().String()
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  contracts.StateMachineState_StateMachineState_ON,
+			Reason: "first transition, turning on",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
+	lastTransitionTime := time.UnixMilli(p.transitions[p.latestStatePtr].TimeMs)
+
+	if lastTransitionTime.Before(time.Now().Add(-5 * time.Second)) {
+		id := uuid.New().String()
+		nextState := contracts.StateMachineState_StateMachineState_ON
+		if p.transitions[p.latestStatePtr].State == contracts.StateMachineState_StateMachineState_ON {
+			nextState = contracts.StateMachineState_StateMachineState_OFF
+		}
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  nextState,
+			Reason: "switching state",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
+
+	return nil
 }
 
 func main() {
@@ -73,12 +111,6 @@ func main() {
 			stateMap[chunk.GetSiteId()] = stateMachine
 		}
 
-		latestChunkTime := int64(0)
-		for _, reading := range chunk.Readings {
-			if reading.Timestamp > latestChunkTime {
-				latestChunkTime = reading.Timestamp
-			}
-		}
 		stateMachine.mu.Lock()
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachine.plugStateMachines[reading.PlugId]
@@ -88,10 +120,20 @@ func main() {
 				continue
 			}
 
-			plugStateMachine.lastReadingTimeMs = reading.GetTimestamp()
-			plugStateMachine.reading = reading
+			nextPtr := (plugStateMachine.latestReadingPtr + 1) % secondsToStore
+			plugStateMachine.latestReadings[nextPtr] = reading
+			plugStateMachine.latestReadingPtr = nextPtr
 
-			plugStateMachine.state = plugStateMachine.NextState()
+			transition := plugStateMachine.DetectTransition()
+			if transition == nil {
+				continue
+			}
+			log.Println("got state transition", transition.GetState(), transition.Reason)
+			plugStateMachine.state = transition.GetState()
+			nextStatePtr := (plugStateMachine.latestStatePtr + 1) % statesToStore
+			plugStateMachine.transitions[nextStatePtr] = transition
+			plugStateMachine.latestStatePtr = nextStatePtr
+			fmt.Println("updating pointer", nextStatePtr)
 		}
 		stateMachine.mu.Unlock()
 
@@ -121,10 +163,16 @@ func InitSiteStateMachine(chunk *contracts.ReadingChunk) *SiteStateMachine {
 
 func InitPlugStateMachine(reading *contracts.Reading) *PlugStateMachine {
 
+	latestReadings := make([]*contracts.Reading, secondsToStore)
+	latestReadings[0] = reading
+
+	transitions := make([]*contracts.StateMachineTransition, statesToStore)
+
 	stateMachine := &PlugStateMachine{
-		plugID:            reading.GetPlugId(),
-		lastReadingTimeMs: reading.GetTimestamp(),
-		reading:           reading,
+		plugID:           reading.GetPlugId(),
+		latestReadingPtr: 0,
+		latestReadings:   latestReadings,
+		transitions:      transitions,
 	}
 
 	return stateMachine

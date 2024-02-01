@@ -238,6 +238,14 @@ export interface FuzeSettings {
   site_id: string;
 }
 
+export interface StateMachineTransition {
+  id: string;
+  state: StateMachineState;
+  reason: string;
+  time_ms: number;
+  plug_id: string;
+}
+
 export interface PlugSettings {
   id: string;
   name: string;
@@ -389,6 +397,125 @@ export const FuzeSettings = {
     message.name = object.name ?? "";
     message.current_limit = object.current_limit ?? 0;
     message.site_id = object.site_id ?? "";
+    return message;
+  },
+};
+
+function createBaseStateMachineTransition(): StateMachineTransition {
+  return { id: "", state: 0, reason: "", time_ms: 0, plug_id: "" };
+}
+
+export const StateMachineTransition = {
+  encode(message: StateMachineTransition, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.state !== 0) {
+      writer.uint32(16).int32(message.state);
+    }
+    if (message.reason !== "") {
+      writer.uint32(26).string(message.reason);
+    }
+    if (message.time_ms !== 0) {
+      writer.uint32(32).int64(message.time_ms);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(42).string(message.plug_id);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): StateMachineTransition {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStateMachineTransition();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.state = reader.int32() as any;
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.reason = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.time_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StateMachineTransition {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      state: isSet(object.state) ? stateMachineStateFromJSON(object.state) : 0,
+      reason: isSet(object.reason) ? globalThis.String(object.reason) : "",
+      time_ms: isSet(object.time_ms) ? globalThis.Number(object.time_ms) : 0,
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+    };
+  },
+
+  toJSON(message: StateMachineTransition): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.state !== 0) {
+      obj.state = stateMachineStateToJSON(message.state);
+    }
+    if (message.reason !== "") {
+      obj.reason = message.reason;
+    }
+    if (message.time_ms !== 0) {
+      obj.time_ms = Math.round(message.time_ms);
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StateMachineTransition>, I>>(base?: I): StateMachineTransition {
+    return StateMachineTransition.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StateMachineTransition>, I>>(object: I): StateMachineTransition {
+    const message = createBaseStateMachineTransition();
+    message.id = object.id ?? "";
+    message.state = object.state ?? 0;
+    message.reason = object.reason ?? "";
+    message.time_ms = object.time_ms ?? 0;
+    message.plug_id = object.plug_id ?? "";
     return message;
   },
 };

@@ -34,12 +34,12 @@ func (s *Plug) SetState(req contracts.RequestedState) error {
 func (s *Plug) GetReading() (*contracts.Reading, error) {
 
 	// Generate random values for each field
-	state := contracts.ActualState(rand.Intn(4) + 1) // Assuming there are 4 states (0 to 3)
-	current := rand.Float64() * 100                  // Random current in watts
-	voltage := rand.Float64() * 240                  // Random voltage in volts
-	powerFactor := rand.Float64()*2 - 1              // Random power factor between -1 and 1
-	timestamp := time.Now().Unix()                   // Current timestamp
-	energy := rand.Float64() * 1000                  // Random energy in kWh
+	state := contracts.ActualState(rand.Intn(4) + 1)
+	current := rand.Float64() * 100     // Random current in watts
+	voltage := rand.Float64() * 240     // Random voltage in volts
+	powerFactor := rand.Float64()*2 - 1 // Random power factor between -1 and 1
+	timestamp := time.Now().Unix()      // Current timestamp
+	energy := rand.Float64() * 1000     // Random energy in kWh
 	plugId := s.ID()
 
 	return &contracts.Reading{

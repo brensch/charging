@@ -21,7 +21,7 @@ func (d *Discoverer) Discover() ([]electrical.Plug, []electrical.Fuze, error) {
 
 	// Iterate over the IP addresses in the ips map
 	for ip, mac := range ips {
-		for i := 0; i < 100; i++ { // Assuming Shelly Pro 4 PM has 4 switches
+		for i := 0; i < 1; i++ { // Assuming Shelly Pro 4 PM has 4 switches
 			plugs = append(plugs, &Plug{
 				Host:         ip,
 				Mac:          mac,
