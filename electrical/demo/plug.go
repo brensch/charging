@@ -39,7 +39,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 	voltage := rand.Float64() * 240     // Random voltage in volts
 	powerFactor := rand.Float64()*2 - 1 // Random power factor between -1 and 1
 	timestamp := time.Now().Unix()      // Current timestamp
-	energy := rand.Float64() * 1000     // Random energy in kWh
+	energy := rand.Float64() / 100      // Random energy in kWh
 	plugId := s.ID()
 
 	return &contracts.Reading{

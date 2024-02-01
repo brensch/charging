@@ -39,6 +39,8 @@ type PlugStateMachine struct {
 	latestStatePtr int
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
+
+	accumulatedEnergyUsage float64
 }
 
 func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition {
@@ -120,9 +122,19 @@ func main() {
 				continue
 			}
 
+			fmt.Printf("%f kWh\n", reading.Energy)
+
 			nextPtr := (plugStateMachine.latestReadingPtr + 1) % secondsToStore
 			plugStateMachine.latestReadings[nextPtr] = reading
 			plugStateMachine.latestReadingPtr = nextPtr
+
+			plugStateMachine.accumulatedEnergyUsage += reading.Energy
+
+			if nextPtr == 0 {
+				// TODO: implement
+				fmt.Println("charging customer for energy usage:", plugStateMachine.accumulatedEnergyUsage)
+				plugStateMachine.accumulatedEnergyUsage = 0
+			}
 
 			transition := plugStateMachine.DetectTransition()
 			if transition == nil {
@@ -136,8 +148,6 @@ func main() {
 			fmt.Println("updating pointer", nextStatePtr)
 		}
 		stateMachine.mu.Unlock()
-
-		// assuming all readings should be greater than
 
 	})
 
@@ -179,7 +189,6 @@ func InitPlugStateMachine(reading *contracts.Reading) *PlugStateMachine {
 }
 
 func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.ReadingChunk, error) {
-	fmt.Println("Received a message")
 
 	// Decompress the data
 	reader, err := gzip.NewReader(bytes.NewReader(msg.Data))

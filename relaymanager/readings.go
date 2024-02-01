@@ -45,7 +45,6 @@ func SendReadings(ctx context.Context, topic *pubsub.Topic, siteID string, readi
 	if err != nil {
 		return err
 	}
-	fmt.Println("size of chunk:", len(readingChunkBytes))
 
 	// Create a buffer to hold the compressed data
 	var b bytes.Buffer
@@ -61,8 +60,6 @@ func SendReadings(ctx context.Context, topic *pubsub.Topic, siteID string, readi
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("size of compressed:", len(b.Bytes()))
 
 	result := topic.Publish(ctx, &pubsub.Message{
 		Data: []byte(b.Bytes()),
