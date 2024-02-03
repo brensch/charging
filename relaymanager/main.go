@@ -12,9 +12,7 @@ import (
 	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
 
-	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
-	"google.golang.org/api/option"
 )
 
 const siteName = "brendo pi"
@@ -28,8 +26,6 @@ const (
 
 	readingsBufferSize = 500
 	readingsCollection = "readings"
-
-	CollectionSiteSettings = "site_settings"
 
 	topicID = "test_topic"
 )
@@ -52,22 +48,20 @@ func main() {
 
 	fmt.Println(clientID, projectID)
 
-	// Set up Firestore client
-	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
-	if err != nil {
-		log.Fatalf("Failed to create Firestore client: %v", err)
-	}
-	defer fs.Close()
+	// // Set up Firestore client
+	// fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
+	// if err != nil {
+	// 	log.Fatalf("Failed to create Firestore client: %v", err)
+	// }
+	// defer fs.Close()
 
-	err = ensureSiteSettingsDoc(ctx, fs, clientID)
-	if err != nil {
-		log.Fatalf("failed to ensure site settings: %+v", err)
-	}
-
-	_ = shelly.ConvertToPlugState(false)
+	// err = ensureSiteSettingsDoc(ctx, fs, clientID)
+	// if err != nil {
+	// 	log.Fatalf("failed to ensure site settings: %+v", err)
+	// }
 
 	discoverers := []electrical.Discoverer{
-		// shelly.InitShellyDiscoverer(clientID),
+		shelly.InitShellyDiscoverer(clientID),
 		demo.InitDiscoverer(clientID),
 		// as we make more plug brands we can add their discoverers here.
 	}

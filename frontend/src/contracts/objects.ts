@@ -8,6 +8,10 @@ export enum StateMachineState {
   StateMachineState_UNSPECIFIED = 0,
   StateMachineState_ON = 1,
   StateMachineState_OFF = 2,
+  StateMachineState_USER_REQUESTED_ON = 3,
+  StateMachineState_USER_REQUESTED_OFF = 4,
+  StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5,
+  StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6,
   UNRECOGNIZED = -1,
 }
 
@@ -22,6 +26,18 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case 2:
     case "StateMachineState_OFF":
       return StateMachineState.StateMachineState_OFF;
+    case 3:
+    case "StateMachineState_USER_REQUESTED_ON":
+      return StateMachineState.StateMachineState_USER_REQUESTED_ON;
+    case 4:
+    case "StateMachineState_USER_REQUESTED_OFF":
+      return StateMachineState.StateMachineState_USER_REQUESTED_OFF;
+    case 5:
+    case "StateMachineState_LOCAL_COMMAND_ISSUED_ON":
+      return StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_ON;
+    case 6:
+    case "StateMachineState_LOCAL_COMMAND_ISSUED_OFF":
+      return StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_OFF;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -37,7 +53,62 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
       return "StateMachineState_ON";
     case StateMachineState.StateMachineState_OFF:
       return "StateMachineState_OFF";
+    case StateMachineState.StateMachineState_USER_REQUESTED_ON:
+      return "StateMachineState_USER_REQUESTED_ON";
+    case StateMachineState.StateMachineState_USER_REQUESTED_OFF:
+      return "StateMachineState_USER_REQUESTED_OFF";
+    case StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_ON:
+      return "StateMachineState_LOCAL_COMMAND_ISSUED_ON";
+    case StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_OFF:
+      return "StateMachineState_LOCAL_COMMAND_ISSUED_OFF";
     case StateMachineState.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+export enum UserRequestStatus {
+  RequestedStatus_UNKNOWN = 0,
+  /** RequestedStatus_PENDING - need to write a fs rule to only allow this status from non backend */
+  RequestedStatus_PENDING = 1,
+  RequestedStatus_SUCCESS = 2,
+  /** RequestedStatus_FAILURE - TODO: add more failure reason statuses */
+  RequestedStatus_FAILURE = 3,
+  UNRECOGNIZED = -1,
+}
+
+export function userRequestStatusFromJSON(object: any): UserRequestStatus {
+  switch (object) {
+    case 0:
+    case "RequestedStatus_UNKNOWN":
+      return UserRequestStatus.RequestedStatus_UNKNOWN;
+    case 1:
+    case "RequestedStatus_PENDING":
+      return UserRequestStatus.RequestedStatus_PENDING;
+    case 2:
+    case "RequestedStatus_SUCCESS":
+      return UserRequestStatus.RequestedStatus_SUCCESS;
+    case 3:
+    case "RequestedStatus_FAILURE":
+      return UserRequestStatus.RequestedStatus_FAILURE;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return UserRequestStatus.UNRECOGNIZED;
+  }
+}
+
+export function userRequestStatusToJSON(object: UserRequestStatus): string {
+  switch (object) {
+    case UserRequestStatus.RequestedStatus_UNKNOWN:
+      return "RequestedStatus_UNKNOWN";
+    case UserRequestStatus.RequestedStatus_PENDING:
+      return "RequestedStatus_PENDING";
+    case UserRequestStatus.RequestedStatus_SUCCESS:
+      return "RequestedStatus_SUCCESS";
+    case UserRequestStatus.RequestedStatus_FAILURE:
+      return "RequestedStatus_FAILURE";
+    case UserRequestStatus.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -244,27 +315,52 @@ export interface StateMachineTransition {
   reason: string;
   time_ms: number;
   plug_id: string;
+  owner_id: string;
 }
 
+export interface StateMachinePossibleNextStates {
+  plug_id: string;
+  possible_states: StateMachineState[];
+}
+
+/** plug settings are all the things the user can update in the UI */
 export interface PlugSettings {
   id: string;
   name: string;
   current_limit: number;
   site_id: string;
-  owner_ids: string[];
+  /**
+   * used to decide whether to update latest_reading in the plugstatus.
+   * if a user has checked recently, update, otherwise, do not write readings
+   * value.
+   */
+  last_time_user_checking_ms: number;
 }
 
-export interface PlugCommand {
-  /** request component */
-  requested_state: RequestedState;
-  reason: RequestedStateReason;
-  time: number;
-  requestor: string;
-  command_id: string;
+/** this gets written by the frontend and never edited */
+export interface UserRequest {
+  id: string;
+  user_id: string;
   plug_id: string;
-  /** used to ack by the rpi */
-  acked_at_ms: number;
-  acked_by_key: string;
+  requested_state: StateMachineState;
+  time_requested: number;
+  result: UserRequestResult | undefined;
+}
+
+/** this can only be written by the backend and shows the result of a request */
+export interface UserRequestResult {
+  time_entered_state: number;
+  status: UserRequestStatus;
+}
+
+/**
+ * this is what is used by the frontend to visualise what's going on.
+ * it should only be updateable by the mothership
+ */
+export interface PlugStatus {
+  id: string;
+  state: StateMachineTransition | undefined;
+  latest_reading: Reading | undefined;
 }
 
 export interface Reading {
@@ -293,8 +389,6 @@ export interface SiteSettings {
   id: string;
   name: string;
   description: string;
-  owner_ids: string[];
-  tags: string[];
 }
 
 function createBaseFuzeSettings(): FuzeSettings {
@@ -402,7 +496,7 @@ export const FuzeSettings = {
 };
 
 function createBaseStateMachineTransition(): StateMachineTransition {
-  return { id: "", state: 0, reason: "", time_ms: 0, plug_id: "" };
+  return { id: "", state: 0, reason: "", time_ms: 0, plug_id: "", owner_id: "" };
 }
 
 export const StateMachineTransition = {
@@ -421,6 +515,9 @@ export const StateMachineTransition = {
     }
     if (message.plug_id !== "") {
       writer.uint32(42).string(message.plug_id);
+    }
+    if (message.owner_id !== "") {
+      writer.uint32(50).string(message.owner_id);
     }
     return writer;
   },
@@ -467,6 +564,13 @@ export const StateMachineTransition = {
 
           message.plug_id = reader.string();
           continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.owner_id = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -483,6 +587,7 @@ export const StateMachineTransition = {
       reason: isSet(object.reason) ? globalThis.String(object.reason) : "",
       time_ms: isSet(object.time_ms) ? globalThis.Number(object.time_ms) : 0,
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      owner_id: isSet(object.owner_id) ? globalThis.String(object.owner_id) : "",
     };
   },
 
@@ -503,6 +608,9 @@ export const StateMachineTransition = {
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
     }
+    if (message.owner_id !== "") {
+      obj.owner_id = message.owner_id;
+    }
     return obj;
   },
 
@@ -516,12 +624,103 @@ export const StateMachineTransition = {
     message.reason = object.reason ?? "";
     message.time_ms = object.time_ms ?? 0;
     message.plug_id = object.plug_id ?? "";
+    message.owner_id = object.owner_id ?? "";
+    return message;
+  },
+};
+
+function createBaseStateMachinePossibleNextStates(): StateMachinePossibleNextStates {
+  return { plug_id: "", possible_states: [] };
+}
+
+export const StateMachinePossibleNextStates = {
+  encode(message: StateMachinePossibleNextStates, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.plug_id !== "") {
+      writer.uint32(10).string(message.plug_id);
+    }
+    writer.uint32(18).fork();
+    for (const v of message.possible_states) {
+      writer.int32(v);
+    }
+    writer.ldelim();
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): StateMachinePossibleNextStates {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStateMachinePossibleNextStates();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 2:
+          if (tag === 16) {
+            message.possible_states.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 18) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.possible_states.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StateMachinePossibleNextStates {
+    return {
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      possible_states: globalThis.Array.isArray(object?.possible_states)
+        ? object.possible_states.map((e: any) => stateMachineStateFromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: StateMachinePossibleNextStates): unknown {
+    const obj: any = {};
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.possible_states?.length) {
+      obj.possible_states = message.possible_states.map((e) => stateMachineStateToJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StateMachinePossibleNextStates>, I>>(base?: I): StateMachinePossibleNextStates {
+    return StateMachinePossibleNextStates.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StateMachinePossibleNextStates>, I>>(
+    object: I,
+  ): StateMachinePossibleNextStates {
+    const message = createBaseStateMachinePossibleNextStates();
+    message.plug_id = object.plug_id ?? "";
+    message.possible_states = object.possible_states?.map((e) => e) || [];
     return message;
   },
 };
 
 function createBasePlugSettings(): PlugSettings {
-  return { id: "", name: "", current_limit: 0, site_id: "", owner_ids: [] };
+  return { id: "", name: "", current_limit: 0, site_id: "", last_time_user_checking_ms: 0 };
 }
 
 export const PlugSettings = {
@@ -538,8 +737,8 @@ export const PlugSettings = {
     if (message.site_id !== "") {
       writer.uint32(34).string(message.site_id);
     }
-    for (const v of message.owner_ids) {
-      writer.uint32(42).string(v!);
+    if (message.last_time_user_checking_ms !== 0) {
+      writer.uint32(40).int64(message.last_time_user_checking_ms);
     }
     return writer;
   },
@@ -580,11 +779,11 @@ export const PlugSettings = {
           message.site_id = reader.string();
           continue;
         case 5:
-          if (tag !== 42) {
+          if (tag !== 40) {
             break;
           }
 
-          message.owner_ids.push(reader.string());
+          message.last_time_user_checking_ms = longToNumber(reader.int64() as Long);
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -601,9 +800,9 @@ export const PlugSettings = {
       name: isSet(object.name) ? globalThis.String(object.name) : "",
       current_limit: isSet(object.current_limit) ? globalThis.Number(object.current_limit) : 0,
       site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      owner_ids: globalThis.Array.isArray(object?.owner_ids)
-        ? object.owner_ids.map((e: any) => globalThis.String(e))
-        : [],
+      last_time_user_checking_ms: isSet(object.last_time_user_checking_ms)
+        ? globalThis.Number(object.last_time_user_checking_ms)
+        : 0,
     };
   },
 
@@ -621,8 +820,8 @@ export const PlugSettings = {
     if (message.site_id !== "") {
       obj.site_id = message.site_id;
     }
-    if (message.owner_ids?.length) {
-      obj.owner_ids = message.owner_ids;
+    if (message.last_time_user_checking_ms !== 0) {
+      obj.last_time_user_checking_ms = Math.round(message.last_time_user_checking_ms);
     }
     return obj;
   },
@@ -636,115 +835,86 @@ export const PlugSettings = {
     message.name = object.name ?? "";
     message.current_limit = object.current_limit ?? 0;
     message.site_id = object.site_id ?? "";
-    message.owner_ids = object.owner_ids?.map((e) => e) || [];
+    message.last_time_user_checking_ms = object.last_time_user_checking_ms ?? 0;
     return message;
   },
 };
 
-function createBasePlugCommand(): PlugCommand {
-  return {
-    requested_state: 0,
-    reason: 0,
-    time: 0,
-    requestor: "",
-    command_id: "",
-    plug_id: "",
-    acked_at_ms: 0,
-    acked_by_key: "",
-  };
+function createBaseUserRequest(): UserRequest {
+  return { id: "", user_id: "", plug_id: "", requested_state: 0, time_requested: 0, result: undefined };
 }
 
-export const PlugCommand = {
-  encode(message: PlugCommand, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.requested_state !== 0) {
-      writer.uint32(8).int32(message.requested_state);
+export const UserRequest = {
+  encode(message: UserRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
     }
-    if (message.reason !== 0) {
-      writer.uint32(16).int32(message.reason);
-    }
-    if (message.time !== 0) {
-      writer.uint32(24).int64(message.time);
-    }
-    if (message.requestor !== "") {
-      writer.uint32(34).string(message.requestor);
-    }
-    if (message.command_id !== "") {
-      writer.uint32(42).string(message.command_id);
+    if (message.user_id !== "") {
+      writer.uint32(18).string(message.user_id);
     }
     if (message.plug_id !== "") {
-      writer.uint32(50).string(message.plug_id);
+      writer.uint32(26).string(message.plug_id);
     }
-    if (message.acked_at_ms !== 0) {
-      writer.uint32(56).int64(message.acked_at_ms);
+    if (message.requested_state !== 0) {
+      writer.uint32(32).int32(message.requested_state);
     }
-    if (message.acked_by_key !== "") {
-      writer.uint32(66).string(message.acked_by_key);
+    if (message.time_requested !== 0) {
+      writer.uint32(40).int64(message.time_requested);
+    }
+    if (message.result !== undefined) {
+      UserRequestResult.encode(message.result, writer.uint32(50).fork()).ldelim();
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): PlugCommand {
+  decode(input: _m0.Reader | Uint8Array, length?: number): UserRequest {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlugCommand();
+    const message = createBaseUserRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          if (tag !== 8) {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.user_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
             break;
           }
 
           message.requested_state = reader.int32() as any;
           continue;
-        case 2:
-          if (tag !== 16) {
-            break;
-          }
-
-          message.reason = reader.int32() as any;
-          continue;
-        case 3:
-          if (tag !== 24) {
-            break;
-          }
-
-          message.time = longToNumber(reader.int64() as Long);
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.requestor = reader.string();
-          continue;
         case 5:
-          if (tag !== 42) {
+          if (tag !== 40) {
             break;
           }
 
-          message.command_id = reader.string();
+          message.time_requested = longToNumber(reader.int64() as Long);
           continue;
         case 6:
           if (tag !== 50) {
             break;
           }
 
-          message.plug_id = reader.string();
-          continue;
-        case 7:
-          if (tag !== 56) {
-            break;
-          }
-
-          message.acked_at_ms = longToNumber(reader.int64() as Long);
-          continue;
-        case 8:
-          if (tag !== 66) {
-            break;
-          }
-
-          message.acked_by_key = reader.string();
+          message.result = UserRequestResult.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -755,61 +925,220 @@ export const PlugCommand = {
     return message;
   },
 
-  fromJSON(object: any): PlugCommand {
+  fromJSON(object: any): UserRequest {
     return {
-      requested_state: isSet(object.requested_state) ? requestedStateFromJSON(object.requested_state) : 0,
-      reason: isSet(object.reason) ? requestedStateReasonFromJSON(object.reason) : 0,
-      time: isSet(object.time) ? globalThis.Number(object.time) : 0,
-      requestor: isSet(object.requestor) ? globalThis.String(object.requestor) : "",
-      command_id: isSet(object.command_id) ? globalThis.String(object.command_id) : "",
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      user_id: isSet(object.user_id) ? globalThis.String(object.user_id) : "",
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      acked_at_ms: isSet(object.acked_at_ms) ? globalThis.Number(object.acked_at_ms) : 0,
-      acked_by_key: isSet(object.acked_by_key) ? globalThis.String(object.acked_by_key) : "",
+      requested_state: isSet(object.requested_state) ? stateMachineStateFromJSON(object.requested_state) : 0,
+      time_requested: isSet(object.time_requested) ? globalThis.Number(object.time_requested) : 0,
+      result: isSet(object.result) ? UserRequestResult.fromJSON(object.result) : undefined,
     };
   },
 
-  toJSON(message: PlugCommand): unknown {
+  toJSON(message: UserRequest): unknown {
     const obj: any = {};
-    if (message.requested_state !== 0) {
-      obj.requested_state = requestedStateToJSON(message.requested_state);
+    if (message.id !== "") {
+      obj.id = message.id;
     }
-    if (message.reason !== 0) {
-      obj.reason = requestedStateReasonToJSON(message.reason);
-    }
-    if (message.time !== 0) {
-      obj.time = Math.round(message.time);
-    }
-    if (message.requestor !== "") {
-      obj.requestor = message.requestor;
-    }
-    if (message.command_id !== "") {
-      obj.command_id = message.command_id;
+    if (message.user_id !== "") {
+      obj.user_id = message.user_id;
     }
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
     }
-    if (message.acked_at_ms !== 0) {
-      obj.acked_at_ms = Math.round(message.acked_at_ms);
+    if (message.requested_state !== 0) {
+      obj.requested_state = stateMachineStateToJSON(message.requested_state);
     }
-    if (message.acked_by_key !== "") {
-      obj.acked_by_key = message.acked_by_key;
+    if (message.time_requested !== 0) {
+      obj.time_requested = Math.round(message.time_requested);
+    }
+    if (message.result !== undefined) {
+      obj.result = UserRequestResult.toJSON(message.result);
     }
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<PlugCommand>, I>>(base?: I): PlugCommand {
-    return PlugCommand.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<UserRequest>, I>>(base?: I): UserRequest {
+    return UserRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<PlugCommand>, I>>(object: I): PlugCommand {
-    const message = createBasePlugCommand();
-    message.requested_state = object.requested_state ?? 0;
-    message.reason = object.reason ?? 0;
-    message.time = object.time ?? 0;
-    message.requestor = object.requestor ?? "";
-    message.command_id = object.command_id ?? "";
+  fromPartial<I extends Exact<DeepPartial<UserRequest>, I>>(object: I): UserRequest {
+    const message = createBaseUserRequest();
+    message.id = object.id ?? "";
+    message.user_id = object.user_id ?? "";
     message.plug_id = object.plug_id ?? "";
-    message.acked_at_ms = object.acked_at_ms ?? 0;
-    message.acked_by_key = object.acked_by_key ?? "";
+    message.requested_state = object.requested_state ?? 0;
+    message.time_requested = object.time_requested ?? 0;
+    message.result = (object.result !== undefined && object.result !== null)
+      ? UserRequestResult.fromPartial(object.result)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseUserRequestResult(): UserRequestResult {
+  return { time_entered_state: 0, status: 0 };
+}
+
+export const UserRequestResult = {
+  encode(message: UserRequestResult, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.time_entered_state !== 0) {
+      writer.uint32(8).int64(message.time_entered_state);
+    }
+    if (message.status !== 0) {
+      writer.uint32(16).int32(message.status);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): UserRequestResult {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUserRequestResult();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.time_entered_state = longToNumber(reader.int64() as Long);
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UserRequestResult {
+    return {
+      time_entered_state: isSet(object.time_entered_state) ? globalThis.Number(object.time_entered_state) : 0,
+      status: isSet(object.status) ? userRequestStatusFromJSON(object.status) : 0,
+    };
+  },
+
+  toJSON(message: UserRequestResult): unknown {
+    const obj: any = {};
+    if (message.time_entered_state !== 0) {
+      obj.time_entered_state = Math.round(message.time_entered_state);
+    }
+    if (message.status !== 0) {
+      obj.status = userRequestStatusToJSON(message.status);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UserRequestResult>, I>>(base?: I): UserRequestResult {
+    return UserRequestResult.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UserRequestResult>, I>>(object: I): UserRequestResult {
+    const message = createBaseUserRequestResult();
+    message.time_entered_state = object.time_entered_state ?? 0;
+    message.status = object.status ?? 0;
+    return message;
+  },
+};
+
+function createBasePlugStatus(): PlugStatus {
+  return { id: "", state: undefined, latest_reading: undefined };
+}
+
+export const PlugStatus = {
+  encode(message: PlugStatus, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.state !== undefined) {
+      StateMachineTransition.encode(message.state, writer.uint32(18).fork()).ldelim();
+    }
+    if (message.latest_reading !== undefined) {
+      Reading.encode(message.latest_reading, writer.uint32(26).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): PlugStatus {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePlugStatus();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.state = StateMachineTransition.decode(reader, reader.uint32());
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.latest_reading = Reading.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PlugStatus {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      state: isSet(object.state) ? StateMachineTransition.fromJSON(object.state) : undefined,
+      latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
+    };
+  },
+
+  toJSON(message: PlugStatus): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.state !== undefined) {
+      obj.state = StateMachineTransition.toJSON(message.state);
+    }
+    if (message.latest_reading !== undefined) {
+      obj.latest_reading = Reading.toJSON(message.latest_reading);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<PlugStatus>, I>>(base?: I): PlugStatus {
+    return PlugStatus.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<PlugStatus>, I>>(object: I): PlugStatus {
+    const message = createBasePlugStatus();
+    message.id = object.id ?? "";
+    message.state = (object.state !== undefined && object.state !== null)
+      ? StateMachineTransition.fromPartial(object.state)
+      : undefined;
+    message.latest_reading = (object.latest_reading !== undefined && object.latest_reading !== null)
+      ? Reading.fromPartial(object.latest_reading)
+      : undefined;
     return message;
   },
 };
@@ -1053,7 +1382,7 @@ export const ReadingChunk = {
 };
 
 function createBaseSiteSettings(): SiteSettings {
-  return { id: "", name: "", description: "", owner_ids: [], tags: [] };
+  return { id: "", name: "", description: "" };
 }
 
 export const SiteSettings = {
@@ -1066,12 +1395,6 @@ export const SiteSettings = {
     }
     if (message.description !== "") {
       writer.uint32(26).string(message.description);
-    }
-    for (const v of message.owner_ids) {
-      writer.uint32(34).string(v!);
-    }
-    for (const v of message.tags) {
-      writer.uint32(50).string(v!);
     }
     return writer;
   },
@@ -1104,20 +1427,6 @@ export const SiteSettings = {
 
           message.description = reader.string();
           continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.owner_ids.push(reader.string());
-          continue;
-        case 6:
-          if (tag !== 50) {
-            break;
-          }
-
-          message.tags.push(reader.string());
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1132,10 +1441,6 @@ export const SiteSettings = {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
       name: isSet(object.name) ? globalThis.String(object.name) : "",
       description: isSet(object.description) ? globalThis.String(object.description) : "",
-      owner_ids: globalThis.Array.isArray(object?.owner_ids)
-        ? object.owner_ids.map((e: any) => globalThis.String(e))
-        : [],
-      tags: globalThis.Array.isArray(object?.tags) ? object.tags.map((e: any) => globalThis.String(e)) : [],
     };
   },
 
@@ -1150,12 +1455,6 @@ export const SiteSettings = {
     if (message.description !== "") {
       obj.description = message.description;
     }
-    if (message.owner_ids?.length) {
-      obj.owner_ids = message.owner_ids;
-    }
-    if (message.tags?.length) {
-      obj.tags = message.tags;
-    }
     return obj;
   },
 
@@ -1167,8 +1466,6 @@ export const SiteSettings = {
     message.id = object.id ?? "";
     message.name = object.name ?? "";
     message.description = object.description ?? "";
-    message.owner_ids = object.owner_ids?.map((e) => e) || [];
-    message.tags = object.tags?.map((e) => e) || [];
     return message;
   },
 };

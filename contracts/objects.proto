@@ -17,6 +17,10 @@ enum StateMachineState {
   StateMachineState_UNSPECIFIED = 0;
   StateMachineState_ON = 1;
   StateMachineState_OFF = 2;
+  StateMachineState_USER_REQUESTED_ON = 3;
+  StateMachineState_USER_REQUESTED_OFF = 4;
+  StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
+  StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
 }
 
 message StateMachineTransition {
@@ -25,28 +29,57 @@ message StateMachineTransition {
   string reason = 3;
   int64 time_ms = 4;
   string plug_id = 5;
+  string owner_id = 6;
 }
 
+message StateMachinePossibleNextStates {
+  string plug_id = 1;
+  repeated StateMachineState possible_states = 2;
+}
+
+// plug settings are all the things the user can update in the UI
 message PlugSettings {
   string id = 1;
   string name = 2;
   double current_limit = 3;
   string site_id = 4;
-  repeated string owner_ids = 5;
+  // used to decide whether to update latest_reading in the plugstatus.
+  // if a user has checked recently, update, otherwise, do not write readings
+  // value.
+  int64 last_time_user_checking_ms = 5;
 }
 
-message PlugCommand {
-  // request component
-  RequestedState requested_state = 1;
-  RequestedStateReason reason = 2;
-  int64 time = 3;
-  string requestor = 4;
-  string command_id = 5;
-  string plug_id = 6;
+// this gets written by the frontend and never edited
+message UserRequest {
+  string id = 1;
+  string user_id = 2;
+  string plug_id = 3;
+  StateMachineState requested_state = 4;
+  int64 time_requested = 5;
+  UserRequestResult result = 6;
+}
 
-  // used to ack by the rpi
-  int64 acked_at_ms = 7;
-  string acked_by_key = 8;
+// this can only be written by the backend and shows the result of a request
+message UserRequestResult {
+  int64 time_entered_state = 1;
+  UserRequestStatus status = 2;
+}
+
+enum UserRequestStatus {
+  RequestedStatus_UNKNOWN = 0;
+  // need to write a fs rule to only allow this status from non backend
+  RequestedStatus_PENDING = 1;
+  RequestedStatus_SUCCESS = 2;
+  RequestedStatus_FAILURE = 3;
+  // TODO: add more failure reason statuses
+}
+
+// this is what is used by the frontend to visualise what's going on.
+// it should only be updateable by the mothership
+message PlugStatus {
+  string id = 1;
+  StateMachineTransition state = 2;
+  Reading latest_reading = 3;
 }
 
 enum RequestedState {
@@ -111,6 +144,4 @@ message SiteSettings {
   string id = 1;
   string name = 2;
   string description = 3;
-  repeated string owner_ids = 4;
-  repeated string tags = 6;
 }
