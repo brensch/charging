@@ -1,4 +1,4 @@
-I'm building an EV charging service that needs a UI for customers to scan a qr code or enter a plug number, put their payment details in, and then turn on and off the plug that they will plug their car into.
+I'm building an EV charging service that needs a webpage UI for customers to scan a qr code or enter a plug number, put their payment details in, and then turn on and off the plug that they will plug their car into.
 
 I've mocked the pages I will need in figma here: https://www.figma.com/file/Ebbx4TJyFY839zVAqtPkrl/Magic-Charge?type=design&node-id=0%3A1&mode=design&t=oEgvgBxYuN12UXKk-1
 
