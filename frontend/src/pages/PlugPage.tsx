@@ -36,14 +36,14 @@ const PlugPage = () => {
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [recentRequests, setRecentRequests] = useState<UserRequest[]>([])
 
-  const handleCreateRequest = async () => {
+  const handleCreateRequest = async (state: StateMachineState) => {
     const id = uuidv4() // Generate a unique UUID
 
     const userRequest: UserRequest = {
       id: id,
       user_id: auth.currentUser?.uid!,
       plug_id: inputValue,
-      requested_state: StateMachineState.StateMachineState_USER_REQUESTED_ON,
+      requested_state: state,
       time_requested: Date.now(),
       result: {
         status: UserRequestStatus.RequestedStatus_PENDING,
@@ -131,18 +131,40 @@ const PlugPage = () => {
         <React.Fragment>
           <Box border={1} padding={2} marginY={2}>
             <Typography variant="body1">
-              State: {stateMachineStateToJSON(plugStatus.state?.state)}
+              State:{" "}
+              {stateMachineStateToJSON(plugStatus.state?.state).replace(
+                /^StateMachineState_/,
+                "",
+              )}
             </Typography>
             <Typography variant="body1">
               Time: {new Date(plugStatus.state?.time_ms).toLocaleString()}
+            </Typography>
+            <Typography variant="body1">
+              Reason: {plugStatus.state.reason}
             </Typography>
           </Box>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleCreateRequest}
+            onClick={() =>
+              handleCreateRequest(
+                StateMachineState.StateMachineState_USER_REQUESTED_ON,
+              )
+            }
           >
-            Request State Change
+            Request On
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() =>
+              handleCreateRequest(
+                StateMachineState.StateMachineState_USER_REQUESTED_OFF,
+              )
+            }
+          >
+            Request Off
           </Button>
         </React.Fragment>
       )}

@@ -48,9 +48,72 @@ type PlugStateMachine struct {
 	mu sync.Mutex
 }
 
+func (p *PlugStateMachine) RequestLocalState(state contracts.RequestedState) error {
+	// TODO: actually make this work
+
+	return nil
+}
+
 // this will eventually be a switch thing.
 func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition {
 	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
+	id := uuid.New().String()
+
+	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON {
+
+		err := p.RequestLocalState(contracts.RequestedState_RequestedState_ON)
+		if err != nil {
+			log.Println("got error requesting local state", err)
+			// TODO: how to handle errors
+			return nil
+		}
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
+			Reason: "received user request, commanding on locally",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
+
+	// TODO: this will only be able to be created by the listener to the return channel from the rpis
+	if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON {
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  contracts.StateMachineState_StateMachineState_ON,
+			Reason: "mocking the local on change. TODO: perform the change on the rpi and report back",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
+
+	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
+
+		err := p.RequestLocalState(contracts.RequestedState_RequestedState_OFF)
+		if err != nil {
+			log.Println("got error requesting local state", err)
+			// TODO: how to handle errors
+			return nil
+		}
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
+			Reason: "received user request, commanding off locally",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
+
+	// TODO: this will only be able to be created by the listener to the return channel from the rpis
+	if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF {
+		return &contracts.StateMachineTransition{
+			Id:     id,
+			State:  contracts.StateMachineState_StateMachineState_OFF,
+			Reason: "mocking the local off change. TODO: perform the change on the rpi and report back",
+			TimeMs: time.Now().UnixMilli(),
+			PlugId: p.plugID,
+		}
+	}
 
 	// swap state if haven't transitioned in 5 minutes
 	if p.transitions[p.latestStatePtr] == nil {
@@ -68,7 +131,6 @@ func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition 
 	if !lastTransitionTime.Before(time.Now().Add(-60 * time.Second)) {
 		return nil
 	}
-	id := uuid.New().String()
 	nextState := contracts.StateMachineState_StateMachineState_ON
 	if p.transitions[p.latestStatePtr].State == contracts.StateMachineState_StateMachineState_ON {
 		nextState = contracts.StateMachineState_StateMachineState_OFF
@@ -76,7 +138,7 @@ func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition 
 	return &contracts.StateMachineTransition{
 		Id:     id,
 		State:  nextState,
-		Reason: "switching state",
+		Reason: "auto switching state to demo state machine",
 		TimeMs: time.Now().UnixMilli(),
 		PlugId: p.plugID,
 	}
@@ -133,22 +195,17 @@ func main() {
 	}
 	defer fs.Close()
 
-	// Collection reference
-	userRequests := fs.Collection("user_requests")
+	// TODO: get all the plugs from plug settings to make startup much quicker
 
-	// Create a query for documents within the collection.
-	// Adjust the query according to your needs. This example listens to all documents.
-	query := userRequests.Query
-
-	// Start listening to query results
-	iter := query.Snapshots(ctx)
-
-	defer iter.Stop()
-
-	// when a chunk comes in it belongs to a single site.
-	// store a map of siteids with all the readings from each site for the state machine
+	// this is used to store all the state machines for each plug
 	stateMachines := make(map[string]*PlugStateMachine)
 	var stateMachinesMu sync.Mutex
+
+	// listen to user requests
+	userRequests := fs.Collection(common.CollectionUserRequests)
+	query := userRequests.Where("result.status", "==", 1)
+	iter := query.Snapshots(ctx)
+	defer iter.Stop()
 
 	go func() {
 
@@ -192,15 +249,22 @@ func main() {
 					}
 
 					// update the firestore doc and then the state machine
+					// todo: do these as a batch
 					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
 						{Path: "result", Value: resRequestResult},
 					})
-					if err := change.Doc.DataTo(&userRequest); err != nil {
+					err = change.Doc.DataTo(&userRequest)
+					if err != nil {
 						fmt.Printf("Error updating userrequestresult: %v\n", err)
 						continue
 					}
 
-					// Print out the document contents
+					err = plugStateMachine.PerformTransition(ctx, fs, transition)
+					if err != nil {
+						fmt.Printf("Error updating userrequestresult: %v\n", err)
+						continue
+					}
+
 				}
 			}
 		}
@@ -273,29 +337,6 @@ func main() {
 	}
 }
 
-// func InitSiteStateMachine(ctx context.Context, fs *firestore.Client, chunk *contracts.ReadingChunk) (*SiteStateMachine, error) {
-
-// 	err := ensureSiteSettingsDoc(ctx, fs, chunk.GetSiteId())
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	stateMachine := &SiteStateMachine{
-// 		plugStateMachines: make(map[string]*PlugStateMachine),
-// 	}
-
-// 	// can guarantee only a single reading from each plug per chunk
-// 	for _, reading := range chunk.Readings {
-// 		// start a plug state machine for each
-// 		stateMachine.plugStateMachines[reading.PlugId], err = InitPlugStateMachine(ctx, fs, reading)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 	}
-// 	return stateMachine, nil
-// }
-
 func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, reading *contracts.Reading) (*PlugStateMachine, error) {
 
 	err := ensurePlugSettingsDoc(ctx, fs, reading.GetPlugId())
@@ -354,7 +395,6 @@ func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.Reading
 
 	// Process the ReadingChunk
 	fmt.Printf("Received readings for site: %s %d\n", readingChunk.SiteId, len(readingChunk.Readings))
-	// Add your logic here to process the readings...
 
 	// Acknowledge the message
 	msg.Ack()

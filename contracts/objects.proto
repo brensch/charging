@@ -76,6 +76,7 @@ enum UserRequestStatus {
 
 // this is what is used by the frontend to visualise what's going on.
 // it should only be updateable by the mothership
+// it's also used on startup of the mothership to hydrate its statemachinemap
 message PlugStatus {
   string id = 1;
   StateMachineTransition state = 2;
