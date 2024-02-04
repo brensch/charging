@@ -79,8 +79,9 @@ enum UserRequestStatus {
 // it's also used on startup of the mothership to hydrate its statemachinemap
 message PlugStatus {
   string id = 1;
-  StateMachineTransition state = 2;
-  Reading latest_reading = 3;
+  string site_id = 2;
+  StateMachineTransition state = 3;
+  Reading latest_reading = 4;
 }
 
 enum RequestedState {

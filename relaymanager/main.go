@@ -11,6 +11,8 @@ import (
 	"github.com/brensch/charging/electrical"
 	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"cloud.google.com/go/pubsub"
 )
@@ -44,9 +46,55 @@ func main() {
 	}
 	log.Println("got pubsub client")
 
-	topic := client.Topic(topicID)
+	sendTopic := client.Topic(topicID)
 
 	fmt.Println(clientID, projectID)
+	receiveTopicName := fmt.Sprintf("commands_%s", clientID)
+
+	// set up topic
+	topic, err := client.CreateTopic(ctx, receiveTopicName)
+	if err != nil {
+		// Check if the error is because the topic already exists
+		if status.Code(err) == codes.AlreadyExists {
+			log.Printf("Topic %s already exists\n", receiveTopicName)
+			topic = client.Topic(receiveTopicName)
+		} else {
+			log.Fatalf("Failed to create topic: %v", err)
+		}
+	} else {
+		log.Printf("Topic %s created\n", receiveTopicName)
+	}
+
+	sub, err := client.CreateSubscription(ctx, receiveTopicName, pubsub.SubscriptionConfig{
+		Topic:                     topic,
+		AckDeadline:               10 * time.Second,
+		RetentionDuration:         7 * 24 * time.Hour,
+		EnableMessageOrdering:     true,
+		EnableExactlyOnceDelivery: true,
+		ExpirationPolicy:          time.Duration(0),
+	})
+	if err != nil {
+		// Check if the error is because the topic already exists
+		if status.Code(err) == codes.AlreadyExists {
+			log.Printf("Sub %s already exists\n", receiveTopicName)
+			sub = client.Subscription(receiveTopicName)
+
+		} else {
+			log.Fatalf("Failed to create subscription: %v", err)
+		}
+	} else {
+		log.Printf("Subscription %s created\n", receiveTopicName)
+	}
+
+	go func() {
+
+		err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+			fmt.Println("got messssssssage", msg.Data)
+		})
+		if err != nil {
+			log.Fatal("wtf", err)
+		}
+	}()
 
 	// // Set up Firestore client
 	// fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
@@ -93,7 +141,7 @@ func main() {
 		for _, reading := range readings {
 			fmt.Println("got reading", reading.Voltage)
 		}
-		err = SendReadings(ctx, topic, clientID, readings)
+		err = SendReadings(ctx, sendTopic, clientID, readings)
 		if err != nil {
 			fmt.Println("failed to send readings")
 			continue

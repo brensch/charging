@@ -35,6 +35,7 @@ const (
 
 type PlugStateMachine struct {
 	plugID string
+	siteID string
 
 	latestReadingPtr int
 	latestReadings   []*contracts.Reading
@@ -45,23 +46,35 @@ type PlugStateMachine struct {
 
 	accumulatedEnergyUsage float64
 
+	siteTopic *pubsub.Topic
+
 	mu sync.Mutex
 }
 
-func (p *PlugStateMachine) RequestLocalState(state contracts.RequestedState) error {
+func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contracts.RequestedState) error {
 	// TODO: actually make this work
+
+	res := p.siteTopic.Publish(ctx, &pubsub.Message{
+		Data: []byte("yooooo"),
+	})
+
+	sendID, err := res.Get(ctx)
+	if err != nil {
+		return err
+	}
+	log.Println("sent local request", sendID)
 
 	return nil
 }
 
 // this will eventually be a switch thing.
-func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition {
+func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.StateMachineTransition {
 	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
 	id := uuid.New().String()
 
 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON {
 
-		err := p.RequestLocalState(contracts.RequestedState_RequestedState_ON)
+		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
 		if err != nil {
 			log.Println("got error requesting local state", err)
 			// TODO: how to handle errors
@@ -89,7 +102,7 @@ func (p *PlugStateMachine) DetectTransition() *contracts.StateMachineTransition 
 
 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
 
-		err := p.RequestLocalState(contracts.RequestedState_RequestedState_OFF)
+		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
 		if err != nil {
 			log.Println("got error requesting local state", err)
 			// TODO: how to handle errors
@@ -151,7 +164,7 @@ func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.
 	nextStatePtr := (p.latestStatePtr + 1) % statesToStore
 	p.transitions[nextStatePtr] = transition
 	p.latestStatePtr = nextStatePtr
-	fmt.Println("updating pointer", nextStatePtr)
+	log.Println("updating pointer", nextStatePtr)
 
 	_, err := fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
@@ -195,11 +208,23 @@ func main() {
 	}
 	defer fs.Close()
 
-	// TODO: get all the plugs from plug settings to make startup much quicker
-
 	// this is used to store all the state machines for each plug
 	stateMachines := make(map[string]*PlugStateMachine)
 	var stateMachinesMu sync.Mutex
+
+	plugStatusQuery := fs.Collection(common.CollectionPlugStatus).Query
+	plugStatuses, err := plugStatusQuery.Documents(ctx).GetAll()
+	if err != nil {
+		log.Fatalf("couldn't get plug statuses", err)
+	}
+
+	for _, plugStatusDoc := range plugStatuses {
+		var plugStatus *contracts.PlugStatus
+		plugStatusDoc.DataTo(&plugStatus)
+		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
+	}
+
+	// TODO: get all the plugs from plug settings to make startup much quicker
 
 	// listen to user requests
 	userRequests := fs.Collection(common.CollectionUserRequests)
@@ -250,7 +275,7 @@ func main() {
 
 					// update the firestore doc and then the state machine
 					// todo: do these as a batch
-					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.PlugId).Update(ctx, []firestore.Update{
 						{Path: "result", Value: resRequestResult},
 					})
 					err = change.Doc.DataTo(&userRequest)
@@ -261,7 +286,7 @@ func main() {
 
 					err = plugStateMachine.PerformTransition(ctx, fs, transition)
 					if err != nil {
-						fmt.Printf("Error updating userrequestresult: %v\n", err)
+						fmt.Printf("Error performing transition: %v\n", err)
 						continue
 					}
 
@@ -281,27 +306,29 @@ func main() {
 		}
 
 		for _, reading := range chunk.Readings {
-			stateMachinesMu.Lock()
-			plugStateMachine, ok := stateMachines[reading.PlugId]
-			stateMachinesMu.Unlock()
-			if !ok {
-				// TODO: alert on this, shouldn't be adding new plugs often
-				fmt.Println("couldn't find plug", reading.PlugId)
-				plugStateMachine, err = InitPlugStateMachine(ctx, fs, reading)
-				if err != nil {
-					log.Println("failed to init new plug state machine")
-					return
-				}
+			go func(reading *contracts.Reading) {
+
 				stateMachinesMu.Lock()
-				stateMachines[reading.PlugId] = plugStateMachine
+				plugStateMachine, ok := stateMachines[reading.PlugId]
 				stateMachinesMu.Unlock()
-			}
+				if !ok {
+					// TODO: alert on this, shouldn't be adding new plugs often
+					log.Println("couldn't find plug", reading.PlugId)
+					plugStateMachine = InitPlugStateMachine(client, chunk.GetSiteId(), reading)
 
-			fmt.Printf("%f kWh\n", reading.Energy)
+					// this only needs to be done if we receive a non existant plug id from a reading
+					err = EnsurePlugIsInFirestore(ctx, fs, chunk.GetSiteId(), reading)
+					if err != nil {
+						log.Println("failed to init new plug state machine")
+						return
+					}
+					stateMachinesMu.Lock()
+					stateMachines[reading.PlugId] = plugStateMachine
+					stateMachinesMu.Unlock()
+				}
 
-			// inline func to ensure unlock
-			// TODO: make this better
-			func() {
+				// inline func to ensure unlock
+				// TODO: make this better
 				plugStateMachine.mu.Lock()
 				defer plugStateMachine.mu.Unlock()
 
@@ -313,11 +340,11 @@ func main() {
 
 				if nextPtr == 0 {
 					// TODO: implement
-					fmt.Println("charging customer for energy usage:", plugStateMachine.accumulatedEnergyUsage)
+					log.Println("charging customer for energy usage:", plugStateMachine.accumulatedEnergyUsage)
 					plugStateMachine.accumulatedEnergyUsage = 0
 				}
 
-				transition := plugStateMachine.DetectTransition()
+				transition := plugStateMachine.DetectTransition(ctx)
 				if transition == nil {
 					return
 				}
@@ -327,7 +354,7 @@ func main() {
 					log.Println("had an error performing transition", err)
 				}
 
-			}()
+			}(reading)
 		}
 
 	})
@@ -337,20 +364,29 @@ func main() {
 	}
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, reading *contracts.Reading) (*PlugStateMachine, error) {
-
-	err := ensurePlugSettingsDoc(ctx, fs, reading.GetPlugId())
+func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID string, reading *contracts.Reading) error {
+	err := ensurePlugSettingsDoc(ctx, fs, reading.PlugId)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = ensurePlugStatusDoc(ctx, fs, reading.GetPlugId())
+	err = ensurePlugStatusDoc(ctx, fs, siteID, reading)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
+	return nil
+}
+
+func InitPlugStateMachine(pubsubClient *pubsub.Client, siteID string, reading *contracts.Reading) *PlugStateMachine {
+	log.Println("initialising plug", reading.GetPlugId())
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
 	latestReadings[0] = reading
+
+	receiveTopicName := fmt.Sprintf("commands_%s", siteID)
+
+	topic := pubsubClient.Topic(receiveTopicName)
 
 	transitions := make([]*contracts.StateMachineTransition, statesToStore)
 
@@ -359,9 +395,11 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, reading *co
 		latestReadingPtr: 0,
 		latestReadings:   latestReadings,
 		transitions:      transitions,
+		siteTopic:        topic,
+		siteID:           siteID,
 	}
 
-	return stateMachine, nil
+	return stateMachine
 }
 
 // func EnsurePlugStatusExists
@@ -371,7 +409,7 @@ func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.Reading
 	// Decompress the data
 	reader, err := gzip.NewReader(bytes.NewReader(msg.Data))
 	if err != nil {
-		fmt.Println("Error creating gzip reader:", err)
+		log.Println("Error creating gzip reader:", err)
 		msg.Nack()
 		return nil, err
 	}
@@ -379,7 +417,7 @@ func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.Reading
 
 	decompressedData, err := io.ReadAll(reader)
 	if err != nil {
-		fmt.Println("Error reading decompressed data:", err)
+		log.Println("Error reading decompressed data:", err)
 		msg.Nack()
 		return nil, err
 	}
@@ -388,7 +426,7 @@ func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.Reading
 	var readingChunk contracts.ReadingChunk
 	err = proto.Unmarshal(decompressedData, &readingChunk)
 	if err != nil {
-		fmt.Println("Error unmarshalling data:", err)
+		log.Println("Error unmarshalling data:", err)
 		msg.Nack()
 		return nil, err
 	}

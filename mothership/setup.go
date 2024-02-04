@@ -67,9 +67,9 @@ func ensurePlugSettingsDoc(ctx context.Context, fs *firestore.Client, plugID str
 	return nil
 }
 
-func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, plugID string) error {
+func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, siteID string, reading *contracts.Reading) error {
 	// Reference to the document
-	docRef := fs.Collection(common.CollectionPlugStatus).Doc(plugID)
+	docRef := fs.Collection(common.CollectionPlugStatus).Doc(reading.PlugId)
 
 	// Try to get the document
 	_, err := docRef.Get(ctx)
@@ -86,7 +86,9 @@ func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, plugID strin
 
 	// The document does not exist, create a new one with a full instance of SiteSettings
 	_, err = docRef.Set(ctx, contracts.PlugStatus{
-		Id: plugID,
+		Id:            reading.PlugId,
+		LatestReading: reading,
+		SiteId:        siteID,
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create PlugStatus document: %v", err)

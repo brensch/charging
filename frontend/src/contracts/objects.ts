@@ -356,9 +356,11 @@ export interface UserRequestResult {
 /**
  * this is what is used by the frontend to visualise what's going on.
  * it should only be updateable by the mothership
+ * it's also used on startup of the mothership to hydrate its statemachinemap
  */
 export interface PlugStatus {
   id: string;
+  site_id: string;
   state: StateMachineTransition | undefined;
   latest_reading: Reading | undefined;
 }
@@ -1051,7 +1053,7 @@ export const UserRequestResult = {
 };
 
 function createBasePlugStatus(): PlugStatus {
-  return { id: "", state: undefined, latest_reading: undefined };
+  return { id: "", site_id: "", state: undefined, latest_reading: undefined };
 }
 
 export const PlugStatus = {
@@ -1059,11 +1061,14 @@ export const PlugStatus = {
     if (message.id !== "") {
       writer.uint32(10).string(message.id);
     }
+    if (message.site_id !== "") {
+      writer.uint32(18).string(message.site_id);
+    }
     if (message.state !== undefined) {
-      StateMachineTransition.encode(message.state, writer.uint32(18).fork()).ldelim();
+      StateMachineTransition.encode(message.state, writer.uint32(26).fork()).ldelim();
     }
     if (message.latest_reading !== undefined) {
-      Reading.encode(message.latest_reading, writer.uint32(26).fork()).ldelim();
+      Reading.encode(message.latest_reading, writer.uint32(34).fork()).ldelim();
     }
     return writer;
   },
@@ -1087,10 +1092,17 @@ export const PlugStatus = {
             break;
           }
 
-          message.state = StateMachineTransition.decode(reader, reader.uint32());
+          message.site_id = reader.string();
           continue;
         case 3:
           if (tag !== 26) {
+            break;
+          }
+
+          message.state = StateMachineTransition.decode(reader, reader.uint32());
+          continue;
+        case 4:
+          if (tag !== 34) {
             break;
           }
 
@@ -1108,6 +1120,7 @@ export const PlugStatus = {
   fromJSON(object: any): PlugStatus {
     return {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
       state: isSet(object.state) ? StateMachineTransition.fromJSON(object.state) : undefined,
       latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
     };
@@ -1117,6 +1130,9 @@ export const PlugStatus = {
     const obj: any = {};
     if (message.id !== "") {
       obj.id = message.id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
     }
     if (message.state !== undefined) {
       obj.state = StateMachineTransition.toJSON(message.state);
@@ -1133,6 +1149,7 @@ export const PlugStatus = {
   fromPartial<I extends Exact<DeepPartial<PlugStatus>, I>>(object: I): PlugStatus {
     const message = createBasePlugStatus();
     message.id = object.id ?? "";
+    message.site_id = object.site_id ?? "";
     message.state = (object.state !== undefined && object.state !== null)
       ? StateMachineTransition.fromPartial(object.state)
       : undefined;
