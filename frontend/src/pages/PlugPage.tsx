@@ -169,7 +169,7 @@ const PlugPage = () => {
         </React.Fragment>
       )}
       <Box border={1} padding={2} marginY={2}>
-        {recentRequests.map((request, index) => (
+        {recentRequests.map((request) => (
           <React.Fragment>
             <Typography variant="body1">
               {stateMachineStateToJSON(request.requested_state).replace(
