@@ -84,34 +84,12 @@ const MoneyPage = () => {
       )}
 
       <Stack spacing={4}>
-        <Typography variant="body1" mt={4}>
-          Manual top-up:
-        </Typography>
         <Stack direction="row">
           <Button variant="contained" onClick={handleTopUpSubmit}>
-            Top Up
+            Manual Top Up
           </Button>
         </Stack>
-        <Typography variant="body1" mt={4}>
-          Auto Top-Up Settings:
-        </Typography>
-        {autoTopupPreferences &&
-          autoTopupPreferences.enabled &&
-          stripeCustomer &&
-          stripeCustomer?.payment_methods.length > 0 && (
-            <React.Fragment>
-              <Typography>
-                Threshold: ${autoTopupPreferences?.threshold_cents / 100}
-              </Typography>
-              <Typography>
-                Recharge with: $
-                {autoTopupPreferences?.recharge_value_cents_aud / 100}
-              </Typography>
-            </React.Fragment>
-          )}
-        {autoTopupPreferences && !autoTopupPreferences.enabled && (
-          <Typography>disabled</Typography>
-        )}
+
         {stripeCustomer && stripeCustomer.payment_methods.length === 0 && (
           <Typography>
             No payment methods connected to your account. Add one in settings.
@@ -119,7 +97,6 @@ const MoneyPage = () => {
         )}
       </Stack>
 
-      <Typography variant="h5">Autotopup Settings</Typography>
       {stripeCustomer?.payment_methods.length === 0 ? (
         <Stack spacing={2} alignItems="center">
           <Button
@@ -155,28 +132,24 @@ const MoneyPage = () => {
           />
           {autoTopupPreferences && autoTopupPreferences.enabled && (
             <Stack spacing={2}>
-              <Typography variant="subtitle1">Auto Top-Up Settings:</Typography>
+              <Typography variant="h6">Auto Top-Up Settings:</Typography>
               <Typography>
                 Threshold: ${autoTopupPreferences.threshold_cents / 100}
               </Typography>
-              <Typography>
-                Recharge with: $
-                {autoTopupPreferences.recharge_value_cents_aud / 100}
-              </Typography>
-
-              <Typography variant="subtitle1">
-                New Auto Top-Up Settings:
-              </Typography>
               <TextField
-                label="When I'm below"
+                label="New threshold"
                 type="number"
                 variant="outlined"
                 value={autoTopUpTrigger}
                 onChange={(e) => setAutoTopUpTrigger(e.target.value)}
                 InputProps={{ inputProps: { min: 0 } }}
               />
+              <Typography>
+                Recharge with: $
+                {autoTopupPreferences.recharge_value_cents_aud / 100}
+              </Typography>
               <TextField
-                label="Top up with"
+                label="New recharge amount"
                 type="number"
                 variant="outlined"
                 value={autoTopUpAmount}
