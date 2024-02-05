@@ -49,6 +49,22 @@ message PlugSettings {
   int64 last_time_user_checking_ms = 5;
 }
 
+message LocalStateRequest {
+  string id = 1;
+  string plug_id = 2;
+  string site_id = 3;
+  RequestedState requested_state = 4;
+  int64 request_time = 5;
+}
+
+message LocalStateResponse {
+  string req_id = 1;
+  RequestedState resultant_state = 2;
+  string plug_id = 3;
+  string site_id = 4;
+  int64 time = 5;
+}
+
 // this gets written by the frontend and never edited
 message UserRequest {
   string id = 1;

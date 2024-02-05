@@ -337,6 +337,22 @@ export interface PlugSettings {
   last_time_user_checking_ms: number;
 }
 
+export interface LocalStateRequest {
+  id: string;
+  plug_id: string;
+  site_id: string;
+  requested_state: RequestedState;
+  request_time: number;
+}
+
+export interface LocalStateResponse {
+  req_id: string;
+  resultant_state: RequestedState;
+  plug_id: string;
+  site_id: string;
+  time: number;
+}
+
 /** this gets written by the frontend and never edited */
 export interface UserRequest {
   id: string;
@@ -838,6 +854,244 @@ export const PlugSettings = {
     message.current_limit = object.current_limit ?? 0;
     message.site_id = object.site_id ?? "";
     message.last_time_user_checking_ms = object.last_time_user_checking_ms ?? 0;
+    return message;
+  },
+};
+
+function createBaseLocalStateRequest(): LocalStateRequest {
+  return { id: "", plug_id: "", site_id: "", requested_state: 0, request_time: 0 };
+}
+
+export const LocalStateRequest = {
+  encode(message: LocalStateRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(18).string(message.plug_id);
+    }
+    if (message.site_id !== "") {
+      writer.uint32(26).string(message.site_id);
+    }
+    if (message.requested_state !== 0) {
+      writer.uint32(32).int32(message.requested_state);
+    }
+    if (message.request_time !== 0) {
+      writer.uint32(40).int64(message.request_time);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): LocalStateRequest {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLocalStateRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.requested_state = reader.int32() as any;
+          continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.request_time = longToNumber(reader.int64() as Long);
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): LocalStateRequest {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      requested_state: isSet(object.requested_state) ? requestedStateFromJSON(object.requested_state) : 0,
+      request_time: isSet(object.request_time) ? globalThis.Number(object.request_time) : 0,
+    };
+  },
+
+  toJSON(message: LocalStateRequest): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.requested_state !== 0) {
+      obj.requested_state = requestedStateToJSON(message.requested_state);
+    }
+    if (message.request_time !== 0) {
+      obj.request_time = Math.round(message.request_time);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<LocalStateRequest>, I>>(base?: I): LocalStateRequest {
+    return LocalStateRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<LocalStateRequest>, I>>(object: I): LocalStateRequest {
+    const message = createBaseLocalStateRequest();
+    message.id = object.id ?? "";
+    message.plug_id = object.plug_id ?? "";
+    message.site_id = object.site_id ?? "";
+    message.requested_state = object.requested_state ?? 0;
+    message.request_time = object.request_time ?? 0;
+    return message;
+  },
+};
+
+function createBaseLocalStateResponse(): LocalStateResponse {
+  return { req_id: "", resultant_state: 0, plug_id: "", site_id: "", time: 0 };
+}
+
+export const LocalStateResponse = {
+  encode(message: LocalStateResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.req_id !== "") {
+      writer.uint32(10).string(message.req_id);
+    }
+    if (message.resultant_state !== 0) {
+      writer.uint32(16).int32(message.resultant_state);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(26).string(message.plug_id);
+    }
+    if (message.site_id !== "") {
+      writer.uint32(34).string(message.site_id);
+    }
+    if (message.time !== 0) {
+      writer.uint32(40).int64(message.time);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): LocalStateResponse {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLocalStateResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.req_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.resultant_state = reader.int32() as any;
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.time = longToNumber(reader.int64() as Long);
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): LocalStateResponse {
+    return {
+      req_id: isSet(object.req_id) ? globalThis.String(object.req_id) : "",
+      resultant_state: isSet(object.resultant_state) ? requestedStateFromJSON(object.resultant_state) : 0,
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      time: isSet(object.time) ? globalThis.Number(object.time) : 0,
+    };
+  },
+
+  toJSON(message: LocalStateResponse): unknown {
+    const obj: any = {};
+    if (message.req_id !== "") {
+      obj.req_id = message.req_id;
+    }
+    if (message.resultant_state !== 0) {
+      obj.resultant_state = requestedStateToJSON(message.resultant_state);
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.time !== 0) {
+      obj.time = Math.round(message.time);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<LocalStateResponse>, I>>(base?: I): LocalStateResponse {
+    return LocalStateResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<LocalStateResponse>, I>>(object: I): LocalStateResponse {
+    const message = createBaseLocalStateResponse();
+    message.req_id = object.req_id ?? "";
+    message.resultant_state = object.resultant_state ?? 0;
+    message.plug_id = object.plug_id ?? "";
+    message.site_id = object.site_id ?? "";
+    message.time = object.time ?? 0;
     return message;
   },
 };

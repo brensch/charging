@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	keyFile        = "./testprovision.key"
-	subscriptionID = "test_topic-sub"
+	keyFile                 = "./testprovision.key"
+	telemetryTopicName      = "telemetry"
+	commandResultsTopicName = "command_results"
 
 	secondsToStore = 10
 	statesToStore  = 100
@@ -54,17 +55,15 @@ type PlugStateMachine struct {
 func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contracts.RequestedState) error {
 	// TODO: actually make this work
 
-	res := p.siteTopic.Publish(ctx, &pubsub.Message{
-		Data: []byte("yooooo"),
-	})
-
-	sendID, err := res.Get(ctx)
-	if err != nil {
-		return err
+	request := &contracts.LocalStateRequest{
+		Id:             uuid.NewString(),
+		PlugId:         p.plugID,
+		SiteId:         p.siteID,
+		RequestedState: state,
+		RequestTime:    time.Now().UnixMilli(),
 	}
-	log.Println("sent local request", sendID)
 
-	return nil
+	return SendLocalStateRequest(ctx, p.siteTopic, request)
 }
 
 // this will eventually be a switch thing.
@@ -89,16 +88,16 @@ func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.Stat
 		}
 	}
 
-	// TODO: this will only be able to be created by the listener to the return channel from the rpis
-	if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON {
-		return &contracts.StateMachineTransition{
-			Id:     id,
-			State:  contracts.StateMachineState_StateMachineState_ON,
-			Reason: "mocking the local on change. TODO: perform the change on the rpi and report back",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: p.plugID,
-		}
-	}
+	// // TODO: this will only be able to be created by the listener to the return channel from the rpis
+	// if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON {
+	// 	return &contracts.StateMachineTransition{
+	// 		Id:     id,
+	// 		State:  contracts.StateMachineState_StateMachineState_ON,
+	// 		Reason: "mocking the local on change. TODO: perform the change on the rpi and report back",
+	// 		TimeMs: time.Now().UnixMilli(),
+	// 		PlugId: p.plugID,
+	// 	}
+	// }
 
 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
 
@@ -117,16 +116,16 @@ func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.Stat
 		}
 	}
 
-	// TODO: this will only be able to be created by the listener to the return channel from the rpis
-	if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF {
-		return &contracts.StateMachineTransition{
-			Id:     id,
-			State:  contracts.StateMachineState_StateMachineState_OFF,
-			Reason: "mocking the local off change. TODO: perform the change on the rpi and report back",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: p.plugID,
-		}
-	}
+	// // TODO: this will only be able to be created by the listener to the return channel from the rpis
+	// if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF {
+	// 	return &contracts.StateMachineTransition{
+	// 		Id:     id,
+	// 		State:  contracts.StateMachineState_StateMachineState_OFF,
+	// 		Reason: "mocking the local off change. TODO: perform the change on the rpi and report back",
+	// 		TimeMs: time.Now().UnixMilli(),
+	// 		PlugId: p.plugID,
+	// 	}
+	// }
 
 	// swap state if haven't transitioned in 5 minutes
 	if p.transitions[p.latestStatePtr] == nil {
@@ -199,7 +198,10 @@ func main() {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	sub := client.Subscription(subscriptionID)
+	telemetrySub := client.Subscription(telemetryTopicName)
+	commandResultsSub := client.Subscription(commandResultsTopicName)
+
+	// commandResultsSub.
 
 	// Set up Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
@@ -275,7 +277,7 @@ func main() {
 
 					// update the firestore doc and then the state machine
 					// todo: do these as a batch
-					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.PlugId).Update(ctx, []firestore.Update{
+					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
 						{Path: "result", Value: resRequestResult},
 					})
 					err = change.Doc.DataTo(&userRequest)
@@ -295,7 +297,46 @@ func main() {
 		}
 	}()
 
-	err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+	go func() {
+
+		commandResultsSub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+			response, err := ReceiveCommandResponse(ctx, m)
+			if err != nil {
+				log.Println("failed to read command response")
+				return
+			}
+
+			var state contracts.StateMachineState
+			switch response.ResultantState {
+			case contracts.RequestedState_RequestedState_ON:
+				state = contracts.StateMachineState_StateMachineState_ON
+			case contracts.RequestedState_RequestedState_OFF:
+				state = contracts.StateMachineState_StateMachineState_OFF
+			}
+			// receiving a response from the device indicates we should send the transition regardless
+			transition := &contracts.StateMachineTransition{
+				Id:     uuid.NewString(),
+				State:  state,
+				Reason: "device responded to state request",
+				TimeMs: time.Now().UnixMilli(),
+				PlugId: response.GetPlugId(),
+			}
+
+			plug, ok := stateMachines[response.GetPlugId()]
+			if !ok {
+				fmt.Println("no plug state machine....", response.GetPlugId())
+				return
+			}
+
+			err = plug.PerformTransition(ctx, fs, transition)
+			if err != nil {
+				log.Println("failed to perform transition from locally received state", err)
+				return
+			}
+		})
+	}()
+
+	err = telemetrySub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		mu.Lock()
 		defer mu.Unlock()
 

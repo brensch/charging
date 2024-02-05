@@ -11,6 +11,7 @@ import (
 	"github.com/brensch/charging/electrical"
 	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
+	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -29,7 +30,8 @@ const (
 	readingsBufferSize = 500
 	readingsCollection = "readings"
 
-	topicID = "test_topic"
+	telemetryTopicName      = "telemetry"
+	commandResultsTopicName = "command_results"
 )
 
 func main() {
@@ -46,27 +48,28 @@ func main() {
 	}
 	log.Println("got pubsub client")
 
-	sendTopic := client.Topic(topicID)
+	telemetrySendTopic := client.Topic(telemetryTopicName)
+	commandResultsTopic := client.Topic(commandResultsTopicName)
 
 	fmt.Println(clientID, projectID)
-	receiveTopicName := fmt.Sprintf("commands_%s", clientID)
+	commandRequestTopicName := fmt.Sprintf("commands_%s", clientID)
 
-	// set up topic
-	topic, err := client.CreateTopic(ctx, receiveTopicName)
+	// set up commandRequestTopic
+	commandRequestTopic, err := client.CreateTopic(ctx, commandRequestTopicName)
 	if err != nil {
 		// Check if the error is because the topic already exists
 		if status.Code(err) == codes.AlreadyExists {
-			log.Printf("Topic %s already exists\n", receiveTopicName)
-			topic = client.Topic(receiveTopicName)
+			log.Printf("Topic %s already exists\n", commandRequestTopicName)
+			commandRequestTopic = client.Topic(commandRequestTopicName)
 		} else {
 			log.Fatalf("Failed to create topic: %v", err)
 		}
 	} else {
-		log.Printf("Topic %s created\n", receiveTopicName)
+		log.Printf("Topic %s created\n", commandRequestTopicName)
 	}
 
-	sub, err := client.CreateSubscription(ctx, receiveTopicName, pubsub.SubscriptionConfig{
-		Topic:                     topic,
+	sub, err := client.CreateSubscription(ctx, commandRequestTopicName, pubsub.SubscriptionConfig{
+		Topic:                     commandRequestTopic,
 		AckDeadline:               10 * time.Second,
 		RetentionDuration:         7 * 24 * time.Hour,
 		EnableMessageOrdering:     true,
@@ -76,25 +79,15 @@ func main() {
 	if err != nil {
 		// Check if the error is because the topic already exists
 		if status.Code(err) == codes.AlreadyExists {
-			log.Printf("Sub %s already exists\n", receiveTopicName)
-			sub = client.Subscription(receiveTopicName)
+			log.Printf("Sub %s already exists\n", commandRequestTopicName)
+			sub = client.Subscription(commandRequestTopicName)
 
 		} else {
 			log.Fatalf("Failed to create subscription: %v", err)
 		}
 	} else {
-		log.Printf("Subscription %s created\n", receiveTopicName)
+		log.Printf("Subscription %s created\n", commandRequestTopicName)
 	}
-
-	go func() {
-
-		err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-			fmt.Println("got messssssssage", msg.Data)
-		})
-		if err != nil {
-			log.Fatal("wtf", err)
-		}
-	}()
 
 	// // Set up Firestore client
 	// fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
@@ -114,18 +107,58 @@ func main() {
 		// as we make more plug brands we can add their discoverers here.
 	}
 
-	plugs := make([]electrical.Plug, 0)
-	fuzes := make([]electrical.Fuze, 0)
+	plugs := make(map[string]electrical.Plug, 0)
+	fuzes := make(map[string]electrical.Fuze, 0)
 	for _, discoverer := range discoverers {
 		fmt.Println("discovering")
 		discoveredPlugs, discoveredFuzes, err := discoverer.Discover()
 		if err != nil {
 			log.Fatalf("Failed to discover plugs: %v", err)
 		}
-		plugs = append(plugs, discoveredPlugs...)
-		fuzes = append(fuzes, discoveredFuzes...)
+		for _, plug := range discoveredPlugs {
+			plugs[plug.ID()] = plug
+		}
+		for _, fuze := range discoveredFuzes {
+			fuzes[fuze.ID()] = fuze
+		}
+
 	}
 	fmt.Println("finished discovering")
+
+	go func() {
+
+		err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+			request, err := ReceiveCommandRequest(ctx, msg)
+			if err != nil {
+				log.Println("failed to unpack request")
+				return
+			}
+
+			plug, ok := plugs[request.PlugId]
+			if !ok {
+				log.Println("could not find plug id", request.PlugId)
+				return
+			}
+
+			err = plug.SetState(request.GetRequestedState())
+			if err != nil {
+				log.Println("failed to set state", err)
+				return
+			}
+
+			response := &contracts.LocalStateResponse{
+				ReqId:          request.Id,
+				ResultantState: request.GetRequestedState(),
+				PlugId:         request.GetPlugId(),
+				SiteId:         request.GetSiteId(),
+				Time:           time.Now().UnixMilli(),
+			}
+			err = SendCommandResult(ctx, commandResultsTopic, response)
+		})
+		if err != nil {
+			log.Fatal("wtf", err)
+		}
+	}()
 
 	ticker := time.NewTicker(1 * time.Second)
 	for {
@@ -141,9 +174,9 @@ func main() {
 		for _, reading := range readings {
 			fmt.Println("got reading", reading.Voltage)
 		}
-		err = SendReadings(ctx, sendTopic, clientID, readings)
+		err = SendReadings(ctx, telemetrySendTopic, clientID, readings)
 		if err != nil {
-			fmt.Println("failed to send readings")
+			fmt.Println("failed to send readings", err)
 			continue
 		}
 
