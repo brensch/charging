@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	keyFile                 = "./testprovision.key"
+	keyFile                 = "./mothership.key"
 	telemetryTopicName      = "telemetry"
 	commandResultsTopicName = "command_results"
 
@@ -193,7 +193,7 @@ func main() {
 		log.Fatalf("Failed to get identity: %v", err)
 	}
 
-	client, err := pubsub.NewClient(ctx, projectID)
+	client, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}

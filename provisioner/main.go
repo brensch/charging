@@ -118,6 +118,31 @@ func CreateFirestoreServiceAccount(projectID, accountID, accountDisplayName stri
 		})
 	}
 
+	// Assign Pub/Sub role to the service account
+	// Check if the binding for Pub/Sub role already exists to avoid duplicates
+	pubsubRole := "roles/pubsub.editor"
+	pubsubBindingExists := false
+	for _, b := range policy.Bindings {
+		if b.Role == pubsubRole {
+			for _, m := range b.Members {
+				if m == "serviceAccount:"+account.Email {
+					pubsubBindingExists = true
+					break
+				}
+			}
+		}
+	}
+
+	// Add the new binding for Pub/Sub role if it doesn't exist
+	if !pubsubBindingExists {
+		policy.Bindings = append(policy.Bindings, &cloudresourcemanager.Binding{
+			Role:    pubsubRole,
+			Members: []string{"serviceAccount:" + account.Email},
+		})
+	}
+
+	fmt.Println("got policy:", policy.Bindings)
+
 	// Set the modified policy back to the project
 	_, err = crmService.Projects.SetIamPolicy(projectID, &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,

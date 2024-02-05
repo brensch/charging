@@ -12,6 +12,7 @@ import (
 	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/gen/go/contracts"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -25,7 +26,7 @@ const (
 	port      = ":443"
 	configDir = "./config/"
 	secretDir = "./secrets/"
-	keyFile   = "./testprovision.key"
+	keyFile   = "./gcp.key"
 
 	readingsBufferSize = 500
 	readingsCollection = "readings"
@@ -42,7 +43,7 @@ func main() {
 		log.Fatalf("Failed to get identity: %v", err)
 	}
 
-	client, err := pubsub.NewClient(ctx, projectID)
+	client, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
@@ -116,9 +117,11 @@ func main() {
 			log.Fatalf("Failed to discover plugs: %v", err)
 		}
 		for _, plug := range discoveredPlugs {
+			log.Println("found plug: ", plug.ID())
 			plugs[plug.ID()] = plug
 		}
 		for _, fuze := range discoveredFuzes {
+			log.Println("found fuze: ", fuze.ID())
 			fuzes[fuze.ID()] = fuze
 		}
 
