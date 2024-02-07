@@ -52,6 +52,63 @@ type PlugStateMachine struct {
 	mu sync.Mutex
 }
 
+var (
+	stateMap = map[contracts.StateMachineState][]StateTransition{
+		contracts.StateMachineState_StateMachineState_OFF: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_ON,
+				DetectTransition: func(p *PlugStateMachine) *contracts.StateMachineTransition {
+					return &contracts.StateMachineTransition{
+						Id:      uuid.NewString(),
+						State:   contracts.StateMachineState_StateMachineState_ON,
+						Reason:  "i'm just off",
+						PlugId:  p.plugID,
+						OwnerId: "machine", // todo figure out
+						TimeMs:  time.Now().UnixMilli(),
+					}
+				},
+			},
+		},
+	}
+)
+
+type TransitionDetectionFunc func(p *PlugStateMachine) *contracts.StateMachineTransition
+type TransitionCheckFunc func(p *PlugStateMachine) bool
+type StateTransition struct {
+	TargetState contracts.StateMachineState
+	// DetectTransition is used by the internal state machine
+	DetectTransition TransitionDetectionFunc
+	// CheckTransition is used by anything arriving from outside the state machine
+	CheckTransition TransitionCheckFunc
+}
+
+func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
+	ticker := time.NewTicker(1 * time.Second)
+	go func() {
+		select {
+		case <-ticker.C:
+			state, ok := stateMap[p.state]
+			if !ok {
+				fmt.Println("wot")
+			}
+
+			for _, nextState := range state {
+				transition := nextState.DetectTransition(p)
+				if transition == nil {
+					continue
+				}
+
+				err := p.PerformTransition(ctx, fs, transition)
+				if err != nil {
+					log.Println("failure doing transition")
+				}
+
+			}
+		}
+
+	}()
+}
+
 func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contracts.RequestedState) error {
 	// TODO: actually make this work
 
@@ -66,74 +123,74 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 	return SendLocalStateRequest(ctx, p.siteTopic, request)
 }
 
-// this will eventually be a switch thing.
-func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.StateMachineTransition {
-	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
-	id := uuid.New().String()
+// // this will eventually be a switch thing.
+// func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.StateMachineTransition {
+// 	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
+// 	id := uuid.New().String()
 
-	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON {
+// 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON {
 
-		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
-		if err != nil {
-			log.Println("got error requesting local state", err)
-			// TODO: how to handle errors
-			return nil
-		}
-		return &contracts.StateMachineTransition{
-			Id:     id,
-			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
-			Reason: "received user request, commanding on locally",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: p.plugID,
-		}
-	}
+// 		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
+// 		if err != nil {
+// 			log.Println("got error requesting local state", err)
+// 			// TODO: how to handle errors
+// 			return nil
+// 		}
+// 		return &contracts.StateMachineTransition{
+// 			Id:     id,
+// 			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
+// 			Reason: "received user request, commanding on locally",
+// 			TimeMs: time.Now().UnixMilli(),
+// 			PlugId: p.plugID,
+// 		}
+// 	}
 
-	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
+// 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
 
-		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
-		if err != nil {
-			log.Println("got error requesting local state", err)
-			// TODO: how to handle errors
-			return nil
-		}
-		return &contracts.StateMachineTransition{
-			Id:     id,
-			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
-			Reason: "received user request, commanding off locally",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: p.plugID,
-		}
-	}
+// 		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
+// 		if err != nil {
+// 			log.Println("got error requesting local state", err)
+// 			// TODO: how to handle errors
+// 			return nil
+// 		}
+// 		return &contracts.StateMachineTransition{
+// 			Id:     id,
+// 			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
+// 			Reason: "received user request, commanding off locally",
+// 			TimeMs: time.Now().UnixMilli(),
+// 			PlugId: p.plugID,
+// 		}
+// 	}
 
-	// swap state if haven't transitioned in 5 minutes
-	if p.transitions[p.latestStatePtr] == nil {
-		id := uuid.New().String()
-		return &contracts.StateMachineTransition{
-			Id:     id,
-			State:  contracts.StateMachineState_StateMachineState_ON,
-			Reason: "first transition, turning on",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: p.plugID,
-		}
-	}
-	lastTransitionTime := time.UnixMilli(p.transitions[p.latestStatePtr].TimeMs)
+// 	// swap state if haven't transitioned in 5 minutes
+// 	if p.transitions[p.latestStatePtr] == nil {
+// 		id := uuid.New().String()
+// 		return &contracts.StateMachineTransition{
+// 			Id:     id,
+// 			State:  contracts.StateMachineState_StateMachineState_ON,
+// 			Reason: "first transition, turning on",
+// 			TimeMs: time.Now().UnixMilli(),
+// 			PlugId: p.plugID,
+// 		}
+// 	}
+// 	lastTransitionTime := time.UnixMilli(p.transitions[p.latestStatePtr].TimeMs)
 
-	if !lastTransitionTime.Before(time.Now().Add(-60 * time.Second)) {
-		return nil
-	}
-	nextState := contracts.StateMachineState_StateMachineState_ON
-	if p.transitions[p.latestStatePtr].State == contracts.StateMachineState_StateMachineState_ON {
-		nextState = contracts.StateMachineState_StateMachineState_OFF
-	}
-	return &contracts.StateMachineTransition{
-		Id:     id,
-		State:  nextState,
-		Reason: "auto switching state to demo state machine",
-		TimeMs: time.Now().UnixMilli(),
-		PlugId: p.plugID,
-	}
+// 	if !lastTransitionTime.Before(time.Now().Add(-60 * time.Second)) {
+// 		return nil
+// 	}
+// 	nextState := contracts.StateMachineState_StateMachineState_ON
+// 	if p.transitions[p.latestStatePtr].State == contracts.StateMachineState_StateMachineState_ON {
+// 		nextState = contracts.StateMachineState_StateMachineState_OFF
+// 	}
+// 	return &contracts.StateMachineTransition{
+// 		Id:     id,
+// 		State:  nextState,
+// 		Reason: "auto switching state to demo state machine",
+// 		TimeMs: time.Now().UnixMilli(),
+// 		PlugId: p.plugID,
+// 	}
 
-}
+// }
 
 func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.Client, transition *contracts.StateMachineTransition) error {
 	log.Println("got state transition", transition.GetState(), transition.Reason)
@@ -203,6 +260,18 @@ func main() {
 		plugStatusDoc.DataTo(&plugStatus)
 		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
 	}
+
+	// main control loop
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+
+		for {
+			select {
+			case <-ticker.C:
+
+			}
+		}
+	}()
 
 	// TODO: get all the plugs from plug settings to make startup much quicker
 
@@ -363,15 +432,15 @@ func main() {
 					plugStateMachine.accumulatedEnergyUsage = 0
 				}
 
-				transition := plugStateMachine.DetectTransition(ctx)
-				if transition == nil {
-					return
-				}
+				// transition := plugStateMachine.(ctx)
+				// if transition == nil {
+				// 	return
+				// }
 
-				err = plugStateMachine.PerformTransition(ctx, fs, transition)
-				if err != nil {
-					log.Println("had an error performing transition", err)
-				}
+				// err = plugStateMachine.PerformTransition(ctx, fs, transition)
+				// if err != nil {
+				// 	log.Println("had an error performing transition", err)
+				// }
 
 			}(reading)
 		}
