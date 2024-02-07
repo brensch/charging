@@ -88,17 +88,6 @@ func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.Stat
 		}
 	}
 
-	// // TODO: this will only be able to be created by the listener to the return channel from the rpis
-	// if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON {
-	// 	return &contracts.StateMachineTransition{
-	// 		Id:     id,
-	// 		State:  contracts.StateMachineState_StateMachineState_ON,
-	// 		Reason: "mocking the local on change. TODO: perform the change on the rpi and report back",
-	// 		TimeMs: time.Now().UnixMilli(),
-	// 		PlugId: p.plugID,
-	// 	}
-	// }
-
 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
 
 		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
@@ -115,17 +104,6 @@ func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.Stat
 			PlugId: p.plugID,
 		}
 	}
-
-	// // TODO: this will only be able to be created by the listener to the return channel from the rpis
-	// if p.state == contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF {
-	// 	return &contracts.StateMachineTransition{
-	// 		Id:     id,
-	// 		State:  contracts.StateMachineState_StateMachineState_OFF,
-	// 		Reason: "mocking the local off change. TODO: perform the change on the rpi and report back",
-	// 		TimeMs: time.Now().UnixMilli(),
-	// 		PlugId: p.plugID,
-	// 	}
-	// }
 
 	// swap state if haven't transitioned in 5 minutes
 	if p.transitions[p.latestStatePtr] == nil {

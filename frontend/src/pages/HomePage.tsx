@@ -19,9 +19,6 @@ const HomePage = () => {
     <div style={{ padding: 20 }}>
       <Typography variant="h4">Home Page</Typography>
       {/* Additional content and components go here */}
-      <Button variant="contained" color="primary" onClick={handleLogout}>
-        Logout
-      </Button>
     </div>
   )
 }
