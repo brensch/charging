@@ -9,7 +9,6 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
-	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/api/option"
@@ -90,21 +89,9 @@ func main() {
 		log.Printf("Subscription %s created\n", commandRequestTopicName)
 	}
 
-	// // Set up Firestore client
-	// fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
-	// if err != nil {
-	// 	log.Fatalf("Failed to create Firestore client: %v", err)
-	// }
-	// defer fs.Close()
-
-	// err = ensureSiteSettingsDoc(ctx, fs, clientID)
-	// if err != nil {
-	// 	log.Fatalf("failed to ensure site settings: %+v", err)
-	// }
-
 	discoverers := []electrical.Discoverer{
 		shelly.InitShellyDiscoverer(clientID),
-		demo.InitDiscoverer(clientID),
+		// demo.InitDiscoverer(clientID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 
@@ -128,6 +115,7 @@ func main() {
 	}
 	fmt.Println("finished discovering")
 
+	// command listening loop
 	go func() {
 
 		err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
@@ -157,6 +145,10 @@ func main() {
 				Time:           time.Now().UnixMilli(),
 			}
 			err = SendCommandResult(ctx, commandResultsTopic, response)
+			if err != nil {
+				log.Println("failed to set command result", err)
+				return
+			}
 		})
 		if err != nil {
 			log.Fatal("wtf", err)
@@ -174,9 +166,7 @@ func main() {
 			fmt.Println("got error reading readings")
 			continue
 		}
-		for _, reading := range readings {
-			fmt.Println("got reading", reading.Voltage)
-		}
+
 		err = SendReadings(ctx, telemetrySendTopic, clientID, readings)
 		if err != nil {
 			fmt.Println("failed to send readings", err)

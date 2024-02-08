@@ -67,26 +67,31 @@ type SetStateResult struct {
 }
 
 type SwitchSetParams struct {
-	ID    int  `json:"id"`
-	State bool `json:"state"`
+	ID int  `json:"id"`
+	On bool `json:"on"`
 }
 
 func (s *ShellyPlug) SetState(req contracts.RequestedState) error {
 	state := ConvertToShellyState(req)
-	log.Println("setting shelly state to: ", state)
+	log.Println("setting shelly state to", state)
 
 	rpcReq := &RpcRequest{
 		ID:     0,
 		Method: "switch.set",
 		Params: &SwitchSetParams{
-			ID:    s.SwitchNumber,
-			State: state,
+			ID: s.SwitchNumber,
+			On: state,
 		},
 	}
 
-	_, err := s.rpcCall(rpcReq)
+	response, err := s.rpcCall(rpcReq)
+	if err != nil {
+		return err
+	}
 
-	return err
+	log.Println("got response from device:", string(response))
+
+	return nil
 
 	// Shelly only returns WasOn in its response so don't need to check the payload
 	// var response RpcResponse

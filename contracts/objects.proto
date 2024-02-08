@@ -14,7 +14,7 @@ message FuzeSettings {
 }
 
 enum StateMachineState {
-  StateMachineState_UNSPECIFIED = 0;
+  StateMachineState_INITIALISING = 0;
   StateMachineState_ON = 1;
   StateMachineState_OFF = 2;
   StateMachineState_USER_REQUESTED_ON = 3;
@@ -79,6 +79,7 @@ message UserRequest {
 message UserRequestResult {
   int64 time_entered_state = 1;
   UserRequestStatus status = 2;
+  string reason = 3;
 }
 
 enum UserRequestStatus {
@@ -87,6 +88,7 @@ enum UserRequestStatus {
   RequestedStatus_PENDING = 1;
   RequestedStatus_SUCCESS = 2;
   RequestedStatus_FAILURE = 3;
+  RequestedStatus_RECEIVED = 4;
   // TODO: add more failure reason statuses
 }
 

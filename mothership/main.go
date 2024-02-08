@@ -45,8 +45,6 @@ type PlugStateMachine struct {
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
 
-	accumulatedEnergyUsage float64
-
 	siteTopic *pubsub.Topic
 
 	mu sync.Mutex
@@ -54,14 +52,15 @@ type PlugStateMachine struct {
 
 var (
 	stateMap = map[contracts.StateMachineState][]StateTransition{
-		contracts.StateMachineState_StateMachineState_OFF: {
+		contracts.StateMachineState_StateMachineState_INITIALISING: {
 			{
-				TargetState: contracts.StateMachineState_StateMachineState_ON,
-				DetectTransition: func(p *PlugStateMachine) *contracts.StateMachineTransition {
+				TargetState: contracts.StateMachineState_StateMachineState_OFF,
+				DetectTransition: func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition {
+					// TODO: should actually check to see what the current state of the device is in
 					return &contracts.StateMachineTransition{
 						Id:      uuid.NewString(),
-						State:   contracts.StateMachineState_StateMachineState_ON,
-						Reason:  "i'm just off",
+						State:   contracts.StateMachineState_StateMachineState_OFF,
+						Reason:  "off from initialising",
 						PlugId:  p.plugID,
 						OwnerId: "machine", // todo figure out
 						TimeMs:  time.Now().UnixMilli(),
@@ -69,11 +68,105 @@ var (
 				},
 			},
 		},
+		contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
+				DetectTransition: func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition {
+					err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
+					if err != nil {
+						log.Println("got error requesting local state", err)
+						// TODO: how to handle errors
+						return nil
+					}
+					return &contracts.StateMachineTransition{
+						Id:      uuid.NewString(),
+						State:   contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
+						Reason:  "sent off command to site",
+						PlugId:  p.plugID,
+						OwnerId: "machine", // todo figure out
+						TimeMs:  time.Now().UnixMilli(),
+					}
+				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_OFF,
+				CheckTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					if p.state != contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF {
+						log.Println("got wrong state trying to transition to off", p.state)
+						return false
+					}
+
+					return true
+				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_OFF: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON,
+				CheckTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					if p.state != contracts.StateMachineState_StateMachineState_OFF {
+						log.Println("got wrong state trying to transition to on", p.state)
+						return false
+					}
+
+					return true
+				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
+				DetectTransition: func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition {
+					err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
+					if err != nil {
+						log.Println("got error requesting local state", err)
+						// TODO: how to handle errors
+						return nil
+					}
+					return &contracts.StateMachineTransition{
+						Id:      uuid.NewString(),
+						State:   contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
+						Reason:  "sent on command to site",
+						PlugId:  p.plugID,
+						OwnerId: "machine", // todo figure out
+						TimeMs:  time.Now().UnixMilli(),
+					}
+				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_ON,
+				CheckTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					if p.state != contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON {
+						log.Println("got wrong state trying to transition to off", p.state)
+						return false
+					}
+
+					return true
+				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_ON: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF,
+				CheckTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					if p.state != contracts.StateMachineState_StateMachineState_ON {
+						log.Println("got wrong state trying to transition to off", p.state)
+						return false
+					}
+
+					return true
+				},
+			},
+		},
 	}
 )
 
-type TransitionDetectionFunc func(p *PlugStateMachine) *contracts.StateMachineTransition
-type TransitionCheckFunc func(p *PlugStateMachine) bool
+type TransitionDetectionFunc func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition
+type TransitionCheckFunc func(ctx context.Context, p *PlugStateMachine) bool
 type StateTransition struct {
 	TargetState contracts.StateMachineState
 	// DetectTransition is used by the internal state machine
@@ -85,24 +178,36 @@ type StateTransition struct {
 func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 	ticker := time.NewTicker(1 * time.Second)
 	go func() {
-		select {
-		case <-ticker.C:
-			state, ok := stateMap[p.state]
-			if !ok {
-				fmt.Println("wot")
-			}
-
-			for _, nextState := range state {
-				transition := nextState.DetectTransition(p)
-				if transition == nil {
-					continue
+		for {
+			select {
+			case <-ticker.C:
+				state, ok := stateMap[p.state]
+				if !ok {
+					fmt.Println("no definition for state", p.state)
+					break
 				}
 
-				err := p.PerformTransition(ctx, fs, transition)
-				if err != nil {
-					log.Println("failure doing transition")
-				}
+				log.Printf("got state for %s: %s", p.plugID, p.state)
 
+				for _, nextState := range state {
+					if nextState.DetectTransition == nil {
+						continue
+					}
+
+					transition := nextState.DetectTransition(ctx, p)
+					if transition == nil {
+						continue
+					}
+
+					err := p.PerformTransition(ctx, fs, transition)
+					if err != nil {
+						log.Println("failure doing transition")
+					}
+
+				}
+			case <-ctx.Done():
+				log.Println("context done for plug", p.plugID)
+				return
 			}
 		}
 
@@ -123,82 +228,13 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 	return SendLocalStateRequest(ctx, p.siteTopic, request)
 }
 
-// // this will eventually be a switch thing.
-// func (p *PlugStateMachine) DetectTransition(ctx context.Context) *contracts.StateMachineTransition {
-// 	log.Println("checking for transitions", p.plugID, p.state, p.latestReadings[p.latestReadingPtr].Current)
-// 	id := uuid.New().String()
-
-// 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON {
-
-// 		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
-// 		if err != nil {
-// 			log.Println("got error requesting local state", err)
-// 			// TODO: how to handle errors
-// 			return nil
-// 		}
-// 		return &contracts.StateMachineTransition{
-// 			Id:     id,
-// 			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
-// 			Reason: "received user request, commanding on locally",
-// 			TimeMs: time.Now().UnixMilli(),
-// 			PlugId: p.plugID,
-// 		}
-// 	}
-
-// 	if p.state == contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF {
-
-// 		err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
-// 		if err != nil {
-// 			log.Println("got error requesting local state", err)
-// 			// TODO: how to handle errors
-// 			return nil
-// 		}
-// 		return &contracts.StateMachineTransition{
-// 			Id:     id,
-// 			State:  contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
-// 			Reason: "received user request, commanding off locally",
-// 			TimeMs: time.Now().UnixMilli(),
-// 			PlugId: p.plugID,
-// 		}
-// 	}
-
-// 	// swap state if haven't transitioned in 5 minutes
-// 	if p.transitions[p.latestStatePtr] == nil {
-// 		id := uuid.New().String()
-// 		return &contracts.StateMachineTransition{
-// 			Id:     id,
-// 			State:  contracts.StateMachineState_StateMachineState_ON,
-// 			Reason: "first transition, turning on",
-// 			TimeMs: time.Now().UnixMilli(),
-// 			PlugId: p.plugID,
-// 		}
-// 	}
-// 	lastTransitionTime := time.UnixMilli(p.transitions[p.latestStatePtr].TimeMs)
-
-// 	if !lastTransitionTime.Before(time.Now().Add(-60 * time.Second)) {
-// 		return nil
-// 	}
-// 	nextState := contracts.StateMachineState_StateMachineState_ON
-// 	if p.transitions[p.latestStatePtr].State == contracts.StateMachineState_StateMachineState_ON {
-// 		nextState = contracts.StateMachineState_StateMachineState_OFF
-// 	}
-// 	return &contracts.StateMachineTransition{
-// 		Id:     id,
-// 		State:  nextState,
-// 		Reason: "auto switching state to demo state machine",
-// 		TimeMs: time.Now().UnixMilli(),
-// 		PlugId: p.plugID,
-// 	}
-
-// }
-
 func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.Client, transition *contracts.StateMachineTransition) error {
 	log.Println("got state transition", transition.GetState(), transition.Reason)
+
 	p.state = transition.GetState()
 	nextStatePtr := (p.latestStatePtr + 1) % statesToStore
 	p.transitions[nextStatePtr] = transition
 	p.latestStatePtr = nextStatePtr
-	log.Println("updating pointer", nextStatePtr)
 
 	_, err := fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
@@ -207,7 +243,7 @@ func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.
 	return err
 }
 
-func (p *PlugStateMachine) ValidateCustomerRequest(request *contracts.UserRequest) *contracts.StateMachineTransition {
+func (p *PlugStateMachine) ConvertCustomerRequest(request *contracts.UserRequest) *contracts.StateMachineTransition {
 	// TODO: logic to verify transitioning is ok in the current state
 	return &contracts.StateMachineTransition{
 		Id:      uuid.New().String(),
@@ -258,20 +294,8 @@ func main() {
 	for _, plugStatusDoc := range plugStatuses {
 		var plugStatus *contracts.PlugStatus
 		plugStatusDoc.DataTo(&plugStatus)
-		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
+		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(ctx, fs, client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
 	}
-
-	// main control loop
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-
-		for {
-			select {
-			case <-ticker.C:
-
-			}
-		}
-	}()
 
 	// TODO: get all the plugs from plug settings to make startup much quicker
 
@@ -281,6 +305,7 @@ func main() {
 	iter := query.Snapshots(ctx)
 	defer iter.Stop()
 
+	// Handle commands coming from document changes
 	go func() {
 
 		for {
@@ -294,7 +319,6 @@ func main() {
 				continue
 			}
 
-			// Handle document changes
 			for _, change := range snap.Changes {
 				if change.Kind == firestore.DocumentAdded {
 					// Decode the document into the UserRequest struct
@@ -310,23 +334,57 @@ func main() {
 						log.Println("got missing plugid: %s", userRequest.PlugId)
 						continue
 					}
+
+					availableStates, ok := stateMap[plugStateMachine.state]
+					if !ok {
+						log.Println("requested invalid state")
+						continue
+					}
+
+					stateAllowed := false
+					for _, state := range availableStates {
+						fmt.Println(state.TargetState, userRequest.GetRequestedState())
+						if state.TargetState != userRequest.GetRequestedState() {
+							continue
+						}
+						stateAllowed = true
+						break
+					}
+
+					if !stateAllowed {
+						log.Println("state not allowed", userRequest.GetRequestedState())
+						resRequestResult := &contracts.UserRequestResult{
+							TimeEnteredState: time.Now().UnixMilli(),
+							Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
+							Reason:           fmt.Sprintf("State %s not valid from %s", userRequest.GetRequestedState(), plugStateMachine.state),
+						}
+						_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+							{Path: "result", Value: resRequestResult},
+						})
+						if err != nil {
+							fmt.Printf("Error updating user requests: %v\n", err)
+						}
+						continue
+					}
 					fmt.Printf("Received new user request: %+v: %s\n", userRequest.PlugId, userRequest.RequestedState)
 
-					transition := plugStateMachine.ValidateCustomerRequest(userRequest)
+					transition := plugStateMachine.ConvertCustomerRequest(userRequest)
 					if transition == nil {
 						log.Println("no transition possible")
 					}
 
+					// update the document that we received it
 					resRequestResult := &contracts.UserRequestResult{
 						TimeEnteredState: time.Now().UnixMilli(),
-						Status:           contracts.UserRequestStatus_RequestedStatus_SUCCESS,
+						Status:           contracts.UserRequestStatus_RequestedStatus_RECEIVED,
 					}
-
-					// update the firestore doc and then the state machine
-					// todo: do these as a batch
 					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
 						{Path: "result", Value: resRequestResult},
 					})
+					if err != nil {
+						fmt.Printf("Error updating user requests: %v\n", err)
+						continue
+					}
 					err = change.Doc.DataTo(&userRequest)
 					if err != nil {
 						fmt.Printf("Error updating userrequestresult: %v\n", err)
@@ -336,6 +394,31 @@ func main() {
 					err = plugStateMachine.PerformTransition(ctx, fs, transition)
 					if err != nil {
 						fmt.Printf("Error performing transition: %v\n", err)
+						// update the document that we received it
+						resRequestResult = &contracts.UserRequestResult{
+							TimeEnteredState: time.Now().UnixMilli(),
+							Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
+						}
+						_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+							{Path: "result", Value: resRequestResult},
+						})
+						if err != nil {
+							fmt.Printf("Error updating user requests: %v\n", err)
+							continue
+						}
+						continue
+					}
+
+					// update the document that we succeeded
+					resRequestResult = &contracts.UserRequestResult{
+						TimeEnteredState: time.Now().UnixMilli(),
+						Status:           contracts.UserRequestStatus_RequestedStatus_SUCCESS,
+					}
+					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+						{Path: "result", Value: resRequestResult},
+					})
+					if err != nil {
+						fmt.Printf("Error updating user requests: %v\n", err)
 						continue
 					}
 
@@ -344,6 +427,7 @@ func main() {
 		}
 	}()
 
+	// listen to responses from devices about commands
 	go func() {
 
 		commandResultsSub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
@@ -383,6 +467,7 @@ func main() {
 		})
 	}()
 
+	// listen to telemetry
 	err = telemetrySub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -402,7 +487,7 @@ func main() {
 				if !ok {
 					// TODO: alert on this, shouldn't be adding new plugs often
 					log.Println("couldn't find plug", reading.PlugId)
-					plugStateMachine = InitPlugStateMachine(client, chunk.GetSiteId(), reading)
+					plugStateMachine = InitPlugStateMachine(ctx, fs, client, chunk.GetSiteId(), reading)
 
 					// this only needs to be done if we receive a non existant plug id from a reading
 					err = EnsurePlugIsInFirestore(ctx, fs, chunk.GetSiteId(), reading)
@@ -423,24 +508,6 @@ func main() {
 				nextPtr := (plugStateMachine.latestReadingPtr + 1) % secondsToStore
 				plugStateMachine.latestReadings[nextPtr] = reading
 				plugStateMachine.latestReadingPtr = nextPtr
-
-				plugStateMachine.accumulatedEnergyUsage += reading.Energy
-
-				if nextPtr == 0 {
-					// TODO: implement
-					log.Println("charging customer for energy usage:", plugStateMachine.accumulatedEnergyUsage)
-					plugStateMachine.accumulatedEnergyUsage = 0
-				}
-
-				// transition := plugStateMachine.(ctx)
-				// if transition == nil {
-				// 	return
-				// }
-
-				// err = plugStateMachine.PerformTransition(ctx, fs, transition)
-				// if err != nil {
-				// 	log.Println("had an error performing transition", err)
-				// }
 
 			}(reading)
 		}
@@ -466,7 +533,7 @@ func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID s
 	return nil
 }
 
-func InitPlugStateMachine(pubsubClient *pubsub.Client, siteID string, reading *contracts.Reading) *PlugStateMachine {
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, siteID string, reading *contracts.Reading) *PlugStateMachine {
 	log.Println("initialising plug", reading.GetPlugId())
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
@@ -486,6 +553,8 @@ func InitPlugStateMachine(pubsubClient *pubsub.Client, siteID string, reading *c
 		siteTopic:        topic,
 		siteID:           siteID,
 	}
+
+	stateMachine.Start(ctx, fs)
 
 	return stateMachine
 }

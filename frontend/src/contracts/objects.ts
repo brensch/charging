@@ -5,7 +5,7 @@ import _m0 from "protobufjs/minimal";
 export const protobufPackage = "contracts";
 
 export enum StateMachineState {
-  StateMachineState_UNSPECIFIED = 0,
+  StateMachineState_INITIALISING = 0,
   StateMachineState_ON = 1,
   StateMachineState_OFF = 2,
   StateMachineState_USER_REQUESTED_ON = 3,
@@ -18,8 +18,8 @@ export enum StateMachineState {
 export function stateMachineStateFromJSON(object: any): StateMachineState {
   switch (object) {
     case 0:
-    case "StateMachineState_UNSPECIFIED":
-      return StateMachineState.StateMachineState_UNSPECIFIED;
+    case "StateMachineState_INITIALISING":
+      return StateMachineState.StateMachineState_INITIALISING;
     case 1:
     case "StateMachineState_ON":
       return StateMachineState.StateMachineState_ON;
@@ -47,8 +47,8 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
 
 export function stateMachineStateToJSON(object: StateMachineState): string {
   switch (object) {
-    case StateMachineState.StateMachineState_UNSPECIFIED:
-      return "StateMachineState_UNSPECIFIED";
+    case StateMachineState.StateMachineState_INITIALISING:
+      return "StateMachineState_INITIALISING";
     case StateMachineState.StateMachineState_ON:
       return "StateMachineState_ON";
     case StateMachineState.StateMachineState_OFF:
@@ -72,8 +72,9 @@ export enum UserRequestStatus {
   /** RequestedStatus_PENDING - need to write a fs rule to only allow this status from non backend */
   RequestedStatus_PENDING = 1,
   RequestedStatus_SUCCESS = 2,
-  /** RequestedStatus_FAILURE - TODO: add more failure reason statuses */
   RequestedStatus_FAILURE = 3,
+  /** RequestedStatus_RECEIVED - TODO: add more failure reason statuses */
+  RequestedStatus_RECEIVED = 4,
   UNRECOGNIZED = -1,
 }
 
@@ -91,6 +92,9 @@ export function userRequestStatusFromJSON(object: any): UserRequestStatus {
     case 3:
     case "RequestedStatus_FAILURE":
       return UserRequestStatus.RequestedStatus_FAILURE;
+    case 4:
+    case "RequestedStatus_RECEIVED":
+      return UserRequestStatus.RequestedStatus_RECEIVED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -108,6 +112,8 @@ export function userRequestStatusToJSON(object: UserRequestStatus): string {
       return "RequestedStatus_SUCCESS";
     case UserRequestStatus.RequestedStatus_FAILURE:
       return "RequestedStatus_FAILURE";
+    case UserRequestStatus.RequestedStatus_RECEIVED:
+      return "RequestedStatus_RECEIVED";
     case UserRequestStatus.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -367,6 +373,7 @@ export interface UserRequest {
 export interface UserRequestResult {
   time_entered_state: number;
   status: UserRequestStatus;
+  reason: string;
 }
 
 /**
@@ -1233,7 +1240,7 @@ export const UserRequest = {
 };
 
 function createBaseUserRequestResult(): UserRequestResult {
-  return { time_entered_state: 0, status: 0 };
+  return { time_entered_state: 0, status: 0, reason: "" };
 }
 
 export const UserRequestResult = {
@@ -1243,6 +1250,9 @@ export const UserRequestResult = {
     }
     if (message.status !== 0) {
       writer.uint32(16).int32(message.status);
+    }
+    if (message.reason !== "") {
+      writer.uint32(26).string(message.reason);
     }
     return writer;
   },
@@ -1268,6 +1278,13 @@ export const UserRequestResult = {
 
           message.status = reader.int32() as any;
           continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.reason = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1281,6 +1298,7 @@ export const UserRequestResult = {
     return {
       time_entered_state: isSet(object.time_entered_state) ? globalThis.Number(object.time_entered_state) : 0,
       status: isSet(object.status) ? userRequestStatusFromJSON(object.status) : 0,
+      reason: isSet(object.reason) ? globalThis.String(object.reason) : "",
     };
   },
 
@@ -1292,6 +1310,9 @@ export const UserRequestResult = {
     if (message.status !== 0) {
       obj.status = userRequestStatusToJSON(message.status);
     }
+    if (message.reason !== "") {
+      obj.reason = message.reason;
+    }
     return obj;
   },
 
@@ -1302,6 +1323,7 @@ export const UserRequestResult = {
     const message = createBaseUserRequestResult();
     message.time_entered_state = object.time_entered_state ?? 0;
     message.status = object.status ?? 0;
+    message.reason = object.reason ?? "";
     return message;
   },
 };

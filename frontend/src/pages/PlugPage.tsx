@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   setDoc,
+  where,
 } from "firebase/firestore"
 import { firestore } from "../firebase" // Assume you have a Firebase config file
 import {
@@ -48,6 +49,7 @@ const PlugPage = () => {
       result: {
         status: UserRequestStatus.RequestedStatus_PENDING,
         time_entered_state: Date.now(),
+        reason: "user request",
       },
     }
 
@@ -85,6 +87,7 @@ const PlugPage = () => {
     // Create a query against the "user_requests" collection, ordered by "time_requested" descending, limited to 5 documents
     const q = query(
       collection(firestore, "user_requests"),
+      where("plug_id", "==", inputValue),
       orderBy("time_requested", "desc"),
       limit(5),
     )
@@ -100,7 +103,7 @@ const PlugPage = () => {
 
     // Clean up the subscription when the component unmounts
     return () => unsubscribe()
-  }, []) // Empty dependency array means this effect runs once on mount
+  }, [inputValue]) // Empty dependency array means this effect runs once on mount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -193,6 +196,7 @@ const PlugPage = () => {
                     "",
                   )}
                 </Typography>
+                <Typography variant="body1">{request.result.reason}</Typography>
               </React.Fragment>
             )}
             -------------------
