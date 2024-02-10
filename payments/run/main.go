@@ -71,7 +71,7 @@ func main() {
 	router.GET("/topup/:customerID", handler.HandleManualTopup)
 	router.GET("/manage/:customerID", handler.HandleManageCustomer)
 	router.POST("/charge", handler.HandleChargeCustomer)
-	router.POST("/hook", handler.HandleWebhook) // Assuming handleWebhook is a POST endpoint
+	router.POST("/hook", handler.HandleWebhook)
 
 	// Use Gin's run method to start the server on the specified port
 	port := os.Getenv("PORT")

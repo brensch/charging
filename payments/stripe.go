@@ -135,8 +135,8 @@ func (h *Handler) HandleManualTopup(c *gin.Context) {
 		Customer:   stripe.String(stripeCustomer.StripeId),
 		Currency:   stripe.String("aud"),
 		Mode:       stripe.String(string(stripe.CheckoutSessionModePayment)),
-		SuccessURL: stripe.String(fmt.Sprintf("%s/account", FrontendURL)),
-		CancelURL:  stripe.String(fmt.Sprintf("%s/account", FrontendURL)),
+		SuccessURL: stripe.String(fmt.Sprintf("%s/money", FrontendURL)),
+		CancelURL:  stripe.String(fmt.Sprintf("%s/money", FrontendURL)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price: &CreditPriceID,
@@ -206,7 +206,7 @@ func (h *Handler) HandleManageCustomer(c *gin.Context) {
 				Enabled: stripe.Bool(true),
 			},
 		},
-		DefaultReturnURL: stripe.String(fmt.Sprintf("%s/account", FrontendURL)),
+		DefaultReturnURL: stripe.String(fmt.Sprintf("%s/money", FrontendURL)),
 	}
 
 	s, err := configuration.New(configParams)
