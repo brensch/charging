@@ -144,7 +144,13 @@ function App() {
             <TopAppBar setAppBarHeight={setAppBarHeight} />
             <Container
               maxWidth="sm"
-              sx={{ marginTop: `${appBarHeight}px`, p: 1 }}
+              sx={{
+                marginTop: `${appBarHeight}px`,
+                p: 1,
+                maxWidth: "100%",
+                overflowX: "hidden",
+                boxSizing: "border-box",
+              }}
             >
               <Routes>
                 <Route path="/home" element={<HomePage />} />
