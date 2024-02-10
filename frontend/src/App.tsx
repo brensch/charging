@@ -1,4 +1,16 @@
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material"
+import {
+  AppBar,
+  Box,
+  Button,
+  CssBaseline,
+  IconButton,
+  Menu,
+  MenuItem,
+  ThemeProvider,
+  Toolbar,
+  Typography,
+  createTheme,
+} from "@mui/material"
 import {
   Navigate,
   Route,
@@ -18,82 +30,115 @@ import TopUpPage from "./pages/TopUpPage"
 import BottomNav from "./objects/BottomNav"
 import MoneyPage from "./pages/MoneyPage"
 import SessionsPage from "./pages/SessionsPage"
+import { useState } from "react"
 
-// Create a Material UI theme
 const theme = createTheme({
   palette: {
-    primary: {
-      main: "#556cd6",
-    },
-    secondary: {
-      main: "#19857b",
-    },
-    error: {
-      main: "#ff1744",
-    },
     background: {
-      default: "#fff",
+      default: "#fff", // Sets default background color to white
+    },
+    primary: {
+      main: "#000", // Sets the primary color to black
+    },
+    text: {
+      primary: "#000", // Sets the primary text color to black
+    },
+  },
+  typography: {
+    fontFamily: [
+      "Mabry Pro",
+      "-apple-system",
+      "BlinkMacSystemFont",
+      '"Segoe UI"',
+      "Roboto",
+      '"Helvetica Neue"',
+      "Arial",
+      "sans-serif",
+      '"Apple Color Emoji"',
+      '"Segoe UI Emoji"',
+      '"Segoe UI Symbol"',
+    ].join(","),
+    // Define font weights for consistency
+    fontWeightRegular: 400,
+    fontWeightMedium: 500,
+    fontWeightBold: 700,
+  },
+  components: {
+    MuiAppBar: {
+      defaultProps: {
+        elevation: 0, // Removes dropshadow
+      },
+      styleOverrides: {
+        root: {
+          backgroundColor: "#fff", // Sets AppBar background color to white
+          borderBottom: "2px solid #000000", // Adds a thin line at the bottom
+          color: "#000", // Set default color here for all child elements
+        },
+      },
     },
   },
 })
 
 function App() {
+  const [appBarHeight, setAppBarHeight] = useState(64)
+
   return (
     <ThemeProvider theme={theme}>
+      <CssBaseline />
       <AuthProvider>
         <CustomerProvider>
-          <CssBaseline />
-
           <Router>
-            <TopAppBar />
-            <Routes>
-              <Route path="/home" element={<HomePage />} />
-              <Route
-                path="/user"
-                element={
-                  <ProtectedRoute>
-                    <UserPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/plug"
-                element={
-                  <ProtectedRoute>
-                    <PlugPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/money"
-                element={
-                  <ProtectedRoute>
-                    <MoneyPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/sessions"
-                element={
-                  <ProtectedRoute>
-                    <SessionsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/confirm-login" element={<ConfirmLoginInPage />} />
-              <Route
-                path="/autotopup"
-                element={
-                  <ProtectedRoute>
-                    <TopUpPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/" element={<Navigate to="/home" />} />
-              {/* Redirect to /home as a default route */}
-              {/* <Route path="*" element={<Navigate replace to="/home" />} /> */}
-            </Routes>
+            <TopAppBar setAppBarHeight={setAppBarHeight} />
+            <Box sx={{ marginTop: `${appBarHeight}px` }}>
+              <Routes>
+                <Route path="/home" element={<HomePage />} />
+                <Route
+                  path="/user"
+                  element={
+                    <ProtectedRoute>
+                      <UserPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/plug"
+                  element={
+                    <ProtectedRoute>
+                      <PlugPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/money"
+                  element={
+                    <ProtectedRoute>
+                      <MoneyPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/sessions"
+                  element={
+                    <ProtectedRoute>
+                      <SessionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/confirm-login" element={<ConfirmLoginInPage />} />
+                <Route
+                  path="/autotopup"
+                  element={
+                    <ProtectedRoute>
+                      <TopUpPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/" element={<Navigate to="/home" />} />
+                {/* Redirect to /home as a default route */}
+                {/* <Route path="*" element={<Navigate replace to="/home" />} /> */}
+              </Routes>
+            </Box>
           </Router>
         </CustomerProvider>
       </AuthProvider>
