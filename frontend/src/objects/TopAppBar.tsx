@@ -26,6 +26,8 @@ interface TopAppBarProps {
   setAppBarHeight: React.Dispatch<React.SetStateAction<number>>
 }
 
+const appBarHeight = "64px"
+
 const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -87,7 +89,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
         sx={{
           width: "100vw",
           position: "fixed",
-          top: "64px", // AppBar height
+          top: appBarHeight, // AppBar height
           left: 0,
           zIndex: menuZIndex, // zIndex lower than AppBar
           backgroundColor: "white",
@@ -111,7 +113,10 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
 
   return (
     <>
-      <AppBar position="fixed" sx={{ zIndex: appBarZIndex }}>
+      <AppBar
+        position="fixed"
+        sx={{ height: appBarHeight, zIndex: appBarZIndex }}
+      >
         <Toolbar ref={menuRef}>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Magic Charge
