@@ -162,6 +162,13 @@ const PlugPage = () => {
       .toLowerCase()
       .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 
+  const formatRequestStatus = (state: UserRequestStatus) =>
+    userRequestStatusToJSON(state)
+      .replace(/^RequestedStatus_/, "")
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+
   return (
     <Container>
       <TextField
@@ -281,9 +288,9 @@ const PlugPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>State</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Time Requested</TableCell>
                   <TableCell>Time Entered State</TableCell>
-                  <TableCell>Status</TableCell>
                   <TableCell>Reason</TableCell>
                 </TableRow>
               </TableHead>
@@ -291,10 +298,10 @@ const PlugPage = () => {
                 {recentRequests.map((request, index) => (
                   <TableRow key={index} style={{ padding: 0 }}>
                     <TableCell>
-                      {stateMachineStateToJSON(request.requested_state).replace(
-                        /^StateMachineState_/,
-                        "",
-                      )}
+                      {formatState(request.requested_state)}
+                    </TableCell>
+                    <TableCell>
+                      {formatRequestStatus(request.result?.status!)}
                     </TableCell>
                     <TableCell>
                       {new Date(request.time_requested).toLocaleString()}
@@ -306,13 +313,7 @@ const PlugPage = () => {
                           ).toLocaleString()
                         : "N/A"}
                     </TableCell>
-                    <TableCell>
-                      {request.result
-                        ? userRequestStatusToJSON(
-                            request.result.status,
-                          ).replace(/^RequestedStatus_/, "")
-                        : "N/A"}
-                    </TableCell>
+
                     <TableCell>
                       {request.result ? request.result.reason : "N/A"}
                     </TableCell>
