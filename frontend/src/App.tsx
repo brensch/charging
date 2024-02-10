@@ -25,6 +25,7 @@ import TopAppBar from "./objects/TopAppBar"
 import ConfirmLoginInPage from "./pages/ConfirmLoginPage"
 import HomePage from "./pages/HomePage"
 import LoginPage from "./pages/LoginPage"
+import LoginPendingPage from "./pages/LoginPendingPage"
 import PlugPage from "./pages/PlugPage"
 import UserPage from "./pages/UserPage"
 import TopUpPage from "./pages/TopUpPage"
@@ -216,6 +217,7 @@ function App() {
                   }
                 />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/loginpending" element={<LoginPendingPage />} />
                 <Route path="/confirm-login" element={<ConfirmLoginInPage />} />
                 <Route
                   path="/autotopup"

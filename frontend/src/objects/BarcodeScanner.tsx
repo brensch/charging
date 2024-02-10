@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { BrowserMultiFormatReader } from "@zxing/library"
-import { Dialog, CircularProgress, Paper, Typography } from "@mui/material"
+import { Dialog, CircularProgress, Paper, Typography, Box } from "@mui/material"
 
 interface BarcodeScannerDialogProps {
   open: boolean
@@ -70,11 +70,12 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
   }
 
   return (
-    <Dialog open={dialogOpen} onClose={() => onClose()}>
-      <Paper
-        elevation={3}
-        style={{ padding: "20px", border: "2px solid black" }}
-      >
+    <Dialog
+      open={dialogOpen}
+      onClose={() => onClose()}
+      style={{ border: "none" }}
+    >
+      <Box style={{ padding: "20px" }}>
         <Typography variant="h6" style={{ marginBottom: "20px" }}>
           Scan QR code on plug
         </Typography>
@@ -108,7 +109,7 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
             autoPlay
           />
         </Paper>
-      </Paper>
+      </Box>
     </Dialog>
   )
 }

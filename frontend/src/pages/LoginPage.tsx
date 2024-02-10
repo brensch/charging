@@ -7,25 +7,31 @@ import Paper from "@mui/material/Paper"
 import TextField from "@mui/material/TextField"
 import Button from "@mui/material/Button"
 import Box from "@mui/material/Box"
+import { useNavigate } from "react-router-dom"
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("")
+  const navigate = useNavigate()
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const sendEmailLink = async (e: React.FormEvent) => {
+    setSending(true)
+    setError(null)
     e.preventDefault()
 
     const actionCodeSettings = {
       url: `${window.location.origin}/confirm-login`,
       handleCodeInApp: true,
     }
-
     try {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings)
       window.localStorage.setItem("emailForSignIn", email)
-      alert("Sign-in link sent! Check your email.")
+      navigate("/loginpending")
     } catch (error) {
       console.error(error)
-      alert("Error sending email link. Please try again.")
+      setError("Failed to send signin link: " + error)
+      setSending(false)
     }
   }
 
@@ -58,11 +64,13 @@ const LoginPage: React.FC = () => {
           <Button
             type="submit"
             fullWidth
+            disabled={sending || email === ""}
             variant="outlined"
             sx={{ mt: 3, mb: 2 }}
           >
             Send Sign-in Link
           </Button>
+          {error && <Typography>{error}</Typography>}
         </Box>
       </Paper>
     </Container>

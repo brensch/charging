@@ -145,15 +145,17 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Magic Charge
           </Typography>
-          <IconButton
-            edge="end"
-            color="inherit"
-            aria-label="menu"
-            onClick={toggleMenu}
-            id="closedhamburger"
-          >
-            <MenuIcon />
-          </IconButton>
+          {auth.currentUser && (
+            <IconButton
+              edge="end"
+              color="inherit"
+              aria-label="menu"
+              onClick={toggleMenu}
+              id="closedhamburger"
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
       {fullScreenMenu}

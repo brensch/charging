@@ -57,6 +57,7 @@ const PlugPage = () => {
 
       if (plugValue) {
         setInputValue(plugValue)
+        navigate(`?plug=${plugValue}`)
         // Handle the plug value as needed, like setting it to an input field
       }
     }
@@ -131,7 +132,7 @@ const PlugPage = () => {
 
     // Clean up the subscription when the component unmounts
     return () => unsubscribe()
-  }, [inputValue]) // Empty dependency array means this effect runs once on mount
+  }, [urlQuery.get("plug")]) // Empty dependency array means this effect runs once on mount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
