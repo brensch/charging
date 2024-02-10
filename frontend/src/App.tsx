@@ -77,6 +77,51 @@ const theme = createTheme({
         },
       },
     },
+    MuiButton: {
+      styleOverrides: {
+        // Name of the slot
+        root: {
+          // Some CSS
+          borderRadius: "20px", // Adjust the border-radius for rounded corners
+          // padding: "6px 16px", // Adjust padding, if necessary
+          borderWidth: "2px",
+
+          textTransform: "none", // Buttons have uppercase text by default, set this to 'none' to use normal casing
+          boxShadow: "none", // remove shadow from all buttons
+          "&:hover": {
+            borderWidth: "2px",
+          },
+        },
+      },
+      variants: [
+        {
+          props: { variant: "contained" },
+          style: {
+            backgroundColor: "#000", // Change this to the color code you want
+            color: "#fff", // Text color for contained button
+            "&:hover": {
+              // Styles for when the button is hovered
+              backgroundColor: "rgba(0, 0, 0, 0.8)", // Darken button color slightly on hover
+              boxShadow: "none", // remove shadow on hover
+            },
+          },
+        },
+        {
+          props: { variant: "outlined" },
+          style: {
+            borderColor: "#000", // Border color for outlined button
+            color: "#000", // Text color for outlined button
+            "&:hover": {
+              // Styles for when the button is hovered
+              color: "#fff",
+              backgroundColor: "#000",
+              // borderColor: "rgba(0, 0, 0, 0.5)", // Darken border color slightly on hover
+              boxShadow: "none", // remove shadow on hover
+            },
+          },
+        },
+      ],
+    },
   },
 })
 

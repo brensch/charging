@@ -5,8 +5,7 @@ import {
   Container,
   Divider,
   FormControlLabel,
-  IconButton,
-  Stack,
+  Grid,
   Switch,
   TextField,
   Typography,
@@ -75,98 +74,112 @@ const MoneyPage = () => {
 
   return (
     <Container>
-      <Typography variant="h4">Money</Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={12}>
+          {customerBalance && (
+            <Typography variant="h4">
+              Credit: ${customerBalance?.cents_aud / 100}
+            </Typography>
+          )}
+        </Grid>
 
-      {customerBalance && (
-        <Typography variant="h6">
-          Total Credit: ${customerBalance?.cents_aud / 100}
-        </Typography>
-      )}
-
-      <Stack spacing={4}>
-        <Stack direction="row">
-          <Button variant="contained" onClick={handleTopUpSubmit}>
+        <Grid item xs={6}>
+          <Button variant="outlined" onClick={handleTopUpSubmit} fullWidth>
             Manual Top Up
           </Button>
-        </Stack>
+        </Grid>
+
+        <Grid item xs={6}>
+          {stripeCustomer && stripeCustomer.payment_methods.length > 0 ? (
+            <Button
+              variant="outlined"
+              onClick={() =>
+                window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
+              }
+              fullWidth
+            >
+              Manage payment methods
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={() =>
+                window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
+              }
+              fullWidth
+            >
+              Add payment method
+            </Button>
+          )}
+        </Grid>
 
         {stripeCustomer && stripeCustomer.payment_methods.length === 0 && (
-          <Typography>
-            No payment methods connected to your account. Add one in settings.
-          </Typography>
+          <Grid item xs={12}>
+            <Typography>
+              No payment methods connected to your account.
+              <br />
+              <br />
+              Add one to use auto topup.
+            </Typography>
+          </Grid>
         )}
-      </Stack>
 
-      {stripeCustomer?.payment_methods.length === 0 ? (
-        <Stack spacing={2} alignItems="center">
-          <Button
-            variant="contained"
-            onClick={() =>
-              window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
-            }
-          >
-            Add payment method
-          </Button>
-          <Typography>
-            Can only use autotopup once payment method has been added.
-          </Typography>
-        </Stack>
-      ) : (
-        <>
-          <Button
-            variant="contained"
-            onClick={() =>
-              window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
-            }
-          >
-            Manage payment methods
-          </Button>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isAutoTopUpEnabled}
-                onChange={handleToggleAutoTopUp}
-              />
-            }
-            label="Enable Auto Top-Up"
-          />
-          {autoTopupPreferences && autoTopupPreferences.enabled && (
-            <Stack spacing={2}>
-              <Typography variant="h6">Auto Top-Up Settings:</Typography>
-              <Typography>
-                Threshold: ${autoTopupPreferences.threshold_cents / 100}
-              </Typography>
-              <TextField
-                label="New threshold"
-                type="number"
-                variant="outlined"
-                value={autoTopUpTrigger}
-                onChange={(e) => setAutoTopUpTrigger(e.target.value)}
-                InputProps={{ inputProps: { min: 0 } }}
-              />
-              <Typography>
-                Recharge with: $
-                {autoTopupPreferences.recharge_value_cents_aud / 100}
-              </Typography>
-              <TextField
-                label="New recharge amount"
-                type="number"
-                variant="outlined"
-                value={autoTopUpAmount}
-                onChange={(e) => setAutoTopUpAmount(e.target.value)}
-                InputProps={{ inputProps: { min: 0 } }}
-              />
-              <Button
-                variant="contained"
-                disabled={autoTopUpTrigger === "" || autoTopUpAmount === ""}
-                onClick={handleAutoTopUpConfirm}
-              >
-                Update Auto Top-Up
-              </Button>
-            </Stack>
+        <Grid item xs={12}>
+          {stripeCustomer?.payment_methods.length !== 0 && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isAutoTopUpEnabled}
+                  onChange={handleToggleAutoTopUp}
+                />
+              }
+              label="Enable Auto Top-Up"
+            />
           )}
-        </>
-      )}
+        </Grid>
+
+        {stripeCustomer?.payment_methods.length !== 0 &&
+          autoTopupPreferences &&
+          autoTopupPreferences.enabled && (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant="h6">Auto Top-Up Settings:</Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="New threshold"
+                  type="number"
+                  variant="outlined"
+                  value={autoTopUpTrigger}
+                  onChange={(e) => setAutoTopUpTrigger(e.target.value)}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="New recharge amount"
+                  type="number"
+                  variant="outlined"
+                  value={autoTopUpAmount}
+                  onChange={(e) => setAutoTopUpAmount(e.target.value)}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  disabled={autoTopUpTrigger === "" || autoTopUpAmount === ""}
+                  onClick={handleAutoTopUpConfirm}
+                  fullWidth
+                >
+                  Update Auto Top-Up
+                </Button>
+              </Grid>
+            </React.Fragment>
+          )}
+      </Grid>
     </Container>
   )
 }
