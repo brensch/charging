@@ -115,35 +115,39 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           borderBottom: "2px solid black",
         }}
       >
-        <Container maxWidth="sm" component="main">
-          <List disablePadding>
-            {menuItems.map((item, index) => (
-              <ListItem
-                key={index}
-                onClick={() => handleListItemClick(item.path)}
-                sx={{
-                  "&:hover": {
-                    backgroundColor: "#bafca2", // Light grey background on hover
-                    cursor: "pointer", // Change cursor to pointer on hover
+        <List disablePadding>
+          {menuItems.map((item, index) => (
+            <ListItem
+              key={index}
+              onClick={() => handleListItemClick(item.path)}
+              sx={{
+                "&:hover": {
+                  backgroundColor: "#bafca2", // Light grey background on hover
+                  cursor: "pointer", // Change cursor to pointer on hover
 
-                    // Change icon color on hover
-                    "& .MuiListItemIcon-root": {
-                      color: "black", // Change this to your desired color on hover
-                    },
-
-                    // Change text color on hover
-                    "& .MuiListItemText-primary": {
-                      color: "black", // Change this to your desired color on hover
-                    },
+                  // Change icon color on hover
+                  "& .MuiListItemIcon-root": {
+                    color: "black", // Change this to your desired color on hover
                   },
-                }}
-              >
-                <ListItemIcon sx={{ color: "black" }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItem>
-            ))}
-          </List>
-        </Container>
+
+                  // Change text color on hover
+                  "& .MuiListItemText-primary": {
+                    color: "black", // Change this to your desired color on hover
+                  },
+                },
+              }}
+            >
+              <Container maxWidth="sm">
+                <ListItem key={`${index}-inside`} disablePadding>
+                  <ListItemIcon sx={{ color: "black" }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItem>{" "}
+              </Container>
+            </ListItem>
+          ))}
+        </List>
 
         <Divider sx={{ border: "1px solid black" }} />
         <Box
