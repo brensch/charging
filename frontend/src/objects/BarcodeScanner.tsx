@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react"
 import { BrowserMultiFormatReader } from "@zxing/library"
-import { Button, Dialog, DialogActions, DialogContent } from "@mui/material"
+import { Dialog } from "@mui/material"
 
 interface BarcodeScannerDialogProps {
   open: boolean
@@ -12,19 +12,22 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
   onClose,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const codeReader = new BrowserMultiFormatReader()
+  const codeReader = useRef<BrowserMultiFormatReader | null>(null)
+  const streamRef = useRef<MediaStream | null>(null) // Ref for the camera stream
 
   useEffect(() => {
     if (open) {
       navigator.mediaDevices
         .getUserMedia({ video: { facingMode: "environment" } })
         .then((stream) => {
+          streamRef.current = stream // Store the stream in a ref
           const videoElement = videoRef.current
           if (videoElement) {
             videoElement.srcObject = stream
-            videoElement.setAttribute("playsinline", "true") // required to tell iOS safari we don't want fullscreen
+            videoElement.setAttribute("playsinline", "true")
             videoElement.play()
 
+            codeReader.current = new BrowserMultiFormatReader()
             decodeFromVideo(videoElement)
           }
         })
@@ -34,15 +37,25 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
     }
 
     return () => {
-      codeReader.reset()
+      // Cleanup function to reset the codeReader and release the camera stream
+      if (codeReader.current) {
+        codeReader.current.reset()
+        codeReader.current = null
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop()
+        })
+        streamRef.current = null // Clear the stream ref after stopping the tracks
+      }
     }
-  }, [open])
+  }, [open]) // Dependency array ensures this effect runs only when `open` changes
 
   const decodeFromVideo = (videoElement: HTMLVideoElement) => {
-    codeReader
-      .decodeFromVideoElement(videoElement)
+    codeReader.current
+      ?.decodeFromVideoElement(videoElement)
       .then((result) => {
-        onClose(result.getText()) // Close the dialog after scanning
+        onClose(result.getText())
       })
       .catch((err) => {
         console.error("Error decoding barcode", err)
