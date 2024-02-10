@@ -15,7 +15,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import ReceiptIcon from "@mui/icons-material/Receipt"
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney"
 import Box from "@mui/material/Box"
-import { Button, Divider } from "@mui/material"
+import { Button, Container, Divider } from "@mui/material"
 import { useAuth } from "../contexts/AuthContext"
 import { auth } from "../firebase"
 import { useCustomer } from "../contexts/CustomerContext"
@@ -115,33 +115,36 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           borderBottom: "2px solid black",
         }}
       >
-        <List disablePadding>
-          {menuItems.map((item, index) => (
-            <ListItem
-              key={index}
-              onClick={() => handleListItemClick(item.path)}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "#bafca2", // Light grey background on hover
-                  cursor: "pointer", // Change cursor to pointer on hover
+        <Container maxWidth="sm" component="main">
+          <List disablePadding>
+            {menuItems.map((item, index) => (
+              <ListItem
+                key={index}
+                onClick={() => handleListItemClick(item.path)}
+                sx={{
+                  "&:hover": {
+                    backgroundColor: "#bafca2", // Light grey background on hover
+                    cursor: "pointer", // Change cursor to pointer on hover
 
-                  // Change icon color on hover
-                  "& .MuiListItemIcon-root": {
-                    color: "black", // Change this to your desired color on hover
-                  },
+                    // Change icon color on hover
+                    "& .MuiListItemIcon-root": {
+                      color: "black", // Change this to your desired color on hover
+                    },
 
-                  // Change text color on hover
-                  "& .MuiListItemText-primary": {
-                    color: "black", // Change this to your desired color on hover
+                    // Change text color on hover
+                    "& .MuiListItemText-primary": {
+                      color: "black", // Change this to your desired color on hover
+                    },
                   },
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: "black" }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItem>
-          ))}
-        </List>
+                }}
+              >
+                <ListItemIcon sx={{ color: "black" }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItem>
+            ))}
+          </List>
+        </Container>
+
         <Divider sx={{ border: "1px solid black" }} />
         <Box
           sx={{
@@ -173,22 +176,24 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
         position="fixed"
         sx={{ height: appBarHeight, zIndex: appBarZIndex }}
       >
-        <Toolbar ref={menuRef}>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Magic Charge
-          </Typography>
-          {authState.currentUser && (
-            <IconButton
-              edge="end"
-              color="inherit"
-              aria-label="menu"
-              onClick={toggleMenu}
-              id="closedhamburger"
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-        </Toolbar>
+        <Container maxWidth="sm">
+          <Toolbar ref={menuRef}>
+            <Typography variant="h6" sx={{ flexGrow: 1 }}>
+              Magic Charge
+            </Typography>
+            {authState.currentUser && (
+              <IconButton
+                edge="end"
+                color="inherit"
+                aria-label="menu"
+                onClick={toggleMenu}
+                id="closedhamburger"
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+          </Toolbar>
+        </Container>
       </AppBar>
       {fullScreenMenu}
     </>
