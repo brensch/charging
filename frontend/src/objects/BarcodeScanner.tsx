@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef } from "react"
 import { BrowserMultiFormatReader } from "@zxing/library"
-import { Dialog, CircularProgress, Paper, Typography, Box } from "@mui/material"
+import {
+  Dialog,
+  CircularProgress,
+  Paper,
+  Typography,
+  Box,
+  useTheme,
+} from "@mui/material"
 import useMediaQuery from "@mui/material/useMediaQuery"
 
 interface BarcodeScannerDialogProps {
@@ -17,7 +24,9 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
   const streamRef = useRef<MediaStream | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true) // Start with loading state
   const [dialogOpen, setDialogOpen] = useState<boolean>(false)
-  const isSmallScreen = useMediaQuery((theme) => theme.breakpoints.down("xs"))
+  const theme = useTheme()
+
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("xs"))
 
   useEffect(() => {
     if (open) {
