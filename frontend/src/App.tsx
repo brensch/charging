@@ -72,8 +72,17 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: "#fff", // Sets AppBar background color to white
+          border: "none",
           borderBottom: "2px solid #000000", // Adds a thin line at the bottom
           color: "#000", // Set default color here for all child elements
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          boxShadow: "none", // Removes the drop shadow
+          border: "2px solid black", // Adds a 2px solid black border
         },
       },
     },

@@ -15,6 +15,9 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import ReceiptIcon from "@mui/icons-material/Receipt"
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney"
 import Box from "@mui/material/Box"
+import { Button, Divider } from "@mui/material"
+import { useAuth } from "../contexts/AuthContext"
+import { auth } from "../firebase"
 
 interface MenuItem {
   label: string
@@ -107,6 +110,27 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
             </ListItem>
           ))}
         </List>
+        <Divider sx={{ border: "1px solid black" }} />
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center", // This centers the buttons
+            padding: "16px", // This adds padding; you can adjust as needed
+            gap: "16px", // This adds space between the buttons
+            flexDirection: "row", // This stacks the buttons vertically
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setIsMenuOpen(false)
+              auth.signOut()
+            }}
+          >
+            Sign Out
+          </Button>
+          <Button variant="outlined">Contact Us</Button>
+        </Box>
       </Box>
     </Slide>
   )
