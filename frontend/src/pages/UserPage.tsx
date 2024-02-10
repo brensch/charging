@@ -28,8 +28,8 @@ function UserPage() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ p: 4 }}>
-      <Typography variant="body1" mt={4}>
+    <Container>
+      <Typography variant="body1">
         You are a valued customer. Keep it up.
       </Typography>
     </Container>

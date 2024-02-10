@@ -74,7 +74,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
         <List>
           {menuItems.map((item, index) => (
             <ListItem
-              button
               key={index}
               onClick={() => handleListItemClick(item.path)}
             >

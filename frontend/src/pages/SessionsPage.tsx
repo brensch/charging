@@ -1,5 +1,5 @@
 import React, { useContext } from "react"
-import { Box, Divider, Typography } from "@mui/material"
+import { Box, Container, Divider, Typography } from "@mui/material"
 import { CustomerContext } from "../contexts/CustomerContext"
 
 const SessionsPage = () => {
@@ -11,7 +11,7 @@ const SessionsPage = () => {
   } = useContext(CustomerContext)
 
   return (
-    <div style={{ padding: 20 }}>
+    <Container>
       <Typography variant="h4">Sessions</Typography>
       <Box sx={{ width: "100%" }}>
         <Typography variant="h6" mb={2}>
@@ -22,10 +22,8 @@ const SessionsPage = () => {
             ${transaction.cents_aud / 100}
           </Typography>
         ))}
-        <Divider sx={{ my: 4 }} />
       </Box>
-      {/* Additional content and components go here */}
-    </div>
+    </Container>
   )
 }
 

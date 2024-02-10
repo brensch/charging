@@ -2,6 +2,7 @@ import {
   AppBar,
   Box,
   Button,
+  Container,
   CssBaseline,
   IconButton,
   Menu,
@@ -89,7 +90,10 @@ function App() {
         <CustomerProvider>
           <Router>
             <TopAppBar setAppBarHeight={setAppBarHeight} />
-            <Box sx={{ marginTop: `${appBarHeight}px` }}>
+            <Container
+              maxWidth="sm"
+              sx={{ marginTop: `${appBarHeight}px`, p: 1 }}
+            >
               <Routes>
                 <Route path="/home" element={<HomePage />} />
                 <Route
@@ -138,7 +142,7 @@ function App() {
                 {/* Redirect to /home as a default route */}
                 {/* <Route path="*" element={<Navigate replace to="/home" />} /> */}
               </Routes>
-            </Box>
+            </Container>
           </Router>
         </CustomerProvider>
       </AuthProvider>

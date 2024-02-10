@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { Typography, TextField, Box, Button } from "@mui/material"
+import { Typography, TextField, Box, Button, Container } from "@mui/material"
 import { useLocation, useNavigate } from "react-router-dom"
 import {
   addDoc,
@@ -119,7 +119,7 @@ const PlugPage = () => {
   }, [urlQuery.get("plug")])
 
   return (
-    <div style={{ padding: 20 }}>
+    <Container>
       <Typography variant="h4">Plug</Typography>
       <TextField
         label="Plug ID"
@@ -203,7 +203,7 @@ const PlugPage = () => {
           </React.Fragment>
         ))}
       </Box>
-    </div>
+    </Container>
   )
 }
 

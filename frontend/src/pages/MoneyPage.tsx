@@ -74,7 +74,7 @@ const MoneyPage = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ p: 4 }}>
+    <Container>
       <Typography variant="h4">Money</Typography>
 
       {customerBalance && (
