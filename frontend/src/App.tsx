@@ -122,6 +122,13 @@ const theme = createTheme({
         },
       ],
     },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          boxShadow: "none", // Remove the drop shadow
+        },
+      },
+    },
   },
 })
 

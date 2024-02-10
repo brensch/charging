@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react"
-import { Typography, TextField, Box, Button, Container } from "@mui/material"
+import {
+  Typography,
+  TextField,
+  Box,
+  Button,
+  Container,
+  IconButton,
+  InputAdornment,
+} from "@mui/material"
 import { useLocation, useNavigate } from "react-router-dom"
 import {
   addDoc,
@@ -24,7 +32,8 @@ import {
 import { useAuth } from "../contexts/AuthContext"
 import { v4 as uuidv4 } from "uuid"
 import { UserRequestStatus } from "../contracts/objects"
-
+import QrCode2Icon from "@mui/icons-material/QrCode2"
+import BarcodeScannerDialog from "../objects/BarcodeScanner"
 const useQuery = () => {
   return new URLSearchParams(useLocation().search)
 }
@@ -36,6 +45,18 @@ const PlugPage = () => {
   const [inputValue, setInputValue] = useState(urlQuery.get("plug") || "")
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [recentRequests, setRecentRequests] = useState<UserRequest[]>([])
+  const [openScanner, setOpenScanner] = useState<boolean>(false)
+
+  const handleScannerClose = (scannedCode?: string) => {
+    setOpenScanner(false)
+    if (scannedCode) {
+      setInputValue(scannedCode)
+      // Handle the scanned code as needed, like setting it to an input field
+    }
+  }
+  const toggleScanner = () => {
+    setOpenScanner(!openScanner)
+  }
 
   const handleCreateRequest = async (state: StateMachineState) => {
     const id = uuidv4() // Generate a unique UUID
@@ -120,15 +141,24 @@ const PlugPage = () => {
 
   return (
     <Container>
-      <Typography variant="h4">Plug</Typography>
       <TextField
-        label="Plug ID"
+        label="Enter Plug Code or scan"
         variant="outlined"
         value={inputValue}
         onChange={handleInputChange}
         fullWidth
         margin="normal"
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton onClick={toggleScanner}>
+                <QrCode2Icon />
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
       />
+      <BarcodeScannerDialog open={openScanner} onClose={handleScannerClose} />
 
       {plugStatus && plugStatus.state?.state && (
         <React.Fragment>
@@ -171,38 +201,42 @@ const PlugPage = () => {
           </Button>
         </React.Fragment>
       )}
-      <Box border={1} padding={2} marginY={2}>
-        {recentRequests.map((request) => (
-          <React.Fragment>
-            <Typography variant="body1">
-              {stateMachineStateToJSON(request.requested_state).replace(
-                /^StateMachineState_/,
-                "",
+      {recentRequests.length > 0 && (
+        <Box border={1} padding={2} marginY={2}>
+          {recentRequests.map((request) => (
+            <React.Fragment>
+              <Typography variant="body1">
+                {stateMachineStateToJSON(request.requested_state).replace(
+                  /^StateMachineState_/,
+                  "",
+                )}
+              </Typography>
+              <Typography variant="body1">
+                {new Date(request.time_requested).toLocaleString()}
+              </Typography>
+              {request.result && (
+                <React.Fragment>
+                  <Typography variant="body1">
+                    {new Date(
+                      request.result?.time_entered_state,
+                    ).toLocaleString()}
+                  </Typography>
+                  <Typography variant="body1">
+                    {userRequestStatusToJSON(request.result.status).replace(
+                      /^RequestedStatus_/,
+                      "",
+                    )}
+                  </Typography>
+                  <Typography variant="body1">
+                    {request.result.reason}
+                  </Typography>
+                </React.Fragment>
               )}
-            </Typography>
-            <Typography variant="body1">
-              {new Date(request.time_requested).toLocaleString()}
-            </Typography>
-            {request.result && (
-              <React.Fragment>
-                <Typography variant="body1">
-                  {new Date(
-                    request.result?.time_entered_state,
-                  ).toLocaleString()}
-                </Typography>
-                <Typography variant="body1">
-                  {userRequestStatusToJSON(request.result.status).replace(
-                    /^RequestedStatus_/,
-                    "",
-                  )}
-                </Typography>
-                <Typography variant="body1">{request.result.reason}</Typography>
-              </React.Fragment>
-            )}
-            -------------------
-          </React.Fragment>
-        ))}
-      </Box>
+              -------------------
+            </React.Fragment>
+          ))}
+        </Box>
+      )}
     </Container>
   )
 }
