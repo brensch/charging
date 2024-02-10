@@ -3,21 +3,21 @@ import React, { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "./contexts/AuthContext"
 
-interface ProtectedRouteProps {
+interface UnprotectedRouteProps {
   children: JSX.Element
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const UnprotectedRoute: React.FC<UnprotectedRouteProps> = ({ children }) => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/login")
+    if (currentUser) {
+      navigate("/home")
     }
   }, [currentUser])
 
   return children
 }
 
-export default ProtectedRoute
+export default UnprotectedRoute

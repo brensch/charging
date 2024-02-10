@@ -18,6 +18,7 @@ import Box from "@mui/material/Box"
 import { Button, Divider } from "@mui/material"
 import { useAuth } from "../contexts/AuthContext"
 import { auth } from "../firebase"
+import { useCustomer } from "../contexts/CustomerContext"
 
 interface MenuItem {
   label: string
@@ -32,10 +33,12 @@ interface TopAppBarProps {
 const appBarHeight = "64px"
 
 const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
+  const authState = useAuth()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null) // Reference to the menu
   const appBarRef = useRef<HTMLDivElement>(null)
+  const customer = useCustomer()
 
   useEffect(() => {
     if (appBarRef.current) {
@@ -72,9 +75,22 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
 
   const menuItems: MenuItem[] = [
     { label: "Plug", icon: <ElectricalServicesIcon />, path: "/plug" },
-    { label: "User", icon: <AccountCircleIcon />, path: "/user" },
+    {
+      label: `Money: $${
+        customer.customerBalance?.cents_aud &&
+        customer.customerBalance?.cents_aud / 100
+      }`,
+      icon: <AttachMoneyIcon />,
+      path: "/money",
+    },
     { label: "Sessions", icon: <ReceiptIcon />, path: "/sessions" },
-    { label: "Money", icon: <AttachMoneyIcon />, path: "/money" },
+    {
+      label: auth.currentUser?.displayName
+        ? auth.currentUser?.displayName
+        : "User",
+      icon: <AccountCircleIcon />,
+      path: "/user",
+    },
   ]
 
   const handleListItemClick = (path: string) => {
@@ -99,13 +115,29 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           borderBottom: "2px solid black",
         }}
       >
-        <List>
+        <List disablePadding>
           {menuItems.map((item, index) => (
             <ListItem
               key={index}
               onClick={() => handleListItemClick(item.path)}
+              sx={{
+                "&:hover": {
+                  backgroundColor: "#bafca2", // Light grey background on hover
+                  cursor: "pointer", // Change cursor to pointer on hover
+
+                  // Change icon color on hover
+                  "& .MuiListItemIcon-root": {
+                    color: "black", // Change this to your desired color on hover
+                  },
+
+                  // Change text color on hover
+                  "& .MuiListItemText-primary": {
+                    color: "black", // Change this to your desired color on hover
+                  },
+                },
+              }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ color: "black" }}>{item.icon}</ListItemIcon>
               <ListItemText primary={item.label} />
             </ListItem>
           ))}
@@ -145,7 +177,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Magic Charge
           </Typography>
-          {auth.currentUser && (
+          {authState.currentUser && (
             <IconButton
               edge="end"
               color="inherit"

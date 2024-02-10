@@ -14,13 +14,14 @@ import {
   limit,
   where,
 } from "firebase/firestore"
-import { auth, firestore } from "../firebase"
+import { firestore } from "../firebase"
 import {
   AutoTopupPreferences,
   CustomerBalance,
   StripeCustomer,
   Transaction,
 } from "../contracts/stripe"
+import { useAuth } from "./AuthContext"
 
 // Define the context value's type
 interface CustomerContextValue {
@@ -39,9 +40,12 @@ interface CustomerProviderProps {
   children: ReactNode
 }
 
+export const useCustomer = () => useContext(CustomerContext)
+
 export const CustomerProvider: React.FC<CustomerProviderProps> = ({
   children,
 }) => {
+  const auth = useAuth()
   const [customerBalance, setCustomerBalance] =
     useState<CustomerBalance | null>(null)
   const [stripeCustomer, setStripeCustomer] = useState<StripeCustomer | null>(

@@ -33,6 +33,7 @@ import BottomNav from "./objects/BottomNav"
 import MoneyPage from "./pages/MoneyPage"
 import SessionsPage from "./pages/SessionsPage"
 import { useState } from "react"
+import UnprotectedRoute from "./UnprotectedRoute"
 
 const theme = createTheme({
   palette: {
@@ -216,9 +217,30 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/loginpending" element={<LoginPendingPage />} />
-                <Route path="/confirm-login" element={<ConfirmLoginInPage />} />
+                <Route
+                  path="/login"
+                  element={
+                    <UnprotectedRoute>
+                      <LoginPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/loginpending"
+                  element={
+                    <UnprotectedRoute>
+                      <LoginPendingPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/confirm-login"
+                  element={
+                    <UnprotectedRoute>
+                      <ConfirmLoginInPage />
+                    </UnprotectedRoute>
+                  }
+                />
                 <Route
                   path="/autotopup"
                   element={

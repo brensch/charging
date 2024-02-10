@@ -8,14 +8,13 @@ const HomePage = () => {
       <Typography variant="h4" sx={{ mb: 4 }}>
         The cheapest way to charge your EV.
       </Typography>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <Typography variant="body1">
-          Scan the QR code above a plug, or{" "}
-        </Typography>
-        <Button variant="outlined" onClick={() => navigate("/plug")}>
-          get started here.
-        </Button>
-      </Box>
+      <Typography variant="body1" gutterBottom sx={{ mb: 4 }}>
+        Plug your car in to a normal outlet when you get home. Leave the rest to
+        us.
+      </Typography>
+      <Button variant="outlined" onClick={() => navigate("/plug")}>
+        Get started here.
+      </Button>
     </Box>
   )
 }

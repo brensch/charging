@@ -6,13 +6,14 @@ import {
   Divider,
   FormControlLabel,
   Grid,
+  Paper,
   Switch,
   TextField,
   Typography,
 } from "@mui/material"
 import { doc, updateDoc } from "firebase/firestore"
 import { useNavigate } from "react-router-dom"
-import { CustomerContext } from "../contexts/CustomerContext"
+import { CustomerContext, useCustomer } from "../contexts/CustomerContext"
 import { AutoTopupPreferences } from "../contracts/stripe"
 import { auth, firestore } from "../firebase"
 import { ArrowBackIcon } from "@chakra-ui/icons"
@@ -29,7 +30,7 @@ const MoneyPage = () => {
     stripeCustomer,
     autoTopupPreferences,
     transactions,
-  } = useContext(CustomerContext)
+  } = useCustomer()
 
   const handleTopUpSubmit = () => {
     const url = `${PaymentsAPI}/topup/${auth.currentUser?.uid}`
@@ -69,6 +70,8 @@ const MoneyPage = () => {
         threshold_cents: triggerCents,
         recharge_value_cents_aud: amountCents,
       })
+      setAutoTopUpAmount("")
+      setAutoTopUpTrigger("")
     }
   }
 
@@ -83,20 +86,19 @@ const MoneyPage = () => {
           )}
         </Grid>
 
-        <Grid item xs={6}>
-          <Button variant="outlined" onClick={handleTopUpSubmit} fullWidth>
+        <Grid item xs={12}>
+          <Button variant="outlined" onClick={handleTopUpSubmit}>
             Manual Top Up
           </Button>
         </Grid>
 
-        <Grid item xs={6}>
+        <Grid item xs={12}>
           {stripeCustomer && stripeCustomer.payment_methods.length > 0 ? (
             <Button
               variant="outlined"
               onClick={() =>
                 window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
               }
-              fullWidth
             >
               Manage payment methods
             </Button>
@@ -106,7 +108,6 @@ const MoneyPage = () => {
               onClick={() =>
                 window.open(`${PaymentsAPI}/manage/${auth.currentUser?.uid}`)
               }
-              fullWidth
             >
               Add payment method
             </Button>
@@ -138,47 +139,61 @@ const MoneyPage = () => {
           )}
         </Grid>
 
-        {stripeCustomer?.payment_methods.length !== 0 &&
-          autoTopupPreferences &&
-          autoTopupPreferences.enabled && (
-            <React.Fragment>
-              <Grid item xs={12}>
-                <Typography variant="h6">Auto Top-Up Settings:</Typography>
+        {stripeCustomer?.payment_methods.length !== 0 && isAutoTopUpEnabled && (
+          <Grid item xs={12}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12}>
+                  <Typography variant="h6">Auto Top-Up Settings:</Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>
+                    When below: $
+                    {autoTopupPreferences?.threshold_cents &&
+                      autoTopupPreferences?.threshold_cents / 100}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    label="New threshold"
+                    type="number"
+                    variant="outlined"
+                    value={autoTopUpTrigger}
+                    onChange={(e) => setAutoTopUpTrigger(e.target.value)}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography>
+                    Recharge with: $
+                    {autoTopupPreferences?.recharge_value_cents_aud &&
+                      autoTopupPreferences?.recharge_value_cents_aud / 100}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    label="New recharge"
+                    type="number"
+                    variant="outlined"
+                    value={autoTopUpAmount}
+                    onChange={(e) => setAutoTopUpAmount(e.target.value)}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    onClick={handleAutoTopUpConfirm}
+                    fullWidth
+                    disabled={!autoTopUpTrigger || !autoTopUpAmount}
+                  >
+                    Update Auto Top-Up
+                  </Button>
+                </Grid>
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="New threshold"
-                  type="number"
-                  variant="outlined"
-                  value={autoTopUpTrigger}
-                  onChange={(e) => setAutoTopUpTrigger(e.target.value)}
-                  InputProps={{ inputProps: { min: 0 } }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="New recharge amount"
-                  type="number"
-                  variant="outlined"
-                  value={autoTopUpAmount}
-                  onChange={(e) => setAutoTopUpAmount(e.target.value)}
-                  InputProps={{ inputProps: { min: 0 } }}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  variant="outlined"
-                  disabled={autoTopUpTrigger === "" || autoTopUpAmount === ""}
-                  onClick={handleAutoTopUpConfirm}
-                  fullWidth
-                >
-                  Update Auto Top-Up
-                </Button>
-              </Grid>
-            </React.Fragment>
-          )}
+            </Paper>
+          </Grid>
+        )}
       </Grid>
     </Container>
   )
