@@ -7,6 +7,14 @@ import {
   Container,
   IconButton,
   InputAdornment,
+  Paper,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material"
 import { useLocation, useNavigate } from "react-router-dom"
 import {
@@ -147,6 +155,13 @@ const PlugPage = () => {
     }
   }, [urlQuery.get("plug")])
 
+  const formatState = (state: StateMachineState) =>
+    stateMachineStateToJSON(state)
+      .replace(/^StateMachineState_/, "")
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+
   return (
     <Container>
       <TextField
@@ -170,80 +185,143 @@ const PlugPage = () => {
 
       {plugStatus && plugStatus.state?.state && (
         <React.Fragment>
-          <Box border={1} padding={2} marginY={2}>
-            <Typography variant="body1">
-              State:{" "}
-              {stateMachineStateToJSON(plugStatus.state?.state).replace(
-                /^StateMachineState_/,
-                "",
-              )}
-            </Typography>
-            <Typography variant="body1">
-              Time: {new Date(plugStatus.state?.time_ms).toLocaleString()}
-            </Typography>
-            <Typography variant="body1">
-              Reason: {plugStatus.state.reason}
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() =>
-              handleCreateRequest(
-                StateMachineState.StateMachineState_USER_REQUESTED_ON,
-              )
-            }
-          >
-            Request On
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() =>
-              handleCreateRequest(
-                StateMachineState.StateMachineState_USER_REQUESTED_OFF,
-              )
-            }
-          >
-            Request Off
-          </Button>
+          <Paper elevation={3} style={{ padding: 0, margin: 0 }}>
+            <Grid container spacing={0}>
+              <Grid
+                item
+                xs={12}
+                style={{ padding: 16, borderBottom: "2px solid black" }}
+              >
+                <Typography variant="h6" style={{ fontWeight: "bold" }}>
+                  Current Plug State
+                </Typography>
+              </Grid>
+              <Grid
+                item
+                xs={7}
+                style={{
+                  padding: 16,
+                  borderRight: "2px solid black",
+                  borderBottom: "2px solid black",
+                }}
+              >
+                <Typography
+                  variant="body1"
+                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                >
+                  {formatState(plugStatus.state.state)}
+                </Typography>
+              </Grid>
+              <Grid
+                item
+                xs={5}
+                style={{ padding: 16, borderBottom: "2px solid black" }}
+              >
+                <Typography
+                  variant="body1"
+                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                >
+                  {new Date(plugStatus.state.time_ms).toLocaleString()}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} style={{ padding: 16 }}>
+                <Typography
+                  variant="body1"
+                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                >
+                  {plugStatus.state.reason}
+                </Typography>
+              </Grid>
+            </Grid>
+            <Grid
+              item
+              xs={12}
+              style={{ padding: 16, borderTop: "2px solid black" }}
+            >
+              <Box display="flex" justifyContent="space-around" padding={1}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() =>
+                    handleCreateRequest(
+                      StateMachineState.StateMachineState_USER_REQUESTED_ON,
+                    )
+                  }
+                  style={{ fontWeight: "bold", margin: "0 10px" }}
+                >
+                  Request On
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() =>
+                    handleCreateRequest(
+                      StateMachineState.StateMachineState_USER_REQUESTED_OFF,
+                    )
+                  }
+                  style={{ fontWeight: "bold", margin: "0 10px" }}
+                >
+                  Request Off
+                </Button>
+              </Box>
+            </Grid>
+          </Paper>
         </React.Fragment>
       )}
       {recentRequests.length > 0 && (
-        <Box border={1} padding={2} marginY={2}>
-          {recentRequests.map((request) => (
-            <React.Fragment>
-              <Typography variant="body1">
-                {stateMachineStateToJSON(request.requested_state).replace(
-                  /^StateMachineState_/,
-                  "",
-                )}
-              </Typography>
-              <Typography variant="body1">
-                {new Date(request.time_requested).toLocaleString()}
-              </Typography>
-              {request.result && (
-                <React.Fragment>
-                  <Typography variant="body1">
-                    {new Date(
-                      request.result?.time_entered_state,
-                    ).toLocaleString()}
-                  </Typography>
-                  <Typography variant="body1">
-                    {userRequestStatusToJSON(request.result.status).replace(
-                      /^RequestedStatus_/,
-                      "",
-                    )}
-                  </Typography>
-                  <Typography variant="body1">
-                    {request.result.reason}
-                  </Typography>
-                </React.Fragment>
-              )}
-              -------------------
-            </React.Fragment>
-          ))}
-        </Box>
+        <React.Fragment>
+          <Typography
+            variant="h6"
+            style={{ marginBottom: "20px", marginTop: "20px" }}
+          >
+            Commands to plug
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table aria-label="recent requests">
+              <TableHead>
+                <TableRow>
+                  <TableCell>State</TableCell>
+                  <TableCell>Time Requested</TableCell>
+                  <TableCell>Time Entered State</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Reason</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody style={{ padding: 0 }}>
+                {recentRequests.map((request, index) => (
+                  <TableRow key={index} style={{ padding: 0 }}>
+                    <TableCell>
+                      {stateMachineStateToJSON(request.requested_state).replace(
+                        /^StateMachineState_/,
+                        "",
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(request.time_requested).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      {request.result
+                        ? new Date(
+                            request.result.time_entered_state,
+                          ).toLocaleString()
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {request.result
+                        ? userRequestStatusToJSON(
+                            request.result.status,
+                          ).replace(/^RequestedStatus_/, "")
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {request.result ? request.result.reason : "N/A"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </React.Fragment>
       )}
     </Container>
   )
