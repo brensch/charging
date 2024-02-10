@@ -47,11 +47,18 @@ const PlugPage = () => {
   const [recentRequests, setRecentRequests] = useState<UserRequest[]>([])
   const [openScanner, setOpenScanner] = useState<boolean>(false)
 
-  const handleScannerClose = (scannedCode?: string) => {
+  const handleScannerClose = (scannedUrl?: string) => {
     setOpenScanner(false)
-    if (scannedCode) {
-      setInputValue(scannedCode)
-      // Handle the scanned code as needed, like setting it to an input field
+
+    if (scannedUrl) {
+      // Use the URL constructor and searchParams to extract the plug value
+      const url = new URL(scannedUrl)
+      const plugValue = url.searchParams.get("plug")
+
+      if (plugValue) {
+        setInputValue(plugValue)
+        // Handle the plug value as needed, like setting it to an input field
+      }
     }
   }
   const toggleScanner = () => {
