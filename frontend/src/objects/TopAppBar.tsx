@@ -29,17 +29,39 @@ interface TopAppBarProps {
 const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
+  const menuRef = useRef<HTMLDivElement>(null) // Reference to the menu
   const appBarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Set the AppBar height after the component mounts
     if (appBarRef.current) {
       setAppBarHeight(appBarRef.current.clientHeight)
     }
   }, [setAppBarHeight])
 
+  useEffect(() => {
+    // TODO: fix pressing the hamburger when open reopening
+    const handleClickOutside = (event: MouseEvent) => {
+      // Check if the click is outside the menu and not on the menu button
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    // Add event listener only when the menu is open
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    // Cleanup the event listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isMenuOpen]) // Depend on isMenuOpen to add/remove the event listener
+
   const toggleMenu = () => {
+    if (isMenuOpen) {
+      return
+    }
     setIsMenuOpen(!isMenuOpen)
   }
 
@@ -61,6 +83,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   const fullScreenMenu = (
     <Slide direction="down" in={isMenuOpen} mountOnEnter unmountOnExit>
       <Box
+        ref={menuRef} // Add the ref here
         sx={{
           width: "100vw",
           position: "fixed",
@@ -89,7 +112,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   return (
     <>
       <AppBar position="fixed" sx={{ zIndex: appBarZIndex }}>
-        <Toolbar>
+        <Toolbar ref={menuRef}>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Magic Charge
           </Typography>
@@ -98,6 +121,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
             color="inherit"
             aria-label="menu"
             onClick={toggleMenu}
+            id="closedhamburger"
           >
             <MenuIcon />
           </IconButton>
