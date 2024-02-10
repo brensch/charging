@@ -129,6 +129,26 @@ const theme = createTheme({
         },
       },
     },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          "& .MuiOutlinedInput-root": {
+            // Target the Outlined Input inside the TextField
+            "& fieldset": {
+              // Target the fieldset element which is the actual border
+              borderColor: "#000", // Set the border color
+              borderWidth: "2px", // Set the border width
+            },
+            "&:hover fieldset": {
+              borderColor: "#000", // Set the border color on hover
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: "#000", // Set the border color when the TextField is focused
+            },
+          },
+        },
+      },
+    },
   },
 })
 
