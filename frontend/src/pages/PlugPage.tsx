@@ -26,6 +26,7 @@ import {
   orderBy,
   query,
   setDoc,
+  updateDoc,
   where,
 } from "firebase/firestore"
 import { firestore } from "../firebase" // Assume you have a Firebase config file
@@ -101,6 +102,32 @@ const PlugPage = () => {
       console.error("Error adding document with UUID as the doc reference: ", e)
     }
   }
+
+  useEffect(() => {
+    // Define a function to update the Firestore document
+    const updatePlugSettings = async () => {
+      const currentTimeInMs = Date.now()
+      const plugSettingsRef = doc(firestore, "plug_settings", inputValue)
+
+      try {
+        await updateDoc(plugSettingsRef, {
+          last_time_user_checking_ms: currentTimeInMs,
+        })
+        console.log("PlugSettings document updated successfully")
+      } catch (error) {
+        console.error("Error updating PlugSettings document: ", error)
+      }
+    }
+
+    // Call the update function immediately on component load
+    updatePlugSettings()
+
+    // Set up an interval to call the update function every 30 seconds
+    const intervalId = setInterval(updatePlugSettings, 30000)
+
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId)
+  }, [inputValue])
 
   useEffect(() => {
     const plugId = urlQuery.get("plug")
@@ -228,10 +255,16 @@ const PlugPage = () => {
                   variant="body1"
                   style={{ fontWeight: "bold", wordWrap: "break-word" }}
                 >
-                  {new Date(plugStatus.state.time_ms).toLocaleString()}
+                  {plugStatus.latest_reading?.current! *
+                    plugStatus.latest_reading?.voltage!}{" "}
+                  W
                 </Typography>
               </Grid>
-              <Grid item xs={12} style={{ padding: 16 }}>
+              <Grid
+                item
+                xs={12}
+                style={{ padding: 16, borderBottom: "2px solid black" }}
+              >
                 <Typography
                   variant="body1"
                   style={{ fontWeight: "bold", wordWrap: "break-word" }}
@@ -239,12 +272,20 @@ const PlugPage = () => {
                   {plugStatus.state.reason}
                 </Typography>
               </Grid>
+              <Grid
+                item
+                xs={12}
+                style={{ padding: 16, borderBottom: "2px solid black" }}
+              >
+                <Typography
+                  variant="body1"
+                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                >
+                  {new Date(plugStatus.state.time_ms).toLocaleString()}
+                </Typography>
+              </Grid>
             </Grid>
-            <Grid
-              item
-              xs={12}
-              style={{ padding: 16, borderTop: "2px solid black" }}
-            >
+            <Grid item xs={12} style={{ padding: 16 }}>
               <Box display="flex" justifyContent="space-around" padding={1}>
                 <Button
                   variant="contained"
@@ -288,10 +329,8 @@ const PlugPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>State</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Time Requested</TableCell>
-                  <TableCell>Time Entered State</TableCell>
-                  <TableCell>Reason</TableCell>
+                  <TableCell>Result</TableCell>
+                  <TableCell>Time</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody style={{ padding: 0 }}>
@@ -304,18 +343,11 @@ const PlugPage = () => {
                       {formatRequestStatus(request.result?.status!)}
                     </TableCell>
                     <TableCell>
-                      {new Date(request.time_requested).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
                       {request.result
                         ? new Date(
                             request.result.time_entered_state,
                           ).toLocaleString()
                         : "N/A"}
-                    </TableCell>
-
-                    <TableCell>
-                      {request.result ? request.result.reason : "N/A"}
                     </TableCell>
                   </TableRow>
                 ))}
