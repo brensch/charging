@@ -7,23 +7,37 @@ import Paper from "@mui/material/Paper"
 import TextField from "@mui/material/TextField"
 import Button from "@mui/material/Button"
 import Box from "@mui/material/Box"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("")
   const navigate = useNavigate()
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const location = useLocation()
+
+  const from = location.state?.from || "/"
+  console.log(location)
+
+  console.log(`${from.pathname}${from.search}`)
 
   const sendEmailLink = async (e: React.FormEvent) => {
     setSending(true)
     setError(null)
     e.preventDefault()
 
+    // Retrieve the originally targeted URL from query parameters or state
+    // For example, if you're using React Router and have passed the target URL as a query parameter named 'redirectTo'
+    const from = location.state?.from || "/"
+
     const actionCodeSettings = {
-      url: `${window.location.origin}/confirm-login`,
+      // Include the originally targeted URL in the 'url' parameter, ensuring it's properly encoded
+      url: `${
+        window.location.origin
+      }/confirm-login?redirectTo=${`${from.pathname}${from.search}`}`,
       handleCodeInApp: true,
     }
+
     try {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings)
       window.localStorage.setItem("emailForSignIn", email)

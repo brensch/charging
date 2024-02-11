@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import {
   isSignInWithEmailLink,
   signInWithEmailLink,
@@ -17,12 +17,22 @@ const ConfirmLoginInPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState("")
   const [error, setError] = useState("")
+  const location = useLocation()
+
+  // Parse the query parameters
+  // const queryParams = new URLSearchParams(location.search)
+  // const redirect = queryParams.get("redirectTo")
+  // queryParams.forEach((param) => console.log(param))
+  // console.log(redirect)
+  // console.log(queryParams)
 
   useEffect(() => {
     // Check if the user is already logged in
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        navigate("/") // User is signed in, navigate to home
+        const queryParams = new URLSearchParams(location.search)
+        const redirect = queryParams.get("redirectTo")
+        navigate(redirect ? redirect : "/")
       } else {
         // No user is signed in, proceed with email link sign in flow
         if (isSignInWithEmailLink(auth, window.location.href)) {
@@ -46,7 +56,9 @@ const ConfirmLoginInPage: React.FC = () => {
     try {
       await signInWithEmailLink(auth, storedEmail, window.location.href)
       // window.localStorage.removeItem("emailForSignIn")
-      navigate("/") // Navigate to the homepage after successful sign-in
+      const queryParams = new URLSearchParams(location.search)
+      const redirect = queryParams.get("redirectTo")
+      navigate(redirect ? redirect : "/")
     } catch (error) {
       console.error(error)
       setError("Failed to sign in. Please request a new link.")
@@ -60,7 +72,9 @@ const ConfirmLoginInPage: React.FC = () => {
     try {
       await signInWithEmailLink(auth, email, window.location.href)
       // window.localStorage.removeItem("emailForSignIn")
-      navigate("/")
+      const queryParams = new URLSearchParams(location.search)
+      const redirect = queryParams.get("redirectTo")
+      navigate(redirect ? redirect : "/")
     } catch (error) {
       console.error(error)
       setError("Failed to sign in. Please request a new link.")

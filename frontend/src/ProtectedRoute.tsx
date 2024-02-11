@@ -1,7 +1,6 @@
-// src/ProtectedRoute.tsx
 import React, { useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "./contexts/AuthContext"
+import { useNavigate, useLocation } from "react-router-dom"
+import { useAuth } from "./contexts/AuthContext" // Adjust the path according to your project structure
 
 interface ProtectedRouteProps {
   children: JSX.Element
@@ -10,14 +9,17 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     if (!currentUser) {
-      navigate("/login")
+      console.log(location)
+      // Redirect unauthenticated users to the login page, preserving the originally targeted URL
+      navigate("/login", { state: { from: location } })
     }
-  }, [currentUser])
+  }, [currentUser, navigate, location])
 
-  return children
+  return currentUser ? children : null // Render children if the user is authenticated, otherwise render nothing
 }
 
 export default ProtectedRoute
