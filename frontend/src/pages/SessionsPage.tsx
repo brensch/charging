@@ -1,27 +1,49 @@
 import React, { useContext } from "react"
-import { Box, Container, Divider, Typography } from "@mui/material"
+import {
+  Box,
+  Container,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material"
 import { CustomerContext } from "../contexts/CustomerContext"
 
 const SessionsPage = () => {
-  const {
-    customerBalance,
-    stripeCustomer,
-    autoTopupPreferences,
-    transactions,
-  } = useContext(CustomerContext)
+  const { transactions } = useContext(CustomerContext)
 
   return (
     <Container>
-      <Typography variant="h4">Sessions</Typography>
       <Box sx={{ width: "100%" }}>
         <Typography variant="h6" mb={2}>
-          Previous Transactions:
+          Times we exchanged money
         </Typography>
-        {transactions.map((transaction) => (
-          <Typography key={transaction.payment_id}>
-            ${transaction.cents_aud / 100}
-          </Typography>
-        ))}
+        <TableContainer component={Paper}>
+          <Table aria-label="transactions table">
+            <TableHead>
+              <TableRow>
+                <TableCell>Amount (AUD)</TableCell>
+                <TableCell align="right">Date</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.map((transaction) => (
+                <TableRow key={transaction.payment_id}>
+                  <TableCell component="th" scope="row">
+                    ${transaction.cents_aud / 100}
+                  </TableCell>
+                  <TableCell align="right">
+                    {new Date(transaction.completed_ms).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
     </Container>
   )
