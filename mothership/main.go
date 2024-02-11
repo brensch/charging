@@ -45,6 +45,8 @@ type PlugStateMachine struct {
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
 
+	settings *contracts.PlugSettings
+
 	siteTopic *pubsub.Topic
 
 	mu sync.Mutex
@@ -205,12 +207,85 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 					}
 
 				}
+
+				// update latest state in firestore if someon has looked at the site in the last 30 seconds
+				p.mu.Lock()
+				latestViewing := p.settings.LastTimeUserCheckingMs
+				latestReading := p.latestReadings[p.latestReadingPtr]
+				plugID := p.plugID
+				p.mu.Unlock()
+
+				if latestViewing > time.Now().UnixMilli()-30*1000 {
+					log.Println("updating latest readings in firestore", plugID, latestViewing, time.Now().UnixMilli()-30*1000)
+					go func() {
+						fs.Collection(common.CollectionPlugStatus).Doc(plugID).Update(ctx, []firestore.Update{
+							{Path: "latest_reading", Value: latestReading},
+						})
+					}()
+				}
 			case <-ctx.Done():
 				log.Println("context done for plug", p.plugID)
 				return
 			}
 		}
 
+	}()
+}
+
+func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.Client) {
+	// listen to all plug settings updates (from UI so using firestore)
+	plugSettingsQuery := fs.Collection(common.CollectionPlugSettings).Query.Where("id", "==", p.plugID)
+	// do one request to get all the plugsettings and initialise the map
+	allPlugSettings, err := plugSettingsQuery.Documents(ctx).GetAll()
+	if err != nil {
+		log.Fatalf("failed to get plug settings", err)
+	}
+	if len(allPlugSettings) != 1 {
+		log.Fatalf("should have exactly 1 plugsetting doc, got %d", len(allPlugSettings))
+	}
+	// should only be one but will iterate
+	for _, plug := range allPlugSettings {
+		var plugSetting *contracts.PlugSettings
+		err = plug.DataTo(&plugSetting)
+		if err != nil {
+			log.Fatalf("failed to read a plug setting. should address this")
+		}
+		p.settings = plugSetting
+	}
+
+	// then listen to all docs
+	plugSettingsIter := plugSettingsQuery.Snapshots(ctx)
+	// TODO: return this and do it. for the time being can run indefinitely
+	// defer plugSettingsIter.Stop()
+	go func() {
+		for {
+			// Await the next snapshot.
+			snap, err := plugSettingsIter.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				fmt.Printf("Error listening to changes: %v\n", err)
+				continue
+			}
+
+			for _, change := range snap.Changes {
+				var updatedPlugSetting *contracts.PlugSettings
+				err = change.Doc.DataTo(&updatedPlugSetting)
+				if err != nil {
+					fmt.Println("failed to read plug setting", err)
+					continue
+				}
+
+				log.Println("got latest reading time", updatedPlugSetting.Id, updatedPlugSetting.LastTimeUserCheckingMs)
+				p.mu.Lock()
+				p.settings.CurrentLimit = updatedPlugSetting.CurrentLimit
+				p.settings.LastTimeUserCheckingMs = updatedPlugSetting.LastTimeUserCheckingMs
+				p.settings.Name = updatedPlugSetting.Name
+				p.mu.Unlock()
+
+			}
+		}
 	}()
 }
 
@@ -297,8 +372,6 @@ func main() {
 		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(ctx, fs, client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
 	}
 
-	// TODO: get all the plugs from plug settings to make startup much quicker
-
 	// listen to user requests
 	userRequests := fs.Collection(common.CollectionUserRequests)
 	query := userRequests.Where("result.status", "==", 1)
@@ -307,7 +380,6 @@ func main() {
 
 	// Handle commands coming from document changes
 	go func() {
-
 		for {
 			// Await the next snapshot.
 			snap, err := iter.Next()
@@ -555,6 +627,7 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 	}
 
 	stateMachine.Start(ctx, fs)
+	stateMachine.ListenToSettings(ctx, fs)
 
 	return stateMachine
 }

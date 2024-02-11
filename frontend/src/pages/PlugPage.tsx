@@ -255,8 +255,10 @@ const PlugPage = () => {
                   variant="body1"
                   style={{ fontWeight: "bold", wordWrap: "break-word" }}
                 >
-                  {plugStatus.latest_reading?.current! *
-                    plugStatus.latest_reading?.voltage!}{" "}
+                  {(
+                    plugStatus.latest_reading?.current! *
+                    plugStatus.latest_reading?.voltage!
+                  ).toFixed(2)}
                   W
                 </Typography>
               </Grid>
