@@ -15,7 +15,6 @@ import (
 )
 
 func GetReadings(ctx context.Context, plugs map[string]electrical.Plug) ([]*contracts.Reading, error) {
-	log.Println("reading meters")
 
 	// get all plug readings
 	var readings []*contracts.Reading

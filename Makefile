@@ -13,30 +13,63 @@ generate-proto:
 RELAYMANAGER_HOST=ubuntu-pi-server
 RELAYMANAGER_USER=niquist
 RELAYMANAGER_BINARY=relaymanager-bin
-SERVICE_FILE=relaymanager.service
-CONF_FILE=journald.conf
+RELAYMANAGER_SERVICE_FILE=relaymanager.service
+RELAYMANAGER_CONF_FILE=journald.conf
 
-# Compile the relaymanager binary for a relay manager target
+MOTHERSHIP_HOST=mothership
+MOTHERSHIP_USER=niquist
+MOTHERSHIP_BINARY=mothership-bin
+MOTHERSHIP_SERVICE_FILE=mothership.service
+MOTHERSHIP_CONF_FILE=journald.conf
+
+
+# Compile the relaymanager binary for a relaymanager target
 build-relaymanager:
 	@echo "Building relaymanager..."
 	env GOOS=linux GOARCH=arm GOARM=7 go build \
 		-o $(RELAYMANAGER_BINARY) ./relaymanager 
 
-# Deploy the relaymanager binary to the relay manager
+# Compile the mothership binary for a relaymanager target
+build-mothership:
+	@echo "Building mothership..."
+	GOOS=linux go build -ldflags="-s -w" -trimpath \
+		-o $(MOTHERSHIP_BINARY) ./mothership 
+
+# Deploy the relaymanager binary to the relaymanager
 deploy-relaymanager: build-relaymanager
-	@echo "Deploying relaymanager to relay manager..."
+	@echo "Deploying relaymanager to relaymanager..."
 	tsh scp $(RELAYMANAGER_BINARY) \
 		$(RELAYMANAGER_USER)@$(RELAYMANAGER_HOST):.
 
-# Deploy the relaymanager systemd service and journald configuration to the relay manager
-deploy-service:
-	@echo "Deploying relaymanager service to relay manager..."
-	tsh scp ./relaymanager/$(SERVICE_FILE) \
+# Deploy the mothership binary to the mothership
+deploy-mothership: build-mothership
+	@echo "Deploying mothership to mothership..."
+	tsh scp $(MOTHERSHIP_BINARY) \
+		$(MOTHERSHIP_USER)@$(MOTHERSHIP_HOST):.
+
+# Deploy the relaymanager systemd service and journald configuration to the relaymanager
+deploy-mothership-service: deploy-mothership
+	@echo "Deploying mothership service to mothership..."
+	tsh scp ./mothership/$(MOTHERSHIP_SERVICE_FILE) \
+		root@$(MOTHERSHIP_HOST):/tmp
+	tsh scp ./mothership/$(MOTHERSHIP_CONF_FILE) \
+		root@$(MOTHERSHIP_HOST):/tmp
+	tsh ssh root@$(MOTHERSHIP_HOST) 'mv /tmp/$(MOTHERSHIP_SERVICE_FILE) /etc/systemd/system/ && \
+		mv /tmp/$(MOTHERSHIP_CONF_FILE) /etc/systemd/journald.conf && \
+		systemctl restart systemd-journald && \
+		systemctl daemon-reload && \
+		systemctl enable mothership.service && \
+		systemctl start mothership.service'
+
+# Deploy the relaymanager systemd service and journald configuration to the relaymanager
+deploy-relaymanager-service:
+	@echo "Deploying relaymanager service to relaymanager..."
+	tsh scp ./relaymanager/$(RELAYMANAGER_SERVICE_FILE) \
 		root@$(RELAYMANAGER_HOST):/tmp
-	tsh scp ./relaymanager/$(CONF_FILE) \
+	tsh scp ./relaymanager/$(RELAYMANAGER_CONF_FILE) \
 		root@$(RELAYMANAGER_HOST):/tmp
-	tsh ssh root@$(RELAYMANAGER_HOST) 'mv /tmp/$(SERVICE_FILE) /etc/systemd/system/ && \
-		mv /tmp/$(CONF_FILE) /etc/systemd/journald.conf && \
+	tsh ssh root@$(RELAYMANAGER_HOST) 'mv /tmp/$(RELAYMANAGER_SERVICE_FILE) /etc/systemd/system/ && \
+		mv /tmp/$(RELAYMANAGER_CONF_FILE) /etc/systemd/journald.conf && \
 		systemctl restart systemd-journald && \
 		systemctl daemon-reload && \
 		systemctl enable relaymanager.service && \

@@ -1,0 +1,14 @@
+[Unit]
+Description=Mothership Service
+After=network.target
+
+[Service]
+Type=simple
+User=niquist
+WorkingDirectory=/home/niquist
+ExecStart=/home/niquist/mothership-bin
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -4,17 +4,22 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sync"
 	"time"
 
-	"cloud.google.com/go/firestore"
-	"cloud.google.com/go/pubsub"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+
+	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/pubsub"
 	"github.com/google/uuid"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/protobuf/proto"
@@ -27,6 +32,11 @@ const (
 
 	secondsToStore = 10
 	statesToStore  = 100
+
+	influxOrg         = "Niquist"
+	influxBucketNEM   = "nem"
+	influxBucketSites = "opc"
+	influxHost        = "https://us-east-1-1.aws.cloud2.influxdata.com"
 )
 
 // type SiteStateMachine struct {
@@ -46,6 +56,8 @@ type PlugStateMachine struct {
 	transitions    []*contracts.StateMachineTransition
 
 	settings *contracts.PlugSettings
+
+	influxAPI api.WriteAPI
 
 	siteTopic *pubsub.Topic
 
@@ -189,8 +201,6 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 					break
 				}
 
-				log.Printf("got state for %s: %s", p.plugID, p.state)
-
 				for _, nextState := range state {
 					if nextState.DetectTransition == nil {
 						continue
@@ -290,8 +300,6 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 }
 
 func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contracts.RequestedState) error {
-	// TODO: actually make this work
-
 	request := &contracts.LocalStateRequest{
 		Id:             uuid.NewString(),
 		PlugId:         p.plugID,
@@ -301,6 +309,24 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 	}
 
 	return SendLocalStateRequest(ctx, p.siteTopic, request)
+}
+
+func (p *PlugStateMachine) WriteReadingToDB(ctx context.Context, reading *contracts.Reading) error {
+	point := influxdb2.NewPointWithMeasurement("plug_readings").
+		SetTime(time.UnixMilli(reading.GetTimestamp())).
+		AddTag("site_id", p.siteID).
+		AddTag("plug_id", reading.PlugId).
+		AddTag("fuze_id", reading.FuzeId).
+		AddField("state", reading.State).
+		AddField("current", reading.Current).
+		AddField("voltage", reading.Voltage).
+		AddField("power_factor", reading.PowerFactor).
+		AddField("energy", reading.Energy)
+
+	p.influxAPI.WritePoint(point)
+
+	// keeping the error here in case the internals of this function end up throwing an error
+	return nil
 }
 
 func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.Client, transition *contracts.StateMachineTransition) error {
@@ -347,7 +373,20 @@ func main() {
 	telemetrySub := client.Subscription(telemetryTopicName)
 	commandResultsSub := client.Subscription(commandResultsTopicName)
 
-	// commandResultsSub.
+	options := influxdb2.DefaultOptions()
+	options.SetBatchSize(10)
+	options.SetFlushInterval(10)
+
+	influxTokenBytes, err := os.ReadFile("influx.key")
+	if err != nil {
+		log.Fatalf("problem reading influx token: %v", err)
+	}
+	fmt.Println(string(influxTokenBytes))
+
+	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
+
+	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
+	defer ifClientWriteSites.Flush()
 
 	// Set up Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
@@ -369,7 +408,7 @@ func main() {
 	for _, plugStatusDoc := range plugStatuses {
 		var plugStatus *contracts.PlugStatus
 		plugStatusDoc.DataTo(&plugStatus)
-		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(ctx, fs, client, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
+		stateMachines[plugStatus.GetId()] = InitPlugStateMachine(ctx, fs, client, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetLatestReading())
 	}
 
 	// listen to user requests
@@ -553,13 +592,19 @@ func main() {
 		for _, reading := range chunk.Readings {
 			go func(reading *contracts.Reading) {
 
+				if reading.GetTimestamp() == 0 {
+					yo, _ := json.Marshal(reading)
+					fmt.Println(string(yo))
+					panic("got 0 timestamp")
+				}
+
 				stateMachinesMu.Lock()
 				plugStateMachine, ok := stateMachines[reading.PlugId]
 				stateMachinesMu.Unlock()
 				if !ok {
 					// TODO: alert on this, shouldn't be adding new plugs often
 					log.Println("couldn't find plug", reading.PlugId)
-					plugStateMachine = InitPlugStateMachine(ctx, fs, client, chunk.GetSiteId(), reading)
+					plugStateMachine = InitPlugStateMachine(ctx, fs, client, ifClientWriteSites, chunk.GetSiteId(), reading)
 
 					// this only needs to be done if we receive a non existant plug id from a reading
 					err = EnsurePlugIsInFirestore(ctx, fs, chunk.GetSiteId(), reading)
@@ -580,6 +625,11 @@ func main() {
 				nextPtr := (plugStateMachine.latestReadingPtr + 1) % secondsToStore
 				plugStateMachine.latestReadings[nextPtr] = reading
 				plugStateMachine.latestReadingPtr = nextPtr
+				err = plugStateMachine.WriteReadingToDB(ctx, reading)
+				if err != nil {
+					log.Println("failed to write reading to db")
+					return
+				}
 
 			}(reading)
 		}
@@ -605,7 +655,7 @@ func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID s
 	return nil
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, siteID string, reading *contracts.Reading) *PlugStateMachine {
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx api.WriteAPI, siteID string, reading *contracts.Reading) *PlugStateMachine {
 	log.Println("initialising plug", reading.GetPlugId())
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
@@ -624,6 +674,7 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 		transitions:      transitions,
 		siteTopic:        topic,
 		siteID:           siteID,
+		influxAPI:        influx,
 	}
 
 	stateMachine.Start(ctx, fs)
@@ -661,10 +712,7 @@ func UnpackMessage(ctx context.Context, msg *pubsub.Message) (*contracts.Reading
 		return nil, err
 	}
 
-	// Process the ReadingChunk
-	fmt.Printf("Received readings for site: %s %d\n", readingChunk.SiteId, len(readingChunk.Readings))
-
-	// Acknowledge the message
+	// TODO: may need to not ack this until we've flushed. may be awkward since that is quite delayed
 	msg.Ack()
 
 	return &readingChunk, nil
