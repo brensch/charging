@@ -51,10 +51,12 @@ const PlugPage = () => {
   const urlQuery = useQuery()
   const navigate = useNavigate()
   const auth = useAuth()
-  const [inputValue, setInputValue] = useState(urlQuery.get("plug") || "")
+
+  const [plugID, setPlugID] = useState(urlQuery.get("plug") || "")
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [recentRequests, setRecentRequests] = useState<UserRequest[]>([])
   const [openScanner, setOpenScanner] = useState<boolean>(false)
+  const [loadingPlugStatus, setLoadingPlugStatus] = useState<boolean>(false)
 
   const handleScannerClose = (scannedUrl?: string) => {
     setOpenScanner(false)
@@ -65,7 +67,7 @@ const PlugPage = () => {
       const plugValue = url.searchParams.get("plug")
 
       if (plugValue) {
-        setInputValue(plugValue)
+        setPlugID(plugValue)
         navigate(`?plug=${plugValue}`)
         // Handle the plug value as needed, like setting it to an input field
       }
@@ -81,7 +83,7 @@ const PlugPage = () => {
     const userRequest: UserRequest = {
       id: id,
       user_id: auth.currentUser?.uid!,
-      plug_id: inputValue,
+      plug_id: plugID,
       requested_state: state,
       time_requested: Date.now(),
       result: {
@@ -107,7 +109,7 @@ const PlugPage = () => {
     // Define a function to update the Firestore document
     const updatePlugSettings = async () => {
       const currentTimeInMs = Date.now()
-      const plugSettingsRef = doc(firestore, "plug_settings", inputValue)
+      const plugSettingsRef = doc(firestore, "plug_settings", plugID)
 
       try {
         await updateDoc(plugSettingsRef, {
@@ -127,31 +129,33 @@ const PlugPage = () => {
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(intervalId)
-  }, [inputValue])
+  }, [plugID])
 
   useEffect(() => {
-    const plugId = urlQuery.get("plug")
-    if (plugId) {
+    if (plugID) {
+      setLoadingPlugStatus(true)
       const unsubscribe = onSnapshot(
-        doc(firestore, "plug_status", plugId),
+        doc(firestore, "plug_status", plugID),
         (doc) => {
           if (doc.exists()) {
             setPlugStatus(PlugStatus.fromJSON(doc.data()))
           } else {
             setPlugStatus(null)
           }
+          setLoadingPlugStatus(false)
         },
       )
 
       return () => unsubscribe()
     }
-  }, [urlQuery.get("plug")])
+    setPlugStatus(null)
+  }, [plugID])
 
   useEffect(() => {
     // Create a query against the "user_requests" collection, ordered by "time_requested" descending, limited to 5 documents
     const q = query(
       collection(firestore, "user_requests"),
-      where("plug_id", "==", inputValue),
+      where("plug_id", "==", plugID),
       orderBy("time_requested", "desc"),
       limit(5),
     )
@@ -167,20 +171,20 @@ const PlugPage = () => {
 
     // Clean up the subscription when the component unmounts
     return () => unsubscribe()
-  }, [urlQuery.get("plug")]) // Empty dependency array means this effect runs once on mount
+  }, [plugID]) // Empty dependency array means this effect runs once on mount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setInputValue(value)
+    setPlugID(value)
     navigate(`?plug=${value}`)
   }
 
   useEffect(() => {
     const plugId = urlQuery.get("plug")
-    if (plugId !== inputValue) {
-      setInputValue(plugId || "")
+    if (plugId !== plugID) {
+      setPlugID(plugId || "")
     }
-  }, [urlQuery.get("plug")])
+  }, [urlQuery])
 
   const formatState = (state: StateMachineState) =>
     stateMachineStateToJSON(state)
@@ -201,7 +205,7 @@ const PlugPage = () => {
       <TextField
         label="Enter Plug Code or scan"
         variant="outlined"
-        value={inputValue}
+        value={plugID}
         onChange={handleInputChange}
         fullWidth
         margin="normal"
@@ -216,6 +220,10 @@ const PlugPage = () => {
         }}
       />
       <BarcodeScannerDialog open={openScanner} onClose={handleScannerClose} />
+      {loadingPlugStatus && <Typography>loading plug state</Typography>}
+      {!plugStatus && (
+        <Typography>Previously used plugs - TODO feature</Typography>
+      )}
 
       {plugStatus && plugStatus.state?.state && (
         <React.Fragment>
@@ -324,7 +332,7 @@ const PlugPage = () => {
             variant="h6"
             style={{ marginBottom: "20px", marginTop: "20px" }}
           >
-            Commands to plug
+            Recent Commands sent to Plug
           </Typography>
           <TableContainer component={Paper}>
             <Table aria-label="recent requests">
