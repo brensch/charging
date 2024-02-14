@@ -11,6 +11,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID string, reading *contracts.Reading) error {
+	err := ensurePlugSettingsDoc(ctx, fs, reading.PlugId)
+	if err != nil {
+		return err
+	}
+
+	err = ensurePlugStatusDoc(ctx, fs, siteID, reading)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ensureSiteSettingsDoc(ctx context.Context, fs *firestore.Client, clientID string) error {
 	// Reference to the document
 	docRef := fs.Collection(common.CollectionSiteSettings).Doc(clientID)
