@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/brensch/charging/electrical"
 
@@ -24,19 +25,26 @@ func findDevices() (map[string]string, error) {
 	devices := make(map[string]string)
 
 	entriesCh := make(chan *mdns.ServiceEntry, 10)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for entry := range entriesCh {
-			if strings.HasPrefix(entry.Name, "shelly") && entry.Port == 80 {
-				isShelly, mac := isShellyPro4PM(entry.AddrV4.String())
-				if isShelly {
-					devices[entry.AddrV4.String()] = mac
-				}
+			if !strings.HasPrefix(entry.Name, "shelly") && entry.Port == 80 {
+				continue
 			}
+			isShelly, mac := isShellyPro4PM(entry.Addr.String())
+			if isShelly {
+				devices[entry.AddrV4.String()] = mac
+			}
+
 		}
 	}()
 
 	mdns.Lookup("_http._tcp", entriesCh)
 	close(entriesCh)
+	wg.Wait()
 
 	return devices, nil
 }

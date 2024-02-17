@@ -9,7 +9,7 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
-	"github.com/brensch/charging/electrical/shelly"
+	"github.com/brensch/charging/electrical/sonoff"
 	"github.com/brensch/charging/gen/go/contracts"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
@@ -90,7 +90,8 @@ func main() {
 	}
 
 	discoverers := []electrical.Discoverer{
-		shelly.InitShellyDiscoverer(clientID),
+		// shelly.InitShellyDiscoverer(clientID),
+		sonoff.InitSonoffDiscoverer(clientID),
 		// demo.InitDiscoverer(clientID),
 		// as we make more plug brands we can add their discoverers here.
 	}

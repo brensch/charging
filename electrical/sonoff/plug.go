@@ -15,14 +15,21 @@ import (
 
 // SonoffPlug represents a Sonoff plug with its host and necessary identification.
 type SonoffPlug struct {
-	Host     string
-	DeviceID string // Unique identifier for the Sonoff device
+	Host        string
+	DeviceID    string // the spm main
+	SubDeviceID string // the 4 port relay
+	SocketID    int    // 0-3, the socket number
 
-	siteID string
+	siteID     string
+	Monitoring MonitoringData
 }
 
 func (s *SonoffPlug) ID() string {
-	return fmt.Sprintf("sonoff:%s", s.DeviceID)
+	return MakeID(s.DeviceID, s.SubDeviceID, s.SocketID)
+}
+
+func MakeID(deviceID, subDeviceID string, socketID int) string {
+	return fmt.Sprintf("sonoff:%s:%s:%d", deviceID, subDeviceID, socketID)
 }
 
 func (s *SonoffPlug) SiteID() string {
@@ -100,6 +107,7 @@ func (s *SonoffPlug) GetReading() (*contracts.Reading, error) {
 		return nil, errors.New("failed to parse response result")
 	}
 	_ = result
+	fmt.Println(result)
 
 	// Extract and convert the relevant data from the result
 	// Placeholder for actual data conversion
