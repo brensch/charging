@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+
+	"log/slog" // Import the structured logging package
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
@@ -32,36 +33,40 @@ const (
 )
 
 func main() {
+	// Initialize a structured logger
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	logger.Info("initialising", "cool", "story")
+
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	projectID, _, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
-		log.Fatalf("Failed to get identity: %v", err)
+		logger.Error("Failed to get identity", "err", err)
+		panic("Failed to get identity") // Halt the program
 	}
 
-	// init google pubsub client
+	// Init google pubsub client
 	ps, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		logger.Error("Failed to create client", "err", err)
+		panic("Failed to create client") // Halt the program
 	}
 
-	// init ifdb
-	options := influxdb2.DefaultOptions()
-	options.SetBatchSize(10)
-	options.SetFlushInterval(10)
+	// Init InfluxDB client
+	options := influxdb2.DefaultOptions().SetBatchSize(10).SetFlushInterval(10)
 	influxTokenBytes, err := os.ReadFile("influx.key")
 	if err != nil {
-		log.Fatalf("problem reading influx token: %v", err)
+		logger.Error("Problem reading influx token", "err", err)
+		panic("Problem reading influx token") // Halt the program
 	}
 	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
 	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
-	defer ifClientWriteSites.Flush()
 
-	// init Firestore client
+	// Init Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
-		log.Fatalf("Failed to create Firestore client: %v", err)
+		logger.Error("Failed to create Firestore client", "err", err)
+		panic("Failed to create Firestore client") // Halt the program
 	}
 	defer fs.Close()
 
@@ -72,14 +77,15 @@ func main() {
 	plugStatusQuery := fs.Collection(common.CollectionPlugStatus).Query
 	plugStatuses, err := plugStatusQuery.Documents(ctx).GetAll()
 	if err != nil {
-		log.Fatalf("couldn't get plug statuses", err)
+		logger.Error("couldn't get plug statuses", "err", err)
+		panic("ouldn't get plug statuses") // Halt the program
+
 	}
 	for _, plugStatusDoc := range plugStatuses {
 		var plugStatus *contracts.PlugStatus
 		plugStatusDoc.DataTo(&plugStatus)
 		stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetLatestReading()))
 	}
-
 	go ListenForNewDevices(ctx, fs, ps, stateMachines)
 	go ListenForUserRequests(ctx, fs, stateMachines)
 	go ListenForDeviceCommandResponses(ctx, fs, ps, stateMachines)
@@ -89,16 +95,9 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan // Block until a signal is received
+	cancel()  // Cancel context to stop background routines
 
-	// Perform flush and other cleanup operations before exiting
-	log.Println("Flushing InfluxDB data and shutting down")
+	logger.Info("Shutting down, flushing InfluxDB data")
 	ifClientWriteSites.Flush()
-	log.Println("Flushing complete")
-
-	cancel()
-
-	// Additional cleanup code can go here
-
-	log.Println("Shutdown complete")
-
+	logger.Info("Shutdown complete")
 }
