@@ -66,8 +66,6 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 			return
 		}
 
-		fmt.Println("got telem from", chunk.SiteId, time.UnixMilli(chunk.Readings[0].TimestampMs))
-
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachines.GetStateMachine(reading.PlugId)
 			if !ok {
