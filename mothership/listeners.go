@@ -13,9 +13,10 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/mothership/statemachine"
 )
 
-func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, stateMachines *StateMachineCollection) {
+func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, stateMachines *statemachine.StateMachineCollection) {
 
 	commandResultsSub := ps.Subscription(common.TopicNameCommandResults)
 	err := commandResultsSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
@@ -27,11 +28,13 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 		}
 
 		var state contracts.StateMachineState
+		// this will need to be able to derive the possible states from the current state of the state machine
+		// and pick the right one accordingly
 		switch response.ResultantState {
 		case contracts.RequestedState_RequestedState_ON:
-			state = contracts.StateMachineState_StateMachineState_ON
+			state = contracts.StateMachineState_StateMachineState_SENSING_CHARGE
 		case contracts.RequestedState_RequestedState_OFF:
-			state = contracts.StateMachineState_StateMachineState_OFF
+			state = contracts.StateMachineState_StateMachineState_ACCOUNT_NULL
 		}
 
 		plug, ok := stateMachines.GetStateMachine(response.GetPlugId())
@@ -40,7 +43,7 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 			return
 		}
 
-		plug.Transition(ctx, stateMap, state, common.AgentMachine)
+		plug.Transition(ctx, statemachine.StateMap, state)
 		// we always want to ack this, or we'll have spurious state commands updating state
 		msg.Ack()
 
@@ -51,7 +54,7 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 
 }
 
-func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClientWriteSites influxdb2api.WriteAPI, stateMachines *StateMachineCollection) {
+func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClientWriteSites influxdb2api.WriteAPI, stateMachines *statemachine.StateMachineCollection) {
 
 	telemetrySub := ps.Subscription(common.TopicNameTelemetry)
 	err := telemetrySub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
@@ -63,6 +66,8 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 			return
 		}
 
+		fmt.Println("got telem from", chunk.SiteId, time.UnixMilli(chunk.Readings[0].TimestampMs))
+
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachines.GetStateMachine(reading.PlugId)
 			if !ok {
@@ -72,21 +77,12 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 				return
 			}
 
-			// write latest reading to pointer location in rolling slice
-			plugStateMachine.mu.Lock()
-			nextPtr := (plugStateMachine.latestReadingPtr + 1) % secondsToStore
-			plugStateMachine.latestReadings[nextPtr] = reading
-			plugStateMachine.latestReadingPtr = nextPtr
-			plugStateMachine.mu.Unlock()
-
-			// async so ok to do in telemetry loop (ie fast)
-			err = plugStateMachine.WriteReadingToDB(ctx, reading)
+			err = plugStateMachine.WriteReading(ctx, reading)
 			if err != nil {
-				log.Println("failed to write reading to db")
+				log.Println("failed to write reading")
 				// want to return here so we don't ack a message that didn't get recorded
 				return
 			}
-
 		}
 
 		// now we've successfully written to ifdb we can ack.
@@ -99,7 +95,7 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 	panic(err)
 }
 
-func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, stateMachines *StateMachineCollection) {
+func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, stateMachines *statemachine.StateMachineCollection) {
 
 	_, sub, err := common.EnsureTopicAndSub(ctx, ps, common.TopicNameNewDevices)
 	if err != nil {
@@ -120,7 +116,7 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 			if ok {
 				continue
 			}
-			stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifdb, deviceAnnouncement.SiteId, plugID))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, deviceAnnouncement.SiteId, plugID))
 		}
 
 		// send empty response on ack channel to site
@@ -140,7 +136,7 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 
 }
 
-func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachines *StateMachineCollection) {
+func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachines *statemachine.StateMachineCollection) {
 	// listen to user requests
 	userRequests := fs.Collection(common.CollectionUserRequests)
 	query := userRequests.Where("result.status", "==", 1)
@@ -192,15 +188,18 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				continue
 			}
 
+			// bit of a cludge here, not sure how to unify this with state machine without accepting inputs
+			plugStateMachine.SetCurrentOwner(userRequest.UserId)
+
 			// try the transition
-			transitioned := plugStateMachine.Transition(ctx, stateMap, userRequest.RequestedState, userRequest.UserId)
+			transitioned := plugStateMachine.Transition(ctx, statemachine.StateMap, userRequest.RequestedState)
 			if !transitioned {
 				// record if the state transition failed
 				log.Println("state transition failed", userRequest.GetRequestedState())
 				resRequestResult := &contracts.UserRequestResult{
 					TimeEnteredState: time.Now().UnixMilli(),
 					Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
-					Reason:           fmt.Sprintf("State %s not valid from %s", userRequest.GetRequestedState(), plugStateMachine.state),
+					Reason:           fmt.Sprintf("State %s not valid from %s", userRequest.GetRequestedState(), plugStateMachine.State()),
 				}
 				_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
 					{Path: "result", Value: resRequestResult},

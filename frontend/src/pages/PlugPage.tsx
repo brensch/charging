@@ -302,14 +302,14 @@ const PlugPage = () => {
                   color="primary"
                   onClick={() =>
                     handleCreateRequest(
-                      StateMachineState.StateMachineState_USER_REQUESTED_ON,
+                      StateMachineState.StateMachineState_ACCOUNT_ADDED,
                     )
                   }
                   style={{ fontWeight: "bold", margin: "0 10px" }}
                 >
-                  Request On
+                  Take control of plug
                 </Button>
-                <Button
+                {/* <Button
                   variant="contained"
                   color="primary"
                   onClick={() =>
@@ -320,7 +320,7 @@ const PlugPage = () => {
                   style={{ fontWeight: "bold", margin: "0 10px" }}
                 >
                   Request Off
-                </Button>
+                </Button> */}
               </Box>
             </Grid>
           </Paper>

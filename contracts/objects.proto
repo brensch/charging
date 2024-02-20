@@ -15,12 +15,26 @@ message FuzeSettings {
 
 enum StateMachineState {
   StateMachineState_INITIALISING = 0;
-  StateMachineState_ON = 1;
-  StateMachineState_OFF = 2;
-  StateMachineState_USER_REQUESTED_ON = 3;
-  StateMachineState_USER_REQUESTED_OFF = 4;
-  StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
-  StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
+  // StateMachineState_ON = 1;
+  // StateMachineState_OFF = 2;
+  // StateMachineState_USER_REQUESTED_ON = 3;
+  // StateMachineState_USER_REQUESTED_OFF = 4;
+  // StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
+  // StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
+
+  StateMachineState_ACCOUNT_NULL = 7;
+  StateMachineState_ACCOUNT_ADDED = 8;
+  StateMachineState_ENTERING_QUEUE = 9;
+  StateMachineState_IN_QUEUE = 10;
+  StateMachineState_SENSING_START_REQUESTED = 11;
+  StateMachineState_SENSING_START_ISSUED_LOCALLY = 12;
+  // StateMachineState_SENSING_START_ACKNOWLEDGED = 13;
+  StateMachineState_SENSING_CHARGE = 14;
+  StateMachineState_CHARGING = 15;
+  StateMachineState_CHARGE_COMPLETE = 16;
+  StateMachineState_ACCOUNT_REMOVAL_REQUESTED = 17;
+  StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY = 18;
+  StateMachineState_WAITING_FOR_PLUG_IN = 19;
 }
 
 message StateMachineTransition {

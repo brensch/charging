@@ -1,4 +1,4 @@
-package main
+package statemachine
 
 import (
 	"context"
@@ -11,10 +11,16 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/mothership/setup"
 	"github.com/google/uuid"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"google.golang.org/api/iterator"
+)
+
+const (
+	secondsToStore = 10
+	statesToStore  = 100
 )
 
 type PlugStateMachine struct {
@@ -27,6 +33,12 @@ type PlugStateMachine struct {
 	latestStatePtr int
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
+
+	currentOwner string
+
+	// QUEUE
+	queuePosition  int64
+	queueEnteredMs int64
 
 	err error
 
@@ -61,7 +73,7 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 		fs:               fs,
 	}
 
-	err := EnsurePlugIsInFirestore(ctx, fs, siteID, plugID)
+	err := setup.EnsurePlugIsInFirestore(ctx, fs, siteID, plugID)
 	if err != nil {
 		log.Fatalf("problem ensuring plug doc: %+v", err)
 	}
@@ -81,8 +93,9 @@ type StateTransition struct {
 	DoTransition TransitionFunc
 
 	// This means that we should not attempt this transition from the state loop
-	AsyncOnly bool
-	Reason    string
+	AsyncOnly            bool
+	Reason               string
+	ConditionExplanation string
 }
 
 func (p *PlugStateMachine) Error(err error) {
@@ -91,13 +104,25 @@ func (p *PlugStateMachine) Error(err error) {
 	p.mu.Unlock()
 }
 
-func (p *PlugStateMachine) Transition(ctx context.Context, stateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState, owner string) bool {
+func (p *PlugStateMachine) State() contracts.StateMachineState {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.state
+}
+
+func (p *PlugStateMachine) SetCurrentOwner(owner string) {
+	p.mu.Lock()
+	p.currentOwner = owner
+	p.mu.Unlock()
+}
+
+func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	log.Println("checking transition for ", p.plugID, p.state, targetState)
 
-	potentialStates, ok := stateMap[p.state]
+	potentialStates, ok := StateMap[p.state]
 	if !ok {
 		log.Println("no such state in statemap, very odd", p.state)
 		return false
@@ -120,7 +145,7 @@ func (p *PlugStateMachine) Transition(ctx context.Context, stateMap map[contract
 			State:   potentialState.TargetState,
 			Reason:  potentialState.Reason,
 			PlugId:  p.plugID,
-			OwnerId: owner,
+			OwnerId: p.currentOwner,
 			TimeMs:  time.Now().UnixMilli(),
 		}
 
@@ -143,7 +168,7 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 		for {
 			select {
 			case <-ticker.C:
-				state, ok := stateMap[p.state]
+				state, ok := StateMap[p.state]
 				if !ok {
 					fmt.Println("no definition for state", p.state)
 					break
@@ -153,7 +178,7 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 					if nextState.AsyncOnly {
 						continue
 					}
-					transitioned := p.Transition(ctx, stateMap, nextState.TargetState, common.AgentMachine)
+					transitioned := p.Transition(ctx, StateMap, nextState.TargetState)
 					if transitioned {
 						break
 					}
@@ -265,7 +290,7 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 	return err
 }
 
-func (p *PlugStateMachine) WriteReadingToDB(ctx context.Context, reading *contracts.Reading) error {
+func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contracts.Reading) error {
 	point := influxdb2.NewPointWithMeasurement("plug_readings").
 		SetTime(time.UnixMilli(reading.GetTimestampMs())).
 		AddTag("site_id", p.siteID).
@@ -303,40 +328,4 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 	p.influxAPI.WritePoint(point)
 
 	return err
-}
-
-func (p *PlugStateMachine) ConvertCustomerRequest(request *contracts.UserRequest) *contracts.StateMachineTransition {
-	// TODO: logic to verify transitioning is ok in the current state
-	return &contracts.StateMachineTransition{
-		Id:      uuid.New().String(),
-		State:   request.GetRequestedState(),
-		PlugId:  p.plugID,
-		Reason:  fmt.Sprintf("Customer request %s", request.Id),
-		TimeMs:  time.Now().UnixMilli(),
-		OwnerId: request.UserId,
-	}
-}
-
-type StateMachineCollection struct {
-	stateMachines   map[string]*PlugStateMachine
-	stateMachinesMu sync.Mutex
-}
-
-func InitStateMachineCollection() *StateMachineCollection {
-	return &StateMachineCollection{
-		stateMachines: make(map[string]*PlugStateMachine),
-	}
-}
-
-func (s *StateMachineCollection) GetStateMachine(plugID string) (*PlugStateMachine, bool) {
-	s.stateMachinesMu.Lock()
-	defer s.stateMachinesMu.Unlock()
-	stateMachine, ok := s.stateMachines[plugID]
-	return stateMachine, ok
-}
-
-func (s *StateMachineCollection) AddStateMachine(stateMachine *PlugStateMachine) {
-	s.stateMachinesMu.Lock()
-	s.stateMachines[stateMachine.plugID] = stateMachine
-	s.stateMachinesMu.Unlock()
 }

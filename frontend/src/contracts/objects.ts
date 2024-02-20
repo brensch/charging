@@ -5,13 +5,28 @@ import _m0 from "protobufjs/minimal";
 export const protobufPackage = "contracts";
 
 export enum StateMachineState {
+  /**
+   * StateMachineState_INITIALISING - StateMachineState_ON = 1;
+   * StateMachineState_OFF = 2;
+   * StateMachineState_USER_REQUESTED_ON = 3;
+   * StateMachineState_USER_REQUESTED_OFF = 4;
+   * StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
+   * StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
+   */
   StateMachineState_INITIALISING = 0,
-  StateMachineState_ON = 1,
-  StateMachineState_OFF = 2,
-  StateMachineState_USER_REQUESTED_ON = 3,
-  StateMachineState_USER_REQUESTED_OFF = 4,
-  StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5,
-  StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6,
+  StateMachineState_ACCOUNT_NULL = 7,
+  StateMachineState_ACCOUNT_ADDED = 8,
+  StateMachineState_ENTERING_QUEUE = 9,
+  StateMachineState_IN_QUEUE = 10,
+  StateMachineState_SENSING_START_REQUESTED = 11,
+  StateMachineState_SENSING_START_ISSUED_LOCALLY = 12,
+  /** StateMachineState_SENSING_CHARGE - StateMachineState_SENSING_START_ACKNOWLEDGED = 13; */
+  StateMachineState_SENSING_CHARGE = 14,
+  StateMachineState_CHARGING = 15,
+  StateMachineState_CHARGE_COMPLETE = 16,
+  StateMachineState_ACCOUNT_REMOVAL_REQUESTED = 17,
+  StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY = 18,
+  StateMachineState_WAITING_FOR_PLUG_IN = 19,
   UNRECOGNIZED = -1,
 }
 
@@ -20,24 +35,42 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case 0:
     case "StateMachineState_INITIALISING":
       return StateMachineState.StateMachineState_INITIALISING;
-    case 1:
-    case "StateMachineState_ON":
-      return StateMachineState.StateMachineState_ON;
-    case 2:
-    case "StateMachineState_OFF":
-      return StateMachineState.StateMachineState_OFF;
-    case 3:
-    case "StateMachineState_USER_REQUESTED_ON":
-      return StateMachineState.StateMachineState_USER_REQUESTED_ON;
-    case 4:
-    case "StateMachineState_USER_REQUESTED_OFF":
-      return StateMachineState.StateMachineState_USER_REQUESTED_OFF;
-    case 5:
-    case "StateMachineState_LOCAL_COMMAND_ISSUED_ON":
-      return StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_ON;
-    case 6:
-    case "StateMachineState_LOCAL_COMMAND_ISSUED_OFF":
-      return StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_OFF;
+    case 7:
+    case "StateMachineState_ACCOUNT_NULL":
+      return StateMachineState.StateMachineState_ACCOUNT_NULL;
+    case 8:
+    case "StateMachineState_ACCOUNT_ADDED":
+      return StateMachineState.StateMachineState_ACCOUNT_ADDED;
+    case 9:
+    case "StateMachineState_ENTERING_QUEUE":
+      return StateMachineState.StateMachineState_ENTERING_QUEUE;
+    case 10:
+    case "StateMachineState_IN_QUEUE":
+      return StateMachineState.StateMachineState_IN_QUEUE;
+    case 11:
+    case "StateMachineState_SENSING_START_REQUESTED":
+      return StateMachineState.StateMachineState_SENSING_START_REQUESTED;
+    case 12:
+    case "StateMachineState_SENSING_START_ISSUED_LOCALLY":
+      return StateMachineState.StateMachineState_SENSING_START_ISSUED_LOCALLY;
+    case 14:
+    case "StateMachineState_SENSING_CHARGE":
+      return StateMachineState.StateMachineState_SENSING_CHARGE;
+    case 15:
+    case "StateMachineState_CHARGING":
+      return StateMachineState.StateMachineState_CHARGING;
+    case 16:
+    case "StateMachineState_CHARGE_COMPLETE":
+      return StateMachineState.StateMachineState_CHARGE_COMPLETE;
+    case 17:
+    case "StateMachineState_ACCOUNT_REMOVAL_REQUESTED":
+      return StateMachineState.StateMachineState_ACCOUNT_REMOVAL_REQUESTED;
+    case 18:
+    case "StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY":
+      return StateMachineState.StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY;
+    case 19:
+    case "StateMachineState_WAITING_FOR_PLUG_IN":
+      return StateMachineState.StateMachineState_WAITING_FOR_PLUG_IN;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -49,18 +82,30 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
   switch (object) {
     case StateMachineState.StateMachineState_INITIALISING:
       return "StateMachineState_INITIALISING";
-    case StateMachineState.StateMachineState_ON:
-      return "StateMachineState_ON";
-    case StateMachineState.StateMachineState_OFF:
-      return "StateMachineState_OFF";
-    case StateMachineState.StateMachineState_USER_REQUESTED_ON:
-      return "StateMachineState_USER_REQUESTED_ON";
-    case StateMachineState.StateMachineState_USER_REQUESTED_OFF:
-      return "StateMachineState_USER_REQUESTED_OFF";
-    case StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_ON:
-      return "StateMachineState_LOCAL_COMMAND_ISSUED_ON";
-    case StateMachineState.StateMachineState_LOCAL_COMMAND_ISSUED_OFF:
-      return "StateMachineState_LOCAL_COMMAND_ISSUED_OFF";
+    case StateMachineState.StateMachineState_ACCOUNT_NULL:
+      return "StateMachineState_ACCOUNT_NULL";
+    case StateMachineState.StateMachineState_ACCOUNT_ADDED:
+      return "StateMachineState_ACCOUNT_ADDED";
+    case StateMachineState.StateMachineState_ENTERING_QUEUE:
+      return "StateMachineState_ENTERING_QUEUE";
+    case StateMachineState.StateMachineState_IN_QUEUE:
+      return "StateMachineState_IN_QUEUE";
+    case StateMachineState.StateMachineState_SENSING_START_REQUESTED:
+      return "StateMachineState_SENSING_START_REQUESTED";
+    case StateMachineState.StateMachineState_SENSING_START_ISSUED_LOCALLY:
+      return "StateMachineState_SENSING_START_ISSUED_LOCALLY";
+    case StateMachineState.StateMachineState_SENSING_CHARGE:
+      return "StateMachineState_SENSING_CHARGE";
+    case StateMachineState.StateMachineState_CHARGING:
+      return "StateMachineState_CHARGING";
+    case StateMachineState.StateMachineState_CHARGE_COMPLETE:
+      return "StateMachineState_CHARGE_COMPLETE";
+    case StateMachineState.StateMachineState_ACCOUNT_REMOVAL_REQUESTED:
+      return "StateMachineState_ACCOUNT_REMOVAL_REQUESTED";
+    case StateMachineState.StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY:
+      return "StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY";
+    case StateMachineState.StateMachineState_WAITING_FOR_PLUG_IN:
+      return "StateMachineState_WAITING_FOR_PLUG_IN";
     case StateMachineState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

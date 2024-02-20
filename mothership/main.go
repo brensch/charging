@@ -11,6 +11,7 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/mothership/statemachine"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
@@ -21,9 +22,6 @@ import (
 const (
 	keyFile = "./mothership.key"
 
-	secondsToStore = 10
-	statesToStore  = 100
-
 	influxOrg         = "Niquist"
 	influxBucketNEM   = "nem"
 	influxBucketSites = "opc"
@@ -31,6 +29,7 @@ const (
 )
 
 func main() {
+
 	// Initialize a structured logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	logger.Info("initialising", "cool", "story")
@@ -69,7 +68,7 @@ func main() {
 	defer fs.Close()
 
 	// this is used to store all the state machines for each plug
-	stateMachines := InitStateMachineCollection()
+	stateMachines := statemachine.InitStateMachineCollection()
 
 	// get all plugstatuses on load and populate the statemachine collection.
 	plugStatusQuery := fs.Collection(common.CollectionPlugStatus).Query
@@ -89,7 +88,7 @@ func main() {
 		wg.Add(1)
 		go func(plugStatus *contracts.PlugStatus) {
 			defer wg.Done()
-			stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetId()))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetId()))
 		}(plugStatus)
 
 	}

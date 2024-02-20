@@ -71,6 +71,7 @@ func ListenForCommands(ctx context.Context, ps *pubsub.Client, clientID string, 
 			log.Println("failed to set command result", err)
 			return
 		}
+		msg.Ack()
 	})
 	if err != nil {
 		log.Fatal("wtf", err)
