@@ -13,7 +13,6 @@ import (
 	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/google/uuid"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/influxdata/influxdb-client-go/v2/api"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"google.golang.org/api/iterator"
 )
@@ -29,9 +28,12 @@ type PlugStateMachine struct {
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
 
+	err error
+
 	settings *contracts.PlugSettings
 
-	influxAPI api.WriteAPI
+	influxAPI influxdb2api.WriteAPI
+	fs        *firestore.Client
 
 	siteTopic *pubsub.Topic
 
@@ -56,6 +58,7 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 		siteTopic:        topic,
 		siteID:           siteID,
 		influxAPI:        influx,
+		fs:               fs,
 	}
 
 	err := EnsurePlugIsInFirestore(ctx, fs, siteID, plugID)
@@ -69,16 +72,69 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 	return stateMachine
 }
 
-type TransitionDetectionFunc func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition
-
-type TransitionCheckFunc func(ctx context.Context, p *PlugStateMachine) bool
+// type TransitionFunc func(ctx context.Context, p *PlugStateMachine) *contracts.StateMachineTransition
+type TransitionFunc func(ctx context.Context, p *PlugStateMachine) bool
 
 type StateTransition struct {
 	TargetState contracts.StateMachineState
-	// DetectTransition is used by the internal state machine
-	DetectTransition TransitionDetectionFunc
-	// CheckTransition is used by anything arriving from outside the state machine
-	CheckTransition TransitionCheckFunc
+	// DoTransition is used by the internal state machine
+	DoTransition TransitionFunc
+
+	// This means that we should not attempt this transition from the state loop
+	AsyncOnly bool
+	Reason    string
+}
+
+func (p *PlugStateMachine) Error(err error) {
+	p.mu.Lock()
+	p.err = err
+	p.mu.Unlock()
+}
+
+func (p *PlugStateMachine) Transition(ctx context.Context, stateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState, owner string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	log.Println("checking transition for ", p.plugID, p.state, targetState)
+
+	potentialStates, ok := stateMap[p.state]
+	if !ok {
+		log.Println("no such state in statemap, very odd", p.state)
+		return false
+	}
+
+	for _, potentialState := range potentialStates {
+		if potentialState.TargetState != targetState {
+			continue
+		}
+		transitioned := true
+		if potentialState.DoTransition != nil {
+			transitioned = potentialState.DoTransition(ctx, p)
+		}
+		if !transitioned {
+			continue
+		}
+
+		transition := &contracts.StateMachineTransition{
+			Id:      uuid.NewString(),
+			State:   potentialState.TargetState,
+			Reason:  potentialState.Reason,
+			PlugId:  p.plugID,
+			OwnerId: owner,
+			TimeMs:  time.Now().UnixMilli(),
+		}
+
+		err := p.performTransition(ctx, transition)
+		if err != nil {
+			log.Println("failed performing transition", err)
+			return false
+		}
+
+		return true
+	}
+
+	return false
+
 }
 
 func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
@@ -94,33 +150,26 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 				}
 
 				for _, nextState := range state {
-					if nextState.DetectTransition == nil {
+					if nextState.AsyncOnly {
 						continue
 					}
-
-					transition := nextState.DetectTransition(ctx, p)
-					if transition == nil {
-						continue
+					transitioned := p.Transition(ctx, stateMap, nextState.TargetState, common.AgentMachine)
+					if transitioned {
+						break
 					}
-
-					err := p.PerformTransition(ctx, fs, transition)
-					if err != nil {
-						log.Println("failure doing transition")
-					}
-
 				}
 
 				// initialising telemetry still
 				if p.latestReadingPtr == -1 {
 					continue
 				}
+
 				// update latest state in firestore if someone has looked at the site in the last 30 seconds
 				p.mu.Lock()
 				latestViewing := p.settings.LastTimeUserCheckingMs
 				latestReading := p.latestReadings[p.latestReadingPtr]
 				plugID := p.plugID
 				p.mu.Unlock()
-
 				if latestViewing > time.Now().UnixMilli()-30*1000 {
 					log.Println("updating latest readings in firestore", plugID, latestViewing, time.Now().UnixMilli()-30*1000)
 					go func() {
@@ -171,7 +220,8 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 				break
 			}
 			if err != nil {
-				fmt.Printf("Error listening to changes: %v\n", err)
+				fmt.Printf("Error listening to settings changes: %v\n", err)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 
@@ -231,7 +281,7 @@ func (p *PlugStateMachine) WriteReadingToDB(ctx context.Context, reading *contra
 	return nil
 }
 
-func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.Client, transition *contracts.StateMachineTransition) error {
+func (p *PlugStateMachine) performTransition(ctx context.Context, transition *contracts.StateMachineTransition) error {
 	log.Println("got state transition", transition.GetState(), transition.Reason)
 
 	p.state = transition.GetState()
@@ -239,9 +289,18 @@ func (p *PlugStateMachine) PerformTransition(ctx context.Context, fs *firestore.
 	p.transitions[nextStatePtr] = transition
 	p.latestStatePtr = nextStatePtr
 
-	_, err := fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
 	})
+
+	point := influxdb2.NewPointWithMeasurement("plug_transitions").
+		SetTime(time.Now()).
+		AddTag("site_id", p.siteID).
+		AddTag("plug_id", p.plugID).
+		AddField("state", transition.GetState().String()).
+		AddField("reason", transition.GetReason())
+
+	p.influxAPI.WritePoint(point)
 
 	return err
 }

@@ -8,7 +8,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
-	"github.com/google/uuid"
 	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"google.golang.org/api/iterator"
 
@@ -34,14 +33,6 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 		case contracts.RequestedState_RequestedState_OFF:
 			state = contracts.StateMachineState_StateMachineState_OFF
 		}
-		// receiving a response from the device indicates we should send the transition regardless
-		transition := &contracts.StateMachineTransition{
-			Id:     uuid.NewString(),
-			State:  state,
-			Reason: "device responded to state request",
-			TimeMs: time.Now().UnixMilli(),
-			PlugId: response.GetPlugId(),
-		}
 
 		plug, ok := stateMachines.GetStateMachine(response.GetPlugId())
 		if !ok {
@@ -49,15 +40,15 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 			return
 		}
 
-		err = plug.PerformTransition(ctx, fs, transition)
-		if err != nil {
-			log.Println("failed to perform transition from locally received state", err)
-			return
-		}
-	})
+		plug.Transition(ctx, stateMap, state, common.AgentMachine)
+		// we always want to ack this, or we'll have spurious state commands updating state
+		msg.Ack()
 
-	// TODO: not this
-	panic(err)
+	})
+	if err != nil {
+		log.Fatalf("device command responses listener exited: %+v", err)
+	}
+
 }
 
 func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClientWriteSites influxdb2api.WriteAPI, stateMachines *StateMachineCollection) {
@@ -164,114 +155,75 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 			break
 		}
 		if err != nil {
-			fmt.Printf("Error listening to changes: %v\n", err)
+			fmt.Printf("Error listening to user request changes: %v\n", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		for _, change := range snap.Changes {
-			if change.Kind == firestore.DocumentAdded {
-				// Decode the document into the UserRequest struct
-				var userRequest *contracts.UserRequest
-				if err := change.Doc.DataTo(&userRequest); err != nil {
-					fmt.Printf("Error decoding document: %v\n", err)
-					continue
-				}
+			if change.Kind != firestore.DocumentAdded {
+				continue
+			}
+			// Decode the document into the UserRequest struct
+			var userRequest *contracts.UserRequest
+			err = change.Doc.DataTo(&userRequest)
+			if err != nil {
+				fmt.Printf("Error decoding document: %v\n", err)
+				continue
+			}
 
-				plugStateMachine, ok := stateMachines.GetStateMachine(userRequest.PlugId)
-				if !ok {
-					// don't accept errors from users, who knows what nonsense they're up to
-					log.Printf("got missing plugid: %s", userRequest.PlugId)
-					continue
-				}
+			// update that we received the request
+			resRequestResult := &contracts.UserRequestResult{
+				TimeEnteredState: time.Now().UnixMilli(),
+				Status:           contracts.UserRequestStatus_RequestedStatus_RECEIVED,
+			}
+			_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+				{Path: "result", Value: resRequestResult},
+			})
+			if err != nil {
+				fmt.Printf("Error updating user requests: %v\n", err)
+				continue
+			}
 
-				availableStates, ok := stateMap[plugStateMachine.state]
-				if !ok {
-					log.Println("requested invalid state")
-					continue
-				}
+			plugStateMachine, ok := stateMachines.GetStateMachine(userRequest.PlugId)
+			if !ok {
+				// don't accept errors from users, who knows what nonsense they're up to
+				log.Printf("got missing plugid: %s", userRequest.PlugId)
+				continue
+			}
 
-				stateAllowed := false
-				for _, state := range availableStates {
-					fmt.Println(state.TargetState, userRequest.GetRequestedState())
-					if state.TargetState != userRequest.GetRequestedState() {
-						continue
-					}
-					stateAllowed = true
-					break
-				}
-
-				if !stateAllowed {
-					log.Println("state not allowed", userRequest.GetRequestedState())
-					resRequestResult := &contracts.UserRequestResult{
-						TimeEnteredState: time.Now().UnixMilli(),
-						Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
-						Reason:           fmt.Sprintf("State %s not valid from %s", userRequest.GetRequestedState(), plugStateMachine.state),
-					}
-					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
-						{Path: "result", Value: resRequestResult},
-					})
-					if err != nil {
-						fmt.Printf("Error updating user requests: %v\n", err)
-					}
-					continue
-				}
-				fmt.Printf("Received new user request: %+v: %s\n", userRequest.PlugId, userRequest.RequestedState)
-
-				transition := plugStateMachine.ConvertCustomerRequest(userRequest)
-				if transition == nil {
-					log.Println("no transition possible")
-				}
-
-				// update the document that we received it
+			// try the transition
+			transitioned := plugStateMachine.Transition(ctx, stateMap, userRequest.RequestedState, userRequest.UserId)
+			if !transitioned {
+				// record if the state transition failed
+				log.Println("state transition failed", userRequest.GetRequestedState())
 				resRequestResult := &contracts.UserRequestResult{
 					TimeEnteredState: time.Now().UnixMilli(),
-					Status:           contracts.UserRequestStatus_RequestedStatus_RECEIVED,
+					Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
+					Reason:           fmt.Sprintf("State %s not valid from %s", userRequest.GetRequestedState(), plugStateMachine.state),
 				}
 				_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
 					{Path: "result", Value: resRequestResult},
 				})
 				if err != nil {
 					fmt.Printf("Error updating user requests: %v\n", err)
-					continue
 				}
-				err = change.Doc.DataTo(&userRequest)
-				if err != nil {
-					fmt.Printf("Error updating userrequestresult: %v\n", err)
-					continue
-				}
-
-				err = plugStateMachine.PerformTransition(ctx, fs, transition)
-				if err != nil {
-					fmt.Printf("Error performing transition: %v\n", err)
-					// update the document that we received it
-					resRequestResult = &contracts.UserRequestResult{
-						TimeEnteredState: time.Now().UnixMilli(),
-						Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
-					}
-					_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
-						{Path: "result", Value: resRequestResult},
-					})
-					if err != nil {
-						fmt.Printf("Error updating user requests: %v\n", err)
-						continue
-					}
-					continue
-				}
-
-				// update the document that we succeeded
-				resRequestResult = &contracts.UserRequestResult{
-					TimeEnteredState: time.Now().UnixMilli(),
-					Status:           contracts.UserRequestStatus_RequestedStatus_SUCCESS,
-				}
-				_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
-					{Path: "result", Value: resRequestResult},
-				})
-				if err != nil {
-					fmt.Printf("Error updating user requests: %v\n", err)
-					continue
-				}
-
+				continue
 			}
+
+			// update the document that we succeeded
+			resRequestResult = &contracts.UserRequestResult{
+				TimeEnteredState: time.Now().UnixMilli(),
+				Status:           contracts.UserRequestStatus_RequestedStatus_SUCCESS,
+			}
+			_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+				{Path: "result", Value: resRequestResult},
+			})
+			if err != nil {
+				fmt.Printf("Error updating user requests: %v\n", err)
+				continue
+			}
+
 		}
 	}
 }
