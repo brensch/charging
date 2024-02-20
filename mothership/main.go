@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
-
-	"log/slog" // Import the structured logging package
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
@@ -37,7 +36,6 @@ func main() {
 	logger.Info("initialising", "cool", "story")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel
 
 	projectID, _, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
@@ -51,7 +49,6 @@ func main() {
 		logger.Error("Failed to create client", "err", err)
 		panic("Failed to create client") // Halt the program
 	}
-	_ = ps
 
 	// Init InfluxDB client
 	options := influxdb2.DefaultOptions().SetBatchSize(10).SetFlushInterval(10)
@@ -62,7 +59,6 @@ func main() {
 	}
 	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
 	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
-	_ = ifClientWriteSites
 
 	// Init Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))

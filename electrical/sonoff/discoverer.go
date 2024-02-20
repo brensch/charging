@@ -372,7 +372,7 @@ func handleConnection(conn net.Conn, plug *SonoffPlug) {
 
 	plug.Monitoring = update
 
-	fmt.Printf("Received sonoff update: %+v\n", update)
+	log.Printf("Received sonoff update: %+v\n", update)
 }
 
 type MonitorUpdateRequest struct {
