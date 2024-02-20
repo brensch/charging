@@ -1,6 +1,7 @@
 package shelly
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,7 +50,7 @@ func findDevices() (map[string]string, error) {
 	return devices, nil
 }
 
-func (d *ShellyDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, error) {
+func (d *ShellyDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []electrical.Fuze, error) {
 	// ips is a map of IP to MAC addresses
 	ips, err := findDevices()
 	if err != nil {

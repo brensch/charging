@@ -38,11 +38,10 @@ type PlugStateMachine struct {
 	mu sync.Mutex
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, siteID string, reading *contracts.Reading) *PlugStateMachine {
-	log.Println("initialising plug", reading.GetPlugId())
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, siteID, plugID string) *PlugStateMachine {
+	log.Println("initialising plug", plugID)
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
-	latestReadings[0] = reading
 
 	receiveTopicName := fmt.Sprintf("commands_%s", siteID)
 
@@ -50,13 +49,18 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 	transitions := make([]*contracts.StateMachineTransition, statesToStore)
 
 	stateMachine := &PlugStateMachine{
-		plugID:           reading.GetPlugId(),
-		latestReadingPtr: 0,
+		plugID:           plugID,
+		latestReadingPtr: -1,
 		latestReadings:   latestReadings,
 		transitions:      transitions,
 		siteTopic:        topic,
 		siteID:           siteID,
 		influxAPI:        influx,
+	}
+
+	err := EnsurePlugIsInFirestore(ctx, fs, siteID, plugID)
+	if err != nil {
+		log.Fatalf("problem ensuring plug doc: %+v", err)
 	}
 
 	stateMachine.Start(ctx, fs)
@@ -106,7 +110,11 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 
 				}
 
-				// update latest state in firestore if someon has looked at the site in the last 30 seconds
+				// initialising telemetry still
+				if p.latestReadingPtr == -1 {
+					continue
+				}
+				// update latest state in firestore if someone has looked at the site in the last 30 seconds
 				p.mu.Lock()
 				latestViewing := p.settings.LastTimeUserCheckingMs
 				latestReading := p.latestReadings[p.latestReadingPtr]
@@ -153,7 +161,7 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 
 	// then listen to all docs
 	plugSettingsIter := plugSettingsQuery.Snapshots(ctx)
-	// TODO: return this and do it. for the time being can run indefinitely
+	// TODO: return stop func and do it. for the time being can run indefinitely
 	// defer plugSettingsIter.Stop()
 	go func() {
 		for {
@@ -195,22 +203,29 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 		RequestedState: state,
 		RequestTime:    time.Now().UnixMilli(),
 	}
+	requestBytes, err := common.PackData(request)
+	if err != nil {
+		return err
+	}
 
-	return SendLocalStateRequest(ctx, p.siteTopic, request)
+	res := p.siteTopic.Publish(ctx, &pubsub.Message{
+		Data: []byte(requestBytes),
+	})
+
+	_, err = res.Get(ctx)
+	return err
 }
 
 func (p *PlugStateMachine) WriteReadingToDB(ctx context.Context, reading *contracts.Reading) error {
 	point := influxdb2.NewPointWithMeasurement("plug_readings").
-		SetTime(time.UnixMilli(reading.GetTimestamp())).
+		SetTime(time.UnixMilli(reading.GetTimestampMs())).
 		AddTag("site_id", p.siteID).
 		AddTag("plug_id", reading.PlugId).
 		AddTag("fuze_id", reading.FuzeId).
 		AddField("state", reading.State).
 		AddField("current", reading.Current).
 		AddField("voltage", reading.Voltage).
-		AddField("power_factor", reading.PowerFactor).
-		AddField("energy", reading.Energy)
-
+		AddField("power_factor", reading.PowerFactor)
 	p.influxAPI.WritePoint(point)
 
 	// keeping the error here in case the internals of this function end up throwing an error

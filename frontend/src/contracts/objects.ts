@@ -397,10 +397,8 @@ export interface Reading {
   voltage: number;
   /** Power factor, typically a value between -1 and 1 */
   power_factor: number;
-  /** Timestamp of the reading in seconds since epoch */
-  timestamp: number;
-  /** The energy reading in kWh */
-  energy: number;
+  /** Timestamp of the reading in ms since epoch */
+  timestamp_ms: number;
   plug_id: string;
   fuze_id: string;
 }
@@ -414,6 +412,12 @@ export interface SiteSettings {
   id: string;
   name: string;
   description: string;
+}
+
+export interface DeviceAnnouncement {
+  site_id: string;
+  plug_ids: string[];
+  fuze_ids: string[];
 }
 
 function createBaseFuzeSettings(): FuzeSettings {
@@ -1437,7 +1441,7 @@ export const PlugStatus = {
 };
 
 function createBaseReading(): Reading {
-  return { state: 0, current: 0, voltage: 0, power_factor: 0, timestamp: 0, energy: 0, plug_id: "", fuze_id: "" };
+  return { state: 0, current: 0, voltage: 0, power_factor: 0, timestamp_ms: 0, plug_id: "", fuze_id: "" };
 }
 
 export const Reading = {
@@ -1454,17 +1458,14 @@ export const Reading = {
     if (message.power_factor !== 0) {
       writer.uint32(33).double(message.power_factor);
     }
-    if (message.timestamp !== 0) {
-      writer.uint32(40).int64(message.timestamp);
-    }
-    if (message.energy !== 0) {
-      writer.uint32(49).double(message.energy);
+    if (message.timestamp_ms !== 0) {
+      writer.uint32(40).int64(message.timestamp_ms);
     }
     if (message.plug_id !== "") {
-      writer.uint32(58).string(message.plug_id);
+      writer.uint32(50).string(message.plug_id);
     }
     if (message.fuze_id !== "") {
-      writer.uint32(66).string(message.fuze_id);
+      writer.uint32(58).string(message.fuze_id);
     }
     return writer;
   },
@@ -1509,24 +1510,17 @@ export const Reading = {
             break;
           }
 
-          message.timestamp = longToNumber(reader.int64() as Long);
+          message.timestamp_ms = longToNumber(reader.int64() as Long);
           continue;
         case 6:
-          if (tag !== 49) {
-            break;
-          }
-
-          message.energy = reader.double();
-          continue;
-        case 7:
-          if (tag !== 58) {
+          if (tag !== 50) {
             break;
           }
 
           message.plug_id = reader.string();
           continue;
-        case 8:
-          if (tag !== 66) {
+        case 7:
+          if (tag !== 58) {
             break;
           }
 
@@ -1547,8 +1541,7 @@ export const Reading = {
       current: isSet(object.current) ? globalThis.Number(object.current) : 0,
       voltage: isSet(object.voltage) ? globalThis.Number(object.voltage) : 0,
       power_factor: isSet(object.power_factor) ? globalThis.Number(object.power_factor) : 0,
-      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
-      energy: isSet(object.energy) ? globalThis.Number(object.energy) : 0,
+      timestamp_ms: isSet(object.timestamp_ms) ? globalThis.Number(object.timestamp_ms) : 0,
       plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
       fuze_id: isSet(object.fuze_id) ? globalThis.String(object.fuze_id) : "",
     };
@@ -1568,11 +1561,8 @@ export const Reading = {
     if (message.power_factor !== 0) {
       obj.power_factor = message.power_factor;
     }
-    if (message.timestamp !== 0) {
-      obj.timestamp = Math.round(message.timestamp);
-    }
-    if (message.energy !== 0) {
-      obj.energy = message.energy;
+    if (message.timestamp_ms !== 0) {
+      obj.timestamp_ms = Math.round(message.timestamp_ms);
     }
     if (message.plug_id !== "") {
       obj.plug_id = message.plug_id;
@@ -1592,8 +1582,7 @@ export const Reading = {
     message.current = object.current ?? 0;
     message.voltage = object.voltage ?? 0;
     message.power_factor = object.power_factor ?? 0;
-    message.timestamp = object.timestamp ?? 0;
-    message.energy = object.energy ?? 0;
+    message.timestamp_ms = object.timestamp_ms ?? 0;
     message.plug_id = object.plug_id ?? "";
     message.fuze_id = object.fuze_id ?? "";
     return message;
@@ -1759,6 +1748,95 @@ export const SiteSettings = {
     message.id = object.id ?? "";
     message.name = object.name ?? "";
     message.description = object.description ?? "";
+    return message;
+  },
+};
+
+function createBaseDeviceAnnouncement(): DeviceAnnouncement {
+  return { site_id: "", plug_ids: [], fuze_ids: [] };
+}
+
+export const DeviceAnnouncement = {
+  encode(message: DeviceAnnouncement, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.site_id !== "") {
+      writer.uint32(10).string(message.site_id);
+    }
+    for (const v of message.plug_ids) {
+      writer.uint32(18).string(v!);
+    }
+    for (const v of message.fuze_ids) {
+      writer.uint32(26).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): DeviceAnnouncement {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseDeviceAnnouncement();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.plug_ids.push(reader.string());
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.fuze_ids.push(reader.string());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): DeviceAnnouncement {
+    return {
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      plug_ids: globalThis.Array.isArray(object?.plug_ids) ? object.plug_ids.map((e: any) => globalThis.String(e)) : [],
+      fuze_ids: globalThis.Array.isArray(object?.fuze_ids) ? object.fuze_ids.map((e: any) => globalThis.String(e)) : [],
+    };
+  },
+
+  toJSON(message: DeviceAnnouncement): unknown {
+    const obj: any = {};
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.plug_ids?.length) {
+      obj.plug_ids = message.plug_ids;
+    }
+    if (message.fuze_ids?.length) {
+      obj.fuze_ids = message.fuze_ids;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<DeviceAnnouncement>, I>>(base?: I): DeviceAnnouncement {
+    return DeviceAnnouncement.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<DeviceAnnouncement>, I>>(object: I): DeviceAnnouncement {
+    const message = createBaseDeviceAnnouncement();
+    message.site_id = object.site_id ?? "";
+    message.plug_ids = object.plug_ids?.map((e) => e) || [];
+    message.fuze_ids = object.fuze_ids?.map((e) => e) || [];
     return message;
   },
 };

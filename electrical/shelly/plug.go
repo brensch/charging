@@ -26,6 +26,10 @@ func (s *ShellyPlug) ID() string {
 	return fmt.Sprintf("shelly:%s:%d", s.Mac, s.SwitchNumber)
 }
 
+func (s *ShellyPlug) FuzeID() string {
+	return fmt.Sprintf("shellyfuze:%s", s.Mac)
+}
+
 func (s *ShellyPlug) SiteID() string {
 	return s.siteID
 }
@@ -185,12 +189,11 @@ func (s *ShellyPlug) GetReading() (*contracts.Reading, error) {
 func ConvertToReading(statusResult GetStatusResult, plugID string) *contracts.Reading {
 	state := ConvertToPlugState(statusResult.Output)
 	return &contracts.Reading{
-		Timestamp:   time.Now().UnixMilli(),
+		TimestampMs: time.Now().UnixMilli(),
 		State:       state,
 		Current:     statusResult.Current,
 		Voltage:     statusResult.Voltage,
 		PowerFactor: statusResult.Pf,
-		Energy:      statusResult.AEnergy.Total,
 
 		PlugId: plugID,
 	}

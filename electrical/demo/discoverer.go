@@ -1,6 +1,7 @@
 package demo
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/brensch/charging/electrical"
@@ -14,7 +15,7 @@ func InitDiscoverer(siteName string) *Discoverer {
 	return &Discoverer{siteName: siteName}
 }
 
-func (d *Discoverer) Discover() ([]electrical.Plug, []electrical.Fuze, error) {
+func (d *Discoverer) Discover(ctx context.Context) ([]electrical.Plug, []electrical.Fuze, error) {
 	// ips is a map of IP to MAC addresses
 	ips := map[string]string{"demo": fmt.Sprintf("mac-%s", d.siteName)}
 

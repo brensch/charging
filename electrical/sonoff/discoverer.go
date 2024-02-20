@@ -1,7 +1,11 @@
 package sonoff
 
 import (
+	"bufio"
 	"bytes"
+	"context"
+	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/brensch/charging/electrical"
 	"github.com/hashicorp/mdns"
@@ -88,8 +93,6 @@ func FetchSubDeviceList(ip, deviceID string) (*ResponseBody, error) {
 		return nil, err
 	}
 
-	fmt.Println(string(jsonData))
-
 	// Create a new POST request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -125,7 +128,7 @@ func FetchSubDeviceList(ip, deviceID string) (*ResponseBody, error) {
 	return &responseBody, nil
 }
 
-func (d *SonoffDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, error) {
+func (d *SonoffDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []electrical.Fuze, error) {
 	// ips is a map of IP to MAC addresses
 	ips, err := findDevices()
 	if err != nil {
@@ -141,7 +144,6 @@ func (d *SonoffDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, err
 	var fuzes []electrical.Fuze
 
 	plugMap := make(map[string]*SonoffPlug)
-	go startMonitorListener(plugMap)
 
 	// Iterate over the IP addresses in the ips map
 	for ip, id := range ips {
@@ -165,14 +167,47 @@ func (d *SonoffDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, err
 				}
 
 				plugMap[fmt.Sprintf("%s-%d", plug.SubDeviceID, i)] = plug
+				// there is a fundamental flaw in the sonoff
+				// the only way to retrieve the telemetry in realtime is to
+				// have it send it to you. you give it a target url and it uploads it.
+				// only catch is it doesn't actually update at the frequency that it says
+				// https://sonoff.tech/sonoff-diy-developer-documentation-spm-main-http-api/#9
 
-				err = plug.requestDeviceToSendTelemetry(localIP)
-				if err != nil {
-					return nil, nil, err
-				}
+				// as per their docs:
+				// Reporting conditions:
+				// -The current change exceeds 0.03 A.
+				// -The voltage change exceeds 5 V.
+				// -The active power, reactive power, or apparent power change exceeds 2 W.
+
+				// but in practice this is not happening.
+				// TODO: explore why this is.
+
+				// Workaround is that every time you ping update the device it uploads its current state.
+				// There's also a bug that it only seems to support one socket per port, so doing one port per socket.
+				port := GeneratePort(plug.SubDeviceID, fmt.Sprint(plug.SocketID))
+
+				go startMonitorListener(port, plug)
+
+				// start a loop to request monitoring
+				// This is a bit dirty but fine for the time being
+				go func(plug *SonoffPlug) {
+					ticker := time.NewTicker(30 * time.Second)
+					for {
+						err = plug.requestDeviceToSendTelemetry(localIP, port)
+						if err != nil {
+							log.Fatalf("failed to request device send telemetry")
+						}
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+						}
+					}
+				}(plug)
 
 				plugs = append(plugs, plug)
 			}
+
 			fuzes = append(fuzes, &SonoffFuze{
 				Host:        ip,
 				DeviceID:    id,
@@ -182,8 +217,6 @@ func (d *SonoffDiscoverer) Discover() ([]electrical.Plug, []electrical.Fuze, err
 			})
 		}
 	}
-
-	// initialise listener for live updates
 
 	return plugs, fuzes, nil
 }
@@ -204,7 +237,7 @@ func getLocalIP() (string, error) {
 	return "", fmt.Errorf("unable to find local IP address")
 }
 
-func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string) error {
+func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string, port int) error {
 	fmt.Println("requesting socket send telemetry", p.DeviceID, p.SubDeviceID, p.SocketID)
 	url := fmt.Sprintf("http://%s:%s/zeroconf/monitor", p.Host, SonoffPort)
 	updatePayload := MonitorUpdateRequest{
@@ -217,10 +250,10 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string) error {
 			Time     int    `json:"time"`
 		}{
 			URL:      fmt.Sprintf("http://%s", localIP), // Update with your actual URL
-			Port:     7790,                              // Update with your actual listening port
+			Port:     port,                              // Update with your actual listening port
 			SubDevId: p.SubDeviceID,
 			Outlet:   p.SocketID, // Assuming Outlet is related to Type
-			Time:     3600,       // Update with your actual time
+			Time:     180,        // Update with your actual time
 		},
 	}
 
@@ -229,7 +262,7 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string) error {
 		log.Printf("Error marshaling update request: %v", err)
 		return err
 	}
-	fmt.Println(url, string(requestBody))
+	fmt.Println("sending monitor update request", url, string(requestBody))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -237,7 +270,13 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	fmt.Println("finished yo")
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading body on monitor request: %v", err)
+		return err
+	}
+	fmt.Println("monitor response", string(body))
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("got non 200 status code: %d", resp.StatusCode)
@@ -246,29 +285,93 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string) error {
 	return nil
 }
 
-func startMonitorListener(plugs map[string]*SonoffPlug) {
-	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
-		var update MonitoringData
-		err := json.NewDecoder(r.Body).Decode(&update)
+func GeneratePort(s1, s2 string) int {
+	// Concatenate the strings and compute SHA-1 hash
+	hash := sha1.New()
+	hash.Write([]byte(s1 + s2))
+	bs := hash.Sum(nil)
+
+	// Convert the first few bytes of the hash to an integer
+	// Using only a portion of the hash to get a smaller number
+	hashInt := binary.BigEndian.Uint32(bs[:4])
+
+	// Map the hash integer to a valid port range (1024-49151)
+	// The range size is 49151 - 1024 = 48127
+	port := 1024 + (hashInt % 48127)
+
+	return int(port)
+}
+
+// note, for some reason the responses from the sonoff only work if i listen like this
+func startMonitorListener(port int, plug *SonoffPlug) {
+	listenAddr := fmt.Sprintf("0.0.0.0:%d", port) // Listen on all interfaces
+	listener, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		log.Fatalf("Failed to open port on %s: %v", listenAddr, err)
+	}
+	defer listener.Close()
+
+	fmt.Printf("Listening on %s\n", listenAddr)
+
+	for {
+		conn, err := listener.Accept()
 		if err != nil {
-			http.Error(w, "Bad request", http.StatusBadRequest)
+			log.Printf("Failed to accept connection: %v\n", err)
+			continue
+		}
+		go handleConnection(conn, plug)
+	}
+}
+
+func handleConnection(conn net.Conn, plug *SonoffPlug) {
+	defer conn.Close()
+	fmt.Printf("Connection established from %s\n", conn.RemoteAddr().String())
+
+	reader := bufio.NewReader(conn)
+	var contentLength int
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				log.Printf("Error reading from connection: %v\n", err)
+			}
+			break
+		}
+		// Trim the line to remove \r\n
+		trimmedLine := strings.TrimSpace(line)
+
+		// Check for Content-Length header to determine the body size
+		if strings.HasPrefix(trimmedLine, "Content-Length:") {
+			fmt.Sscanf(trimmedLine, "Content-Length: %d", &contentLength)
+		}
+
+		// An empty line marks the end of the headers
+		if trimmedLine == "" {
+			break
+		}
+	}
+
+	// Read the body based on the Content-Length
+	bodyBytes := make([]byte, contentLength)
+	if contentLength > 0 {
+		_, err := io.ReadFull(reader, bodyBytes)
+		if err != nil {
+			log.Printf("Error reading body from connection: %v\n", err)
 			return
 		}
+	}
 
-		// devicesMu.Lock()
-		// defer devicesMu.Unlock()
-		plugID := fmt.Sprintf("%s-%d", update.SubDevId, update.Outlet)
+	var update MonitoringData
+	err := json.Unmarshal(bodyBytes, &update)
+	if err != nil {
+		log.Printf("Error translating body: %v\n", err)
+		return
 
-		if plug, ok := plugs[plugID]; ok {
-			// Update the internal state of the plug
-			plug.Monitoring = update
+	}
 
-		}
+	plug.Monitoring = update
 
-		fmt.Fprintf(w, "Update received")
-	})
-
-	log.Fatal(http.ListenAndServe(":7790", nil)) // Listen on an arbitrary port
+	fmt.Printf("Received sonoff update: %+v %s\n", update, string(bodyBytes))
 }
 
 type MonitorUpdateRequest struct {

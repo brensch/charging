@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/brensch/charging/common"
@@ -11,13 +12,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID string, reading *contracts.Reading) error {
-	err := ensurePlugSettingsDoc(ctx, fs, reading.PlugId)
+func EnsurePlugIsInFirestore(ctx context.Context, fs *firestore.Client, siteID, plugID string) error {
+	err := ensurePlugSettingsDoc(ctx, fs, siteID, plugID)
 	if err != nil {
 		return err
 	}
 
-	err = ensurePlugStatusDoc(ctx, fs, siteID, reading)
+	err = ensurePlugStatusDoc(ctx, fs, siteID, plugID)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func ensureSiteSettingsDoc(ctx context.Context, fs *firestore.Client, clientID s
 	return nil
 }
 
-func ensurePlugSettingsDoc(ctx context.Context, fs *firestore.Client, plugID string) error {
+func ensurePlugSettingsDoc(ctx context.Context, fs *firestore.Client, siteID, plugID string) error {
 	// Reference to the document
 	docRef := fs.Collection(common.CollectionPlugSettings).Doc(plugID)
 
@@ -72,7 +73,8 @@ func ensurePlugSettingsDoc(ctx context.Context, fs *firestore.Client, plugID str
 
 	// The document does not exist, create a new one with a full instance of SiteSettings
 	_, err = docRef.Set(ctx, contracts.PlugSettings{
-		Id: plugID,
+		Id:     plugID,
+		SiteId: siteID,
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create PlugSettings document: %v", err)
@@ -81,9 +83,9 @@ func ensurePlugSettingsDoc(ctx context.Context, fs *firestore.Client, plugID str
 	return nil
 }
 
-func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, siteID string, reading *contracts.Reading) error {
+func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, siteID, plugID string) error {
 	// Reference to the document
-	docRef := fs.Collection(common.CollectionPlugStatus).Doc(reading.PlugId)
+	docRef := fs.Collection(common.CollectionPlugStatus).Doc(plugID)
 
 	// Try to get the document
 	_, err := docRef.Get(ctx)
@@ -100,9 +102,25 @@ func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, siteID strin
 
 	// The document does not exist, create a new one with a full instance of SiteSettings
 	_, err = docRef.Set(ctx, contracts.PlugStatus{
-		Id:            reading.PlugId,
-		LatestReading: reading,
-		SiteId:        siteID,
+		Id:     plugID,
+		SiteId: siteID,
+		State: &contracts.StateMachineTransition{
+			Id:      "init",
+			State:   contracts.StateMachineState_StateMachineState_INITIALISING,
+			Reason:  "mothership first received device",
+			TimeMs:  time.Now().UnixMilli(),
+			PlugId:  plugID,
+			OwnerId: "mothership",
+		},
+		LatestReading: &contracts.Reading{
+			State:       contracts.ActualState_ActualState_OFF, //TODO: make this init
+			Current:     0,
+			Voltage:     0,
+			PowerFactor: 0,
+			TimestampMs: time.Now().UnixMilli(),
+			PlugId:      plugID,
+			// FuzeId: , //TODO: don't think i need this here. should confirm
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create PlugStatus document: %v", err)

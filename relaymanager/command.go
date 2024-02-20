@@ -1,85 +1,72 @@
 package main
 
-import (
-	"bytes"
-	"compress/gzip"
-	"context"
-	"fmt"
-	"io"
-	"log"
+// func SendCommandResult(ctx context.Context, topic *pubsub.Topic, localStateResponse *contracts.LocalStateResponse) error {
 
-	"cloud.google.com/go/pubsub"
-	"github.com/brensch/charging/gen/go/contracts"
-	"google.golang.org/protobuf/proto"
-)
+// 	readingChunkBytes, err := proto.Marshal(localStateResponse)
+// 	if err != nil {
+// 		return err
+// 	}
 
-func SendCommandResult(ctx context.Context, topic *pubsub.Topic, localStateResponse *contracts.LocalStateResponse) error {
+// 	// Create a buffer to hold the compressed data
+// 	var b bytes.Buffer
+// 	gz := gzip.NewWriter(&b)
 
-	readingChunkBytes, err := proto.Marshal(localStateResponse)
-	if err != nil {
-		return err
-	}
+// 	// Compress the data
+// 	_, err = gz.Write(readingChunkBytes)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	// Close the gzip writer to complete the compression
+// 	err = gz.Close()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// Create a buffer to hold the compressed data
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
+// 	result := topic.Publish(ctx, &pubsub.Message{
+// 		Data: []byte(b.Bytes()),
+// 	})
 
-	// Compress the data
-	_, err = gz.Write(readingChunkBytes)
-	if err != nil {
-		return err
-	}
-	// Close the gzip writer to complete the compression
-	err = gz.Close()
-	if err != nil {
-		return err
-	}
+// 	sendID, err := result.Get(ctx)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	result := topic.Publish(ctx, &pubsub.Message{
-		Data: []byte(b.Bytes()),
-	})
+// 	fmt.Println("sent local state response: ", sendID)
+// 	return nil
+// }
 
-	sendID, err := result.Get(ctx)
-	if err != nil {
-		return err
-	}
+// func ReceiveCommandRequest(ctx context.Context, msg *pubsub.Message) (*contracts.LocalStateRequest, error) {
 
-	fmt.Println("sent local state response: ", sendID)
-	return nil
-}
+// 	// Decompress the data
+// 	reader, err := gzip.NewReader(bytes.NewReader(msg.Data))
+// 	if err != nil {
+// 		log.Println("Error creating gzip reader:", err)
+// 		msg.Ack()
+// 		return nil, err
+// 	}
+// 	defer reader.Close()
 
-func ReceiveCommandRequest(ctx context.Context, msg *pubsub.Message) (*contracts.LocalStateRequest, error) {
+// 	decompressedData, err := io.ReadAll(reader)
+// 	if err != nil {
+// 		log.Println("Error reading decompressed data:", err)
+// 		msg.Ack()
+// 		return nil, err
+// 	}
 
-	// Decompress the data
-	reader, err := gzip.NewReader(bytes.NewReader(msg.Data))
-	if err != nil {
-		log.Println("Error creating gzip reader:", err)
-		msg.Ack()
-		return nil, err
-	}
-	defer reader.Close()
+// 	// Unmarshal the decompressed data into a ReadingChunk
+// 	var localStateRequest contracts.LocalStateRequest
+// 	err = proto.Unmarshal(decompressedData, &localStateRequest)
+// 	if err != nil {
+// 		log.Println("Error unmarshalling data:", err)
+// 		msg.Ack()
+// 		return nil, err
+// 	}
 
-	decompressedData, err := io.ReadAll(reader)
-	if err != nil {
-		log.Println("Error reading decompressed data:", err)
-		msg.Ack()
-		return nil, err
-	}
+// 	// Process the ReadingChunk
+// 	fmt.Printf("Received request for plug%s %s\n", localStateRequest.SiteId, localStateRequest.PlugId)
 
-	// Unmarshal the decompressed data into a ReadingChunk
-	var localStateRequest contracts.LocalStateRequest
-	err = proto.Unmarshal(decompressedData, &localStateRequest)
-	if err != nil {
-		log.Println("Error unmarshalling data:", err)
-		msg.Ack()
-		return nil, err
-	}
+// 	// Acknowledge the message
+// 	msg.Ack()
 
-	// Process the ReadingChunk
-	fmt.Printf("Received request for plug%s %s\n", localStateRequest.SiteId, localStateRequest.PlugId)
-
-	// Acknowledge the message
-	msg.Ack()
-
-	return &localStateRequest, nil
-}
+// 	return &localStateRequest, nil
+// }

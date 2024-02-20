@@ -149,10 +149,9 @@ message Reading {
   double current = 2;  // The current power reading in watts
   double voltage = 3;  // The voltage reading in volts
   double power_factor = 4;  // Power factor, typically a value between -1 and 1
-  int64 timestamp = 5;      // Timestamp of the reading in seconds since epoch
-  double energy = 6;        // The energy reading in kWh
-  string plug_id = 7;
-  string fuze_id = 8;
+  int64 timestamp_ms = 5;   // Timestamp of the reading in ms since epoch
+  string plug_id = 6;
+  string fuze_id = 7;
 }
 
 message ReadingChunk {
@@ -164,4 +163,10 @@ message SiteSettings {
   string id = 1;
   string name = 2;
   string description = 3;
+}
+
+message DeviceAnnouncement {
+  string site_id = 1;
+  repeated string plug_ids = 2;
+  repeated string fuze_ids = 3;
 }

@@ -6,11 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
+)
+
+const (
+	CurrentUnit = 0.01
+	VoltageUnit = 0.01
+	PowerUnit   = 0.01
 )
 
 // SonoffPlug represents a Sonoff plug with its host and necessary identification.
@@ -20,12 +26,17 @@ type SonoffPlug struct {
 	SubDeviceID string // the 4 port relay
 	SocketID    int    // 0-3, the socket number
 
+	mu         sync.Mutex
 	siteID     string
 	Monitoring MonitoringData
 }
 
 func (s *SonoffPlug) ID() string {
 	return MakeID(s.DeviceID, s.SubDeviceID, s.SocketID)
+}
+
+func (s *SonoffPlug) FuzeID() string {
+	return fmt.Sprintf("sonofffuze:%s:%s", s.DeviceID, s.SubDeviceID)
 }
 
 func MakeID(deviceID, subDeviceID string, socketID int) string {
@@ -65,56 +76,56 @@ func ConvertToSonoffState(state contracts.RequestedState) string {
 }
 
 func (s *SonoffPlug) SetState(req contracts.RequestedState) error {
-	desiredState := ConvertToSonoffState(req)
-	log.Println("Setting Sonoff state to", desiredState)
+	// desiredState := ConvertToSonoffState(req)
+	// log.Println("Setting Sonoff state to", desiredState)
 
-	apiReq := &APIRequest{
-		Action: "update",
-		Params: map[string]string{
-			"switch": desiredState,
-		},
-	}
+	// apiReq := &APIRequest{
+	// 	Action: "update",
+	// 	Params: map[string]string{
+	// 		"switch": desiredState,
+	// 	},
+	// }
 
-	response, err := s.apiCall(apiReq)
-	if err != nil {
-		return err
-	}
+	// response, err := s.apiCall(apiReq)
+	// if err != nil {
+	// 	return err
+	// }
 
-	log.Println("Got response from device:", string(response))
+	// log.Println("Got response from device:", string(response))
 	return nil
 }
 
 func (s *SonoffPlug) GetReading() (*contracts.Reading, error) {
-	apiReq := &APIRequest{
-		Action: "query",
-		// Params could be defined here if needed
+	s.mu.Lock()
+	latestReading := s.Monitoring
+	s.mu.Unlock()
+
+	// Adjust current and voltage readings using the given unit constants
+	adjustedCurrent := float64(latestReading.Current) * CurrentUnit
+	adjustedVoltage := float64(latestReading.Voltage) * VoltageUnit
+
+	// Initialize powerFactor to 0 to avoid dividing by zero
+	var powerFactor float64 = 0
+
+	// Check if ApparentPow is not zero to avoid division by zero
+	if latestReading.ApparentPow != 0 {
+		powerFactor = float64(latestReading.ActPow) / float64(latestReading.ApparentPow)
 	}
 
-	resp, err := s.apiCall(apiReq)
-	if err != nil {
-		return nil, err
+	fmt.Println("got readings", adjustedCurrent, adjustedVoltage, powerFactor)
+
+	reading := &contracts.Reading{
+		// State: // TODO: may need an extra api call for this which is annoying
+		Current:     adjustedCurrent,
+		Voltage:     adjustedVoltage,
+		PowerFactor: powerFactor,
+		TimestampMs: time.Now().UnixMilli(),
+
+		PlugId: s.ID(),
+		FuzeId: s.FuzeID(),
 	}
 
-	var response APIResponse
-	err = json.Unmarshal(resp, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	// Assuming the response contains the necessary fields directly
-	result, ok := response.Result.(map[string]interface{})
-	if !ok {
-		return nil, errors.New("failed to parse response result")
-	}
-	_ = result
-	fmt.Println(result)
-
-	// Extract and convert the relevant data from the result
-	// Placeholder for actual data conversion
-	return &contracts.Reading{
-		State: contracts.ActualState_ActualState_ON,
-		// Fill in the Reading struct based on the Sonoff response
-	}, nil
+	return reading, nil
 }
 
 func (s *SonoffPlug) apiCall(apiReq *APIRequest) ([]byte, error) {

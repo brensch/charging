@@ -22,6 +22,10 @@ func (s *Plug) ID() string {
 	return fmt.Sprintf("demo:%s:%d", s.Mac, s.SwitchNumber)
 }
 
+func (s *Plug) FuzeID() string {
+	return fmt.Sprintf("demofuze:%s", s.Mac)
+}
+
 func (s *Plug) SiteID() string {
 	return s.siteID
 }
@@ -38,8 +42,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 	current := rand.Float64() * 100     // Random current in watts
 	voltage := rand.Float64() * 240     // Random voltage in volts
 	powerFactor := rand.Float64()*2 - 1 // Random power factor between -1 and 1
-	timestamp := time.Now().Unix()      // Current timestamp
-	energy := rand.Float64() / 100      // Random energy in kWh
+	timestamp := time.Now().UnixMilli() // Current timestamp
 	plugId := s.ID()
 
 	return &contracts.Reading{
@@ -47,8 +50,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 		Current:     current,
 		Voltage:     voltage,
 		PowerFactor: powerFactor,
-		Timestamp:   timestamp,
-		Energy:      energy,
+		TimestampMs: timestamp,
 		PlugId:      plugId,
 	}, nil
 }

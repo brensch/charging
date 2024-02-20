@@ -10,89 +10,41 @@ import (
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
 	"github.com/brensch/charging/electrical/sonoff"
-	"github.com/brensch/charging/gen/go/contracts"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"cloud.google.com/go/pubsub"
+	"google.golang.org/api/option"
 )
-
-const siteName = "brendo pi"
-const configFile = "./siteSettings.json"
 
 const (
 	port      = ":443"
 	configDir = "./config/"
 	secretDir = "./secrets/"
 	keyFile   = "./gcp.key"
-
-	readingsBufferSize = 500
-	readingsCollection = "readings"
-
-	telemetryTopicName      = "telemetry"
-	commandResultsTopicName = "command_results"
 )
 
 func main() {
 	ctx := context.Background()
 
-	projectID, clientID, err := common.ExtractProjectAndClientID(keyFile)
+	projectID, siteID, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
 		log.Fatalf("Failed to get identity: %v", err)
 	}
 
-	client, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
+	ps, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	log.Println("got pubsub client")
 
-	telemetrySendTopic := client.Topic(telemetryTopicName)
-	commandResultsTopic := client.Topic(commandResultsTopicName)
+	telemetrySendTopic := ps.Topic(common.TopicNameTelemetry)
 
-	fmt.Println(clientID, projectID)
-	commandRequestTopicName := fmt.Sprintf("commands_%s", clientID)
+	fmt.Println(siteID, projectID)
 
-	// set up commandRequestTopic
-	commandRequestTopic, err := client.CreateTopic(ctx, commandRequestTopicName)
-	if err != nil {
-		// Check if the error is because the topic already exists
-		if status.Code(err) == codes.AlreadyExists {
-			log.Printf("Topic %s already exists\n", commandRequestTopicName)
-			commandRequestTopic = client.Topic(commandRequestTopicName)
-		} else {
-			log.Fatalf("Failed to create topic: %v", err)
-		}
-	} else {
-		log.Printf("Topic %s created\n", commandRequestTopicName)
-	}
-
-	sub, err := client.CreateSubscription(ctx, commandRequestTopicName, pubsub.SubscriptionConfig{
-		Topic:                     commandRequestTopic,
-		AckDeadline:               10 * time.Second,
-		RetentionDuration:         7 * 24 * time.Hour,
-		EnableMessageOrdering:     true,
-		EnableExactlyOnceDelivery: true,
-		ExpirationPolicy:          time.Duration(0),
-	})
-	if err != nil {
-		// Check if the error is because the topic already exists
-		if status.Code(err) == codes.AlreadyExists {
-			log.Printf("Sub %s already exists\n", commandRequestTopicName)
-			sub = client.Subscription(commandRequestTopicName)
-
-		} else {
-			log.Fatalf("Failed to create subscription: %v", err)
-		}
-	} else {
-		log.Printf("Subscription %s created\n", commandRequestTopicName)
-	}
-
+	// discover plugs and fuzes
 	discoverers := []electrical.Discoverer{
-		// shelly.InitShellyDiscoverer(clientID),
-		sonoff.InitSonoffDiscoverer(clientID),
-		// demo.InitDiscoverer(clientID),
+		// shelly.InitShellyDiscoverer(siteID),
+		sonoff.InitSonoffDiscoverer(siteID),
+		// demo.InitDiscoverer(siteID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 
@@ -100,7 +52,7 @@ func main() {
 	fuzes := make(map[string]electrical.Fuze, 0)
 	for _, discoverer := range discoverers {
 		fmt.Println("discovering")
-		discoveredPlugs, discoveredFuzes, err := discoverer.Discover()
+		discoveredPlugs, discoveredFuzes, err := discoverer.Discover(ctx)
 		if err != nil {
 			log.Fatalf("Failed to discover plugs: %v", err)
 		}
@@ -112,49 +64,15 @@ func main() {
 			log.Println("found fuze: ", fuze.ID())
 			fuzes[fuze.ID()] = fuze
 		}
-
 	}
-	fmt.Println("finished discovering")
+	fmt.Println("finished discovering, informing mothership of devices")
 
+	err = AnnounceDevices(ctx, ps, siteID, plugs, fuzes)
+	if err != nil {
+		log.Fatalf("got error announcing devices: %+v", err)
+	}
 	// command listening loop
-	go func() {
-
-		err = sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-			request, err := ReceiveCommandRequest(ctx, msg)
-			if err != nil {
-				log.Println("failed to unpack request")
-				return
-			}
-
-			plug, ok := plugs[request.PlugId]
-			if !ok {
-				log.Println("could not find plug id", request.PlugId)
-				return
-			}
-
-			err = plug.SetState(request.GetRequestedState())
-			if err != nil {
-				log.Println("failed to set state", err)
-				return
-			}
-
-			response := &contracts.LocalStateResponse{
-				ReqId:          request.Id,
-				ResultantState: request.GetRequestedState(),
-				PlugId:         request.GetPlugId(),
-				SiteId:         request.GetSiteId(),
-				Time:           time.Now().UnixMilli(),
-			}
-			err = SendCommandResult(ctx, commandResultsTopic, response)
-			if err != nil {
-				log.Println("failed to set command result", err)
-				return
-			}
-		})
-		if err != nil {
-			log.Fatal("wtf", err)
-		}
-	}()
+	go ListenForCommands(ctx, ps, siteID, plugs)
 
 	ticker := time.NewTicker(1 * time.Second)
 	for {
@@ -168,7 +86,7 @@ func main() {
 			continue
 		}
 
-		err = SendReadings(ctx, telemetrySendTopic, clientID, readings)
+		err = SendReadings(ctx, telemetrySendTopic, siteID, readings)
 		if err != nil {
 			fmt.Println("failed to send readings", err)
 			continue

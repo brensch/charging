@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/brensch/charging/common"
@@ -18,10 +20,7 @@ import (
 )
 
 const (
-	keyFile                 = "./mothership.key"
-	TopicNameTelemetry      = "telemetry"
-	TopicNameCommandResults = "command_results"
-	TopicNameNewDevices     = "new_devices"
+	keyFile = "./mothership.key"
 
 	secondsToStore = 10
 	statesToStore  = 100
@@ -38,6 +37,7 @@ func main() {
 	logger.Info("initialising", "cool", "story")
 
 	ctx, cancel := context.WithCancel(context.Background())
+	_ = cancel
 
 	projectID, _, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
@@ -51,6 +51,7 @@ func main() {
 		logger.Error("Failed to create client", "err", err)
 		panic("Failed to create client") // Halt the program
 	}
+	_ = ps
 
 	// Init InfluxDB client
 	options := influxdb2.DefaultOptions().SetBatchSize(10).SetFlushInterval(10)
@@ -61,6 +62,7 @@ func main() {
 	}
 	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
 	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
+	_ = ifClientWriteSites
 
 	// Init Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
@@ -81,12 +83,24 @@ func main() {
 		panic("ouldn't get plug statuses") // Halt the program
 
 	}
+	var wg sync.WaitGroup
 	for _, plugStatusDoc := range plugStatuses {
 		var plugStatus *contracts.PlugStatus
-		plugStatusDoc.DataTo(&plugStatus)
-		stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetLatestReading()))
+		err = plugStatusDoc.DataTo(&plugStatus)
+		if err != nil {
+			log.Fatal("failed to decode plug status", err)
+		}
+		wg.Add(1)
+		go func(plugStatus *contracts.PlugStatus) {
+			defer wg.Done()
+			stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetId()))
+		}(plugStatus)
+
 	}
-	go ListenForNewDevices(ctx, fs, ps, stateMachines)
+
+	wg.Wait()
+
+	go ListenForNewDevices(ctx, fs, ps, ifClientWriteSites, stateMachines)
 	go ListenForUserRequests(ctx, fs, stateMachines)
 	go ListenForDeviceCommandResponses(ctx, fs, ps, stateMachines)
 	go ListenForTelemetry(ctx, fs, ps, ifClientWriteSites, stateMachines)

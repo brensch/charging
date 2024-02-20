@@ -3,7 +3,6 @@ package common
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"io"
 	"log"
 
@@ -11,7 +10,7 @@ import (
 )
 
 // UnpackData generic function to unpack and decompress data into a protobuf message.
-func UnpackData(ctx context.Context, data []byte, result proto.Message) error {
+func UnpackData(data []byte, result proto.Message) error {
 	// Decompress the data
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -37,7 +36,7 @@ func UnpackData(ctx context.Context, data []byte, result proto.Message) error {
 }
 
 // PackData function to marshal a protobuf message and compress the data.
-func PackData(ctx context.Context, message proto.Message) ([]byte, error) {
+func PackData(message proto.Message) ([]byte, error) {
 	// Marshal the protobuf message
 	marshaledData, err := proto.Marshal(message)
 	if err != nil {

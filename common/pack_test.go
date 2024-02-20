@@ -1,7 +1,6 @@
 package common
 
 import (
-	"context"
 	"testing"
 
 	"github.com/brensch/charging/gen/go/contracts"
@@ -9,7 +8,6 @@ import (
 )
 
 func TestPackUnpackData(t *testing.T) {
-	ctx := context.Background()
 
 	// Initialize your protobuf message
 	originalMessage := &contracts.PlugStatus{
@@ -17,7 +15,7 @@ func TestPackUnpackData(t *testing.T) {
 	}
 
 	// Pack the data
-	packedData, err := PackData(ctx, originalMessage)
+	packedData, err := PackData(originalMessage)
 	if err != nil {
 		t.Fatalf("PackData failed: %v", err)
 	}
@@ -26,7 +24,7 @@ func TestPackUnpackData(t *testing.T) {
 	unpackedMessage := &contracts.PlugStatus{}
 
 	// Unpack the data
-	err = UnpackData(ctx, packedData, unpackedMessage)
+	err = UnpackData(packedData, unpackedMessage)
 	if err != nil {
 		t.Fatalf("UnpackData failed: %v", err)
 	}

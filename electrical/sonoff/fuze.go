@@ -11,7 +11,7 @@ type SonoffFuze struct {
 }
 
 func (f *SonoffFuze) ID() string {
-	return fmt.Sprintf("%s-%s", f.DeviceID, f.SubDeviceID)
+	return fmt.Sprintf("sonofffuze:%s-%s", f.DeviceID, f.SubDeviceID)
 }
 
 func (f *SonoffFuze) SiteID() string {

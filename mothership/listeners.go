@@ -18,9 +18,10 @@ import (
 
 func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, stateMachines *StateMachineCollection) {
 
-	commandResultsSub := ps.Subscription(TopicNameCommandResults)
-	err := commandResultsSub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-		response, err := ReceiveCommandResponse(ctx, m)
+	commandResultsSub := ps.Subscription(common.TopicNameCommandResults)
+	err := commandResultsSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+		var response contracts.LocalStateResponse
+		err := common.UnpackData(msg.Data, &response)
 		if err != nil {
 			log.Println("failed to read command response")
 			return
@@ -61,32 +62,22 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 
 func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClientWriteSites influxdb2api.WriteAPI, stateMachines *StateMachineCollection) {
 
-	telemetrySub := ps.Subscription(TopicNameTelemetry)
+	telemetrySub := ps.Subscription(common.TopicNameTelemetry)
 	err := telemetrySub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 
 		chunk := &contracts.ReadingChunk{}
-		err := common.UnpackData(ctx, msg.Data, chunk)
+		err := common.UnpackData(msg.Data, chunk)
 		if err != nil {
-			log.Println("Failed to read message: %v", err)
+			log.Printf("Failed to read message: %v", err)
 			return
 		}
 
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachines.GetStateMachine(reading.PlugId)
 			if !ok {
-				// TODO: formalise the adding of a plug rather than doing it as a side effect of receiving telemetry
-				// this will mean that the telemetry loop doesn't potentially get hung up on the init step
-				// which takes a while due to fs write
-				log.Println("couldn't find plug", reading.PlugId)
-				plugStateMachine = InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, chunk.GetSiteId(), reading)
-
-				// this only needs to be done if we receive a non existant plug id from a reading
-				err = EnsurePlugIsInFirestore(ctx, fs, chunk.GetSiteId(), reading)
-				if err != nil {
-					log.Println("failed to init new plug state machine")
-					return
-				}
-				stateMachines.AddStateMachine(plugStateMachine)
+				// This should not be happening. may downgrade from fatal though
+				log.Fatal("yooo", reading.PlugId)
+				return
 			}
 
 			// write latest reading to pointer location in rolling slice
@@ -116,9 +107,43 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 	panic(err)
 }
 
-func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, stateMachines *StateMachineCollection) {
+func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, stateMachines *StateMachineCollection) {
 
-	// TODO
+	_, sub, err := common.EnsureTopicAndSub(ctx, ps, common.TopicNameNewDevices)
+	if err != nil {
+		log.Fatalf("failed to set up topic and sub: %+v", err)
+	}
+
+	sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+		deviceAnnouncement := &contracts.DeviceAnnouncement{}
+		err := common.UnpackData(msg.Data, deviceAnnouncement)
+		if err != nil {
+			log.Printf("Failed to read message: %v", err)
+			return
+		}
+		fmt.Println("received device announcement", deviceAnnouncement.SiteId)
+
+		for _, plugID := range deviceAnnouncement.PlugIds {
+			_, ok := stateMachines.GetStateMachine(plugID)
+			if ok {
+				continue
+			}
+			stateMachines.AddStateMachine(InitPlugStateMachine(ctx, fs, ps, ifdb, deviceAnnouncement.SiteId, plugID))
+		}
+
+		// send empty response on ack channel to site
+		res := ps.
+			Topic(fmt.Sprintf(common.TopicNameNewDevicesAck, deviceAnnouncement.SiteId)).
+			Publish(ctx, &pubsub.Message{Data: []byte{1}})
+		_, err = res.Get(ctx)
+		if err != nil {
+			log.Printf("failed to ack new devices: %+v", err)
+		}
+
+		msg.Ack()
+
+	})
+
 }
 
 func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachines *StateMachineCollection) {
@@ -152,7 +177,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				plugStateMachine, ok := stateMachines.GetStateMachine(userRequest.PlugId)
 				if !ok {
 					// don't accept errors from users, who knows what nonsense they're up to
-					log.Println("got missing plugid: %s", userRequest.PlugId)
+					log.Printf("got missing plugid: %s", userRequest.PlugId)
 					continue
 				}
 

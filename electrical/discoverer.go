@@ -1,7 +1,9 @@
 package electrical
 
+import "context"
+
 type Discoverer interface {
-	Discover() ([]Plug, []Fuze, error)
+	Discover(context.Context) ([]Plug, []Fuze, error)
 }
 
 type IDer interface {
