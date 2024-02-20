@@ -3,9 +3,8 @@ package sonoff
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -75,23 +74,59 @@ func ConvertToSonoffState(state contracts.RequestedState) string {
 	}
 }
 
+// Switch represents the state of a single switch in the Sonoff device.
+type Switch struct {
+	Switch string `json:"switch"` // "on" or "off"
+	Outlet int    `json:"outlet"`
+}
+
+// SonoffRequest represents the payload sent to the Sonoff device to change its state.
+type SonoffStateRequest struct {
+	DeviceID string `json:"deviceid"`
+	Data     struct {
+		SubDevId string   `json:"subDevId"`
+		Switches []Switch `json:"switches"`
+	} `json:"data"`
+}
+
 func (s *SonoffPlug) SetState(req contracts.RequestedState) error {
-	// desiredState := ConvertToSonoffState(req)
-	// log.Println("Setting Sonoff state to", desiredState)
 
-	// apiReq := &APIRequest{
-	// 	Action: "update",
-	// 	Params: map[string]string{
-	// 		"switch": desiredState,
-	// 	},
-	// }
+	desiredState := ConvertToSonoffState(req)
+	log.Println("Setting Sonoff state to", desiredState)
 
-	// response, err := s.apiCall(apiReq)
-	// if err != nil {
-	// 	return err
-	// }
+	payload := SonoffStateRequest{
+		DeviceID: s.DeviceID,
+		Data: struct {
+			SubDevId string   `json:"subDevId"`
+			Switches []Switch `json:"switches"`
+		}{
+			SubDevId: s.SubDeviceID,
+			Switches: []Switch{
+				{
+					Switch: desiredState,
+					Outlet: s.SocketID,
+				},
+			},
+		},
+	}
 
-	// log.Println("Got response from device:", string(response))
+	// Marshal the payload to JSON
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	// Send the request
+	resp, err := http.Post(fmt.Sprintf("http://%s:%s/zeroconf/switches", s.Host, SonoffPort), "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	return nil
 }
 
@@ -112,8 +147,6 @@ func (s *SonoffPlug) GetReading() (*contracts.Reading, error) {
 		powerFactor = float64(latestReading.ActPow) / float64(latestReading.ApparentPow)
 	}
 
-	fmt.Println("got readings", adjustedCurrent, adjustedVoltage, powerFactor)
-
 	reading := &contracts.Reading{
 		// State: // TODO: may need an extra api call for this which is annoying
 		Current:     adjustedCurrent,
@@ -126,24 +159,4 @@ func (s *SonoffPlug) GetReading() (*contracts.Reading, error) {
 	}
 
 	return reading, nil
-}
-
-func (s *SonoffPlug) apiCall(apiReq *APIRequest) ([]byte, error) {
-	data, err := json.Marshal(apiReq)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Post(fmt.Sprintf("http://%s/api/device/%s", s.Host, s.DeviceID), "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to make API call")
-	}
-
-	return io.ReadAll(resp.Body)
 }

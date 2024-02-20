@@ -75,8 +75,9 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachines.GetStateMachine(reading.PlugId)
 			if !ok {
+				fmt.Printf("reading: %+v", reading)
 				// This should not be happening. may downgrade from fatal though
-				log.Fatal("yooo", reading.PlugId)
+				log.Fatal("yooo", reading.PlugId, reading.Current)
 				return
 			}
 
@@ -139,6 +140,8 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 		if err != nil {
 			log.Printf("failed to ack new devices: %+v", err)
 		}
+
+		fmt.Println("acknowledged device announcement", deviceAnnouncement.SiteId)
 
 		msg.Ack()
 

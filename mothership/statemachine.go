@@ -183,7 +183,6 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 					continue
 				}
 
-				log.Println("got latest reading time", updatedPlugSetting.Id, updatedPlugSetting.LastTimeUserCheckingMs)
 				p.mu.Lock()
 				p.settings.CurrentLimit = updatedPlugSetting.CurrentLimit
 				p.settings.LastTimeUserCheckingMs = updatedPlugSetting.LastTimeUserCheckingMs

@@ -191,7 +191,7 @@ func (d *SonoffDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []e
 				// start a loop to request monitoring
 				// This is a bit dirty but fine for the time being
 				go func(plug *SonoffPlug) {
-					ticker := time.NewTicker(30 * time.Second)
+					ticker := time.NewTicker(5 * time.Second)
 					for {
 						err = plug.requestDeviceToSendTelemetry(localIP, port)
 						if err != nil {
@@ -238,7 +238,6 @@ func getLocalIP() (string, error) {
 }
 
 func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string, port int) error {
-	fmt.Println("requesting socket send telemetry", p.DeviceID, p.SubDeviceID, p.SocketID)
 	url := fmt.Sprintf("http://%s:%s/zeroconf/monitor", p.Host, SonoffPort)
 	updatePayload := MonitorUpdateRequest{
 		DeviceID: p.DeviceID, // Use the SubDevId of the device as DeviceID
@@ -262,7 +261,6 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string, port int) erro
 		log.Printf("Error marshaling update request: %v", err)
 		return err
 	}
-	fmt.Println("sending monitor update request", url, string(requestBody))
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -271,12 +269,11 @@ func (p *SonoffPlug) requestDeviceToSendTelemetry(localIP string, port int) erro
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("Error reading body on monitor request: %v", err)
 		return err
 	}
-	fmt.Println("monitor response", string(body))
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("got non 200 status code: %d", resp.StatusCode)
@@ -325,7 +322,6 @@ func startMonitorListener(port int, plug *SonoffPlug) {
 
 func handleConnection(conn net.Conn, plug *SonoffPlug) {
 	defer conn.Close()
-	fmt.Printf("Connection established from %s\n", conn.RemoteAddr().String())
 
 	reader := bufio.NewReader(conn)
 	var contentLength int
@@ -366,12 +362,17 @@ func handleConnection(conn net.Conn, plug *SonoffPlug) {
 	if err != nil {
 		log.Printf("Error translating body: %v\n", err)
 		return
+	}
 
+	// should only update if this is for the right outlet.
+	// NB: this is a bug in the sonoff imho. it's sending invalid data.
+	if update.Outlet != plug.SocketID {
+		return
 	}
 
 	plug.Monitoring = update
 
-	fmt.Printf("Received sonoff update: %+v %s\n", update, string(bodyBytes))
+	fmt.Printf("Received sonoff update: %+v\n", update)
 }
 
 type MonitorUpdateRequest struct {

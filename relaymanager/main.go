@@ -9,7 +9,9 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
+	"github.com/brensch/charging/electrical/shelly"
 	"github.com/brensch/charging/electrical/sonoff"
+	"github.com/brensch/charging/gen/go/contracts"
 
 	"cloud.google.com/go/pubsub"
 	"google.golang.org/api/option"
@@ -42,7 +44,7 @@ func main() {
 
 	// discover plugs and fuzes
 	discoverers := []electrical.Discoverer{
-		// shelly.InitShellyDiscoverer(siteID),
+		shelly.InitShellyDiscoverer(siteID),
 		sonoff.InitSonoffDiscoverer(siteID),
 		// demo.InitDiscoverer(siteID),
 		// as we make more plug brands we can add their discoverers here.
@@ -86,7 +88,21 @@ func main() {
 			continue
 		}
 
-		err = SendReadings(ctx, telemetrySendTopic, siteID, readings)
+		readingChunk := &contracts.ReadingChunk{
+			SiteId:   siteID,
+			Readings: readings,
+		}
+
+		readingBytes, err := common.PackData(readingChunk)
+		if err != nil {
+			fmt.Println("failed to pack readings", err)
+			continue
+		}
+
+		res := telemetrySendTopic.Publish(ctx, &pubsub.Message{
+			Data: readingBytes,
+		})
+		_, err = res.Get(ctx)
 		if err != nil {
 			fmt.Println("failed to send readings", err)
 			continue
