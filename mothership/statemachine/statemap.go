@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// note do not lock stateMu inside DoTransition since it's already locked during execution
 	StateMap = map[contracts.StateMachineState][]StateTransition{
 		contracts.StateMachineState_StateMachineState_INITIALISING: {
 			{
@@ -87,11 +88,17 @@ var (
 						return false
 					}
 
-					p.mu.Lock()
+					p.latestReadingMu.Lock()
 					latestReading := p.latestReadings[p.latestReadingPtr]
-					p.mu.Unlock()
+					p.latestReadingMu.Unlock()
 
-					return latestReading.Current > 0
+					chargeCommenced := latestReading.Current > 0
+
+					if chargeCommenced {
+						p.chargeStartTime = time.Now()
+					}
+
+					return chargeCommenced
 				},
 			},
 		},
@@ -104,11 +111,13 @@ var (
 						return false
 					}
 
-					p.mu.Lock()
+					p.latestReadingMu.Lock()
 					latestReading := p.latestReadings[p.latestReadingPtr]
-					p.mu.Unlock()
+					p.latestReadingMu.Unlock()
 
-					return latestReading.Current > 0
+					// if it never goes to 0, also stop after 1 minute
+					// TODO: remove time limitation
+					return latestReading.Current == 0 || time.Now().After(p.chargeStartTime.Add(1*time.Minute))
 				},
 			},
 		},
@@ -127,9 +136,7 @@ var (
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
 
-					p.mu.Lock()
 					p.currentOwner = ""
-					p.mu.Unlock()
 					err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
 					if err != nil {
 						log.Println("got error requesting local state", err)
@@ -146,62 +153,5 @@ var (
 				AsyncOnly:   true,
 			},
 		},
-
-		// contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF: {
-		// 	{
-		// 		TargetState: contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF,
-		// 		DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-		// 			err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
-		// 			if err != nil {
-		// 				log.Println("got error requesting local state", err)
-		// 				p.Error(err)
-		// 				return false
-		// 			}
-		// 			return true
-		// 		},
-		// 		ConditionExplanation: "Wait for device response after issuing local command",
-		// 	},
-		// },
-		// contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_OFF: {
-		// 	{
-		// 		TargetState: contracts.StateMachineState_StateMachineState_OFF,
-		// 		AsyncOnly:   true,
-		// 	},
-		// },
-		// contracts.StateMachineState_StateMachineState_OFF: {
-		// 	{
-		// 		TargetState:          contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON,
-		// 		AsyncOnly:            true,
-		// 		ConditionExplanation: "User requested ON",
-		// 	},
-		// },
-		// contracts.StateMachineState_StateMachineState_USER_REQUESTED_ON: {
-		// 	{
-		// 		TargetState: contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON,
-		// 		DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-		// 			err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
-		// 			if err != nil {
-		// 				log.Println("got error requesting local state", err)
-		// 				p.Error(err)
-		// 				return false
-		// 			}
-		// 			return true
-		// 		},
-		// 		ConditionExplanation: "Wait for device response after issuing local command",
-		// 	},
-		// },
-		// contracts.StateMachineState_StateMachineState_LOCAL_COMMAND_ISSUED_ON: {
-		// 	{
-		// 		TargetState: contracts.StateMachineState_StateMachineState_ON,
-		// 		AsyncOnly:   true,
-		// 	},
-		// },
-		// contracts.StateMachineState_StateMachineState_ON: {
-		// 	{
-		// 		TargetState:          contracts.StateMachineState_StateMachineState_USER_REQUESTED_OFF,
-		// 		AsyncOnly:            true,
-		// 		ConditionExplanation: "User requested OFF",
-		// 	},
-		// },
 	}
 )

@@ -27,29 +27,33 @@ type PlugStateMachine struct {
 	plugID string
 	siteID string
 
+	latestReadingMu  sync.Mutex
 	latestReadingPtr int
 	latestReadings   []*contracts.Reading
 
+	stateMu        sync.Mutex
 	latestStatePtr int
 	state          contracts.StateMachineState
 	transitions    []*contracts.StateMachineTransition
+	currentOwner   string
 
-	currentOwner string
+	// this needs to be in the firestore object for resuming
+	chargeStartTime time.Time
 
 	// QUEUE
 	queuePosition  int64
 	queueEnteredMs int64
 
-	err error
+	errMu sync.Mutex
+	err   error
 
-	settings *contracts.PlugSettings
+	settingsMu sync.Mutex
+	settings   *contracts.PlugSettings
 
 	influxAPI influxdb2api.WriteAPI
 	fs        *firestore.Client
 
 	siteTopic *pubsub.Topic
-
-	mu sync.Mutex
 }
 
 func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, siteID, plugID string) *PlugStateMachine {
@@ -99,26 +103,30 @@ type StateTransition struct {
 }
 
 func (p *PlugStateMachine) Error(err error) {
-	p.mu.Lock()
+	p.errMu.Lock()
 	p.err = err
-	p.mu.Unlock()
+	p.errMu.Unlock()
 }
 
 func (p *PlugStateMachine) State() contracts.StateMachineState {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.stateMu.Lock()
+	defer p.stateMu.Unlock()
 	return p.state
 }
 
 func (p *PlugStateMachine) SetCurrentOwner(owner string) {
-	p.mu.Lock()
+	p.stateMu.Lock()
 	p.currentOwner = owner
-	p.mu.Unlock()
+	p.stateMu.Unlock()
 }
 
 func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState) bool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	log.Println("waiting for lock")
+	p.stateMu.Lock()
+	log.Println("got lock")
+
+	defer p.stateMu.Unlock()
+	defer fmt.Println("finished transition")
 
 	log.Println("checking transition for ", p.plugID, p.state, targetState)
 
@@ -132,6 +140,8 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 		if potentialState.TargetState != targetState {
 			continue
 		}
+		log.Println("seeing if state works", p.state, potentialState.TargetState)
+
 		transitioned := true
 		if potentialState.DoTransition != nil {
 			transitioned = potentialState.DoTransition(ctx, p)
@@ -139,6 +149,7 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 		if !transitioned {
 			continue
 		}
+		log.Println("transitioned", p.state, potentialState.TargetState)
 
 		transition := &contracts.StateMachineTransition{
 			Id:      uuid.NewString(),
@@ -190,11 +201,17 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 				}
 
 				// update latest state in firestore if someone has looked at the site in the last 30 seconds
-				p.mu.Lock()
+
+				p.settingsMu.Lock()
 				latestViewing := p.settings.LastTimeUserCheckingMs
+				p.settingsMu.Unlock()
+
+				p.latestReadingMu.Lock()
 				latestReading := p.latestReadings[p.latestReadingPtr]
+				p.latestReadingMu.Unlock()
+
 				plugID := p.plugID
-				p.mu.Unlock()
+
 				if latestViewing > time.Now().UnixMilli()-30*1000 {
 					log.Println("updating latest readings in firestore", plugID, latestViewing, time.Now().UnixMilli()-30*1000)
 					go func() {
@@ -203,6 +220,7 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 						})
 					}()
 				}
+
 			case <-ctx.Done():
 				log.Println("context done for plug", p.plugID)
 				return
@@ -218,7 +236,7 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 	// do one request to get all the plugsettings and initialise the map
 	allPlugSettings, err := plugSettingsQuery.Documents(ctx).GetAll()
 	if err != nil {
-		log.Fatalf("failed to get plug settings", err)
+		log.Fatalf("failed to get plug settings: %+v", err)
 	}
 	if len(allPlugSettings) != 1 {
 		log.Fatalf("should have exactly 1 plugsetting doc, got %d", len(allPlugSettings))
@@ -258,11 +276,11 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 					continue
 				}
 
-				p.mu.Lock()
+				p.settingsMu.Lock()
 				p.settings.CurrentLimit = updatedPlugSetting.CurrentLimit
 				p.settings.LastTimeUserCheckingMs = updatedPlugSetting.LastTimeUserCheckingMs
 				p.settings.Name = updatedPlugSetting.Name
-				p.mu.Unlock()
+				p.settingsMu.Unlock()
 
 			}
 		}
@@ -307,7 +325,6 @@ func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contra
 }
 
 func (p *PlugStateMachine) performTransition(ctx context.Context, transition *contracts.StateMachineTransition) error {
-	log.Println("got state transition", transition.GetState(), transition.Reason)
 
 	p.state = transition.GetState()
 	nextStatePtr := (p.latestStatePtr + 1) % statesToStore
@@ -324,7 +341,6 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 		AddTag("plug_id", p.plugID).
 		AddField("state", transition.GetState().String()).
 		AddField("reason", transition.GetReason())
-
 	p.influxAPI.WritePoint(point)
 
 	return err

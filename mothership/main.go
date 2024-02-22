@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// Init InfluxDB client
-	options := influxdb2.DefaultOptions().SetBatchSize(10).SetFlushInterval(10)
+	options := influxdb2.DefaultOptions().SetBatchSize(1000).SetFlushInterval(60000)
 	influxTokenBytes, err := os.ReadFile("influx.key")
 	if err != nil {
 		logger.Error("Problem reading influx token", "err", err)

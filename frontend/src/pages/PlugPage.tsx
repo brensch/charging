@@ -235,7 +235,7 @@ const PlugPage = () => {
                 style={{ padding: 16, borderBottom: "2px solid black" }}
               >
                 <Typography variant="h6" style={{ fontWeight: "bold" }}>
-                  Current Plug State
+                  Current Plug State {plugStatus.latest_reading?.state}
                 </Typography>
               </Grid>
               <Grid

@@ -33,11 +33,11 @@ func (s *StateMachineCollection) AddStateMachine(stateMachine *PlugStateMachine)
 
 func (p *PlugStateMachine) WriteReading(ctx context.Context, reading *contracts.Reading) error {
 	// write latest reading to pointer location in rolling slice
-	p.mu.Lock()
+	p.latestReadingMu.Lock()
 	nextPtr := (p.latestReadingPtr + 1) % secondsToStore
 	p.latestReadings[nextPtr] = reading
 	p.latestReadingPtr = nextPtr
-	p.mu.Unlock()
+	p.latestReadingMu.Unlock()
 
 	// async so ok to do in telemetry loop (ie fast)
 	return p.writeReadingToDB(ctx, reading)
