@@ -15,13 +15,19 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					return p.currentOwner == ""
+					p.detailsMu.Lock()
+					owner := p.details.CurrentOwner
+					p.detailsMu.Unlock()
+					return owner == ""
 				},
 			},
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_ADDED,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					return p.currentOwner != ""
+					p.detailsMu.Lock()
+					owner := p.details.CurrentOwner
+					p.detailsMu.Unlock()
+					return owner != ""
 				},
 				ConditionExplanation: "can start with account on mothership startup if went offline during session",
 			},
@@ -30,7 +36,10 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_ADDED,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					return p.currentOwner != ""
+					p.detailsMu.Lock()
+					owner := p.details.CurrentOwner
+					p.detailsMu.Unlock()
+					return owner != ""
 				},
 				AsyncOnly: true,
 			},
@@ -44,7 +53,11 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_IN_QUEUE,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					p.queueEnteredMs = time.Now().UnixMilli()
+					err := p.SetQueueEnteredMs(ctx, time.Now().UnixMilli())
+					if err != nil {
+						log.Println("failed to set queue entered time", err)
+						return false
+					}
 					return true
 				},
 			},
@@ -53,9 +66,12 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_REQUESTED,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					p.detailsMu.Lock()
+					queueEnteredTime := p.details.ChargeStartTimeMs
+					p.detailsMu.Unlock()
 					// TODO: gigabrain queue logic.
 					// currently just wait 5 seconds
-					return time.Now().UnixMilli()-p.queueEnteredMs > 5000
+					return time.Now().UnixMilli()-queueEnteredTime > 5000
 				},
 			},
 		},
@@ -95,7 +111,11 @@ var (
 					chargeCommenced := latestReading.Current > 0
 
 					if chargeCommenced {
-						p.chargeStartTime = time.Now()
+						err := p.SetChargeStartTimeMs(ctx, time.Now().UnixMilli())
+						if err != nil {
+							log.Println("failed to set charge start time", err)
+							return false
+						}
 					}
 
 					return chargeCommenced
@@ -115,9 +135,14 @@ var (
 					latestReading := p.latestReadings[p.latestReadingPtr]
 					p.latestReadingMu.Unlock()
 
+					p.detailsMu.Lock()
+					chargeStartTimeMS := p.details.ChargeStartTimeMs
+					p.detailsMu.Unlock()
+
 					// if it never goes to 0, also stop after 1 minute
 					// TODO: remove time limitation
-					return latestReading.Current == 0 || time.Now().After(p.chargeStartTime.Add(1*time.Minute))
+					return latestReading.Current == 0 ||
+						time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(1*time.Minute))
 				},
 			},
 		},
@@ -136,8 +161,12 @@ var (
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
 
-					p.currentOwner = ""
-					err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
+					err := p.SetOwner(ctx, "")
+					if err != nil {
+						log.Println("failed to clear owner", err)
+						return false
+					}
+					err = p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
 					if err != nil {
 						log.Println("got error requesting local state", err)
 						p.Error(err)

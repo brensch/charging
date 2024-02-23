@@ -34,15 +34,11 @@ type PlugStateMachine struct {
 	stateMu        sync.Mutex
 	latestStatePtr int
 	state          contracts.StateMachineState
-	transitions    []*contracts.StateMachineTransition
-	currentOwner   string
+	// TODO: populate this fully from query on startup
+	transitions []*contracts.StateMachineTransition
 
-	// this needs to be in the firestore object for resuming
-	chargeStartTime time.Time
-
-	// QUEUE
-	queuePosition  int64
-	queueEnteredMs int64
+	detailsMu sync.Mutex
+	details   *contracts.StateMachineDetails
 
 	errMu sync.Mutex
 	err   error
@@ -56,28 +52,30 @@ type PlugStateMachine struct {
 	siteTopic *pubsub.Topic
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, siteID, plugID string) *PlugStateMachine {
-	log.Println("initialising plug", plugID)
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, status *contracts.PlugStatus) *PlugStateMachine {
+	log.Println("initialising plug", status.Id)
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
 
-	receiveTopicName := fmt.Sprintf("commands_%s", siteID)
+	receiveTopicName := fmt.Sprintf("commands_%s", status.SiteId)
 
 	topic := pubsubClient.Topic(receiveTopicName)
 	transitions := make([]*contracts.StateMachineTransition, statesToStore)
 
 	stateMachine := &PlugStateMachine{
-		plugID:           plugID,
+		plugID:           status.Id,
 		latestReadingPtr: -1,
 		latestReadings:   latestReadings,
 		transitions:      transitions,
 		siteTopic:        topic,
-		siteID:           siteID,
+		siteID:           status.SiteId,
 		influxAPI:        influx,
+		details:          status.StateMachineDetails,
 		fs:               fs,
+		state:            status.State.State,
 	}
 
-	err := setup.EnsurePlugIsInFirestore(ctx, fs, siteID, plugID)
+	err := setup.EnsurePlugIsInFirestore(ctx, fs, status.SiteId, status.Id)
 	if err != nil {
 		log.Fatalf("problem ensuring plug doc: %+v", err)
 	}
@@ -114,10 +112,79 @@ func (p *PlugStateMachine) State() contracts.StateMachineState {
 	return p.state
 }
 
-func (p *PlugStateMachine) SetCurrentOwner(owner string) {
-	p.stateMu.Lock()
-	p.currentOwner = owner
-	p.stateMu.Unlock()
+func (p *PlugStateMachine) SetOwner(ctx context.Context, owner string) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.current_owner", Value: owner},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.CurrentOwner = owner
+
+	return nil
+}
+
+func (p *PlugStateMachine) SetChargeStartTimeMs(ctx context.Context, chargeStartTimeMs int64) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.charge_start_time_ms", Value: chargeStartTimeMs},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.ChargeStartTimeMs = chargeStartTimeMs
+
+	return nil
+}
+
+func (p *PlugStateMachine) SetQueuePosition(ctx context.Context, queuePosition int64) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.queue_position", Value: queuePosition},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.QueuePosition = queuePosition
+
+	return nil
+}
+
+func (p *PlugStateMachine) SetQueueEnteredMs(ctx context.Context, queueEnteredMs int64) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.queue_entered_ms", Value: queueEnteredMs},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.QueueEnteredMs = queueEnteredMs
+
+	return nil
+}
+
+func (p *PlugStateMachine) SetError(ctx context.Context, error string) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.error", Value: error},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.Error = error
+
+	return nil
 }
 
 func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState) bool {
@@ -126,7 +193,6 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 	log.Println("got lock")
 
 	defer p.stateMu.Unlock()
-	defer fmt.Println("finished transition")
 
 	log.Println("checking transition for ", p.plugID, p.state, targetState)
 
@@ -151,12 +217,16 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 		}
 		log.Println("transitioned", p.state, potentialState.TargetState)
 
+		p.detailsMu.Lock()
+		owner := p.details.CurrentOwner
+		p.detailsMu.Unlock()
+
 		transition := &contracts.StateMachineTransition{
 			Id:      uuid.NewString(),
 			State:   potentialState.TargetState,
 			Reason:  potentialState.Reason,
 			PlugId:  p.plugID,
-			OwnerId: p.currentOwner,
+			OwnerId: owner,
 			TimeMs:  time.Now().UnixMilli(),
 		}
 

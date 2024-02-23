@@ -5,14 +5,6 @@ import _m0 from "protobufjs/minimal";
 export const protobufPackage = "contracts";
 
 export enum StateMachineState {
-  /**
-   * StateMachineState_INITIALISING - StateMachineState_ON = 1;
-   * StateMachineState_OFF = 2;
-   * StateMachineState_USER_REQUESTED_ON = 3;
-   * StateMachineState_USER_REQUESTED_OFF = 4;
-   * StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
-   * StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
-   */
   StateMachineState_INITIALISING = 0,
   StateMachineState_ACCOUNT_NULL = 7,
   StateMachineState_ACCOUNT_ADDED = 8,
@@ -20,7 +12,6 @@ export enum StateMachineState {
   StateMachineState_IN_QUEUE = 10,
   StateMachineState_SENSING_START_REQUESTED = 11,
   StateMachineState_SENSING_START_ISSUED_LOCALLY = 12,
-  /** StateMachineState_SENSING_CHARGE - StateMachineState_SENSING_START_ACKNOWLEDGED = 13; */
   StateMachineState_SENSING_CHARGE = 14,
   StateMachineState_CHARGING = 15,
   StateMachineState_CHARGE_COMPLETE = 16,
@@ -431,6 +422,15 @@ export interface PlugStatus {
   site_id: string;
   state: StateMachineTransition | undefined;
   latest_reading: Reading | undefined;
+  state_machine_details: StateMachineDetails | undefined;
+}
+
+export interface StateMachineDetails {
+  current_owner: string;
+  charge_start_time_ms: number;
+  queue_position: number;
+  queue_entered_ms: number;
+  error: string;
 }
 
 export interface Reading {
@@ -1378,7 +1378,7 @@ export const UserRequestResult = {
 };
 
 function createBasePlugStatus(): PlugStatus {
-  return { id: "", site_id: "", state: undefined, latest_reading: undefined };
+  return { id: "", site_id: "", state: undefined, latest_reading: undefined, state_machine_details: undefined };
 }
 
 export const PlugStatus = {
@@ -1394,6 +1394,9 @@ export const PlugStatus = {
     }
     if (message.latest_reading !== undefined) {
       Reading.encode(message.latest_reading, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.state_machine_details !== undefined) {
+      StateMachineDetails.encode(message.state_machine_details, writer.uint32(42).fork()).ldelim();
     }
     return writer;
   },
@@ -1433,6 +1436,13 @@ export const PlugStatus = {
 
           message.latest_reading = Reading.decode(reader, reader.uint32());
           continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.state_machine_details = StateMachineDetails.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1448,6 +1458,9 @@ export const PlugStatus = {
       site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
       state: isSet(object.state) ? StateMachineTransition.fromJSON(object.state) : undefined,
       latest_reading: isSet(object.latest_reading) ? Reading.fromJSON(object.latest_reading) : undefined,
+      state_machine_details: isSet(object.state_machine_details)
+        ? StateMachineDetails.fromJSON(object.state_machine_details)
+        : undefined,
     };
   },
 
@@ -1465,6 +1478,9 @@ export const PlugStatus = {
     if (message.latest_reading !== undefined) {
       obj.latest_reading = Reading.toJSON(message.latest_reading);
     }
+    if (message.state_machine_details !== undefined) {
+      obj.state_machine_details = StateMachineDetails.toJSON(message.state_machine_details);
+    }
     return obj;
   },
 
@@ -1481,6 +1497,129 @@ export const PlugStatus = {
     message.latest_reading = (object.latest_reading !== undefined && object.latest_reading !== null)
       ? Reading.fromPartial(object.latest_reading)
       : undefined;
+    message.state_machine_details =
+      (object.state_machine_details !== undefined && object.state_machine_details !== null)
+        ? StateMachineDetails.fromPartial(object.state_machine_details)
+        : undefined;
+    return message;
+  },
+};
+
+function createBaseStateMachineDetails(): StateMachineDetails {
+  return { current_owner: "", charge_start_time_ms: 0, queue_position: 0, queue_entered_ms: 0, error: "" };
+}
+
+export const StateMachineDetails = {
+  encode(message: StateMachineDetails, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.current_owner !== "") {
+      writer.uint32(10).string(message.current_owner);
+    }
+    if (message.charge_start_time_ms !== 0) {
+      writer.uint32(16).int64(message.charge_start_time_ms);
+    }
+    if (message.queue_position !== 0) {
+      writer.uint32(24).int64(message.queue_position);
+    }
+    if (message.queue_entered_ms !== 0) {
+      writer.uint32(32).int64(message.queue_entered_ms);
+    }
+    if (message.error !== "") {
+      writer.uint32(42).string(message.error);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): StateMachineDetails {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStateMachineDetails();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.current_owner = reader.string();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.charge_start_time_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.queue_position = longToNumber(reader.int64() as Long);
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.queue_entered_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.error = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StateMachineDetails {
+    return {
+      current_owner: isSet(object.current_owner) ? globalThis.String(object.current_owner) : "",
+      charge_start_time_ms: isSet(object.charge_start_time_ms) ? globalThis.Number(object.charge_start_time_ms) : 0,
+      queue_position: isSet(object.queue_position) ? globalThis.Number(object.queue_position) : 0,
+      queue_entered_ms: isSet(object.queue_entered_ms) ? globalThis.Number(object.queue_entered_ms) : 0,
+      error: isSet(object.error) ? globalThis.String(object.error) : "",
+    };
+  },
+
+  toJSON(message: StateMachineDetails): unknown {
+    const obj: any = {};
+    if (message.current_owner !== "") {
+      obj.current_owner = message.current_owner;
+    }
+    if (message.charge_start_time_ms !== 0) {
+      obj.charge_start_time_ms = Math.round(message.charge_start_time_ms);
+    }
+    if (message.queue_position !== 0) {
+      obj.queue_position = Math.round(message.queue_position);
+    }
+    if (message.queue_entered_ms !== 0) {
+      obj.queue_entered_ms = Math.round(message.queue_entered_ms);
+    }
+    if (message.error !== "") {
+      obj.error = message.error;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<StateMachineDetails>, I>>(base?: I): StateMachineDetails {
+    return StateMachineDetails.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<StateMachineDetails>, I>>(object: I): StateMachineDetails {
+    const message = createBaseStateMachineDetails();
+    message.current_owner = object.current_owner ?? "";
+    message.charge_start_time_ms = object.charge_start_time_ms ?? 0;
+    message.queue_position = object.queue_position ?? 0;
+    message.queue_entered_ms = object.queue_entered_ms ?? 0;
+    message.error = object.error ?? "";
     return message;
   },
 };

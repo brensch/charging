@@ -107,14 +107,23 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 			log.Printf("Failed to read message: %v", err)
 			return
 		}
-		fmt.Println("received device announcement", deviceAnnouncement.SiteId)
+		log.Println("received device announcement", deviceAnnouncement.SiteId)
 
 		for _, plugID := range deviceAnnouncement.PlugIds {
 			_, ok := stateMachines.GetStateMachine(plugID)
 			if ok {
 				continue
 			}
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, deviceAnnouncement.SiteId, plugID))
+			initialStatus := &contracts.PlugStatus{
+				Id:     plugID,
+				SiteId: deviceAnnouncement.SiteId,
+				State: &contracts.StateMachineTransition{
+					// don't need other fields, used solely to indicate to state machine
+					State: contracts.StateMachineState_StateMachineState_INITIALISING,
+				},
+				StateMachineDetails: &contracts.StateMachineDetails{},
+			}
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, initialStatus))
 		}
 
 		// send empty response on ack channel to site
@@ -186,8 +195,13 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				continue
 			}
 
-			// bit of a cludge here, not sure how to unify this with state machine without accepting inputs
-			plugStateMachine.SetCurrentOwner(userRequest.UserId)
+			// // bit of a cludge here, not sure how to unify this with state machine without accepting inputs
+			// plugStateMachine.SetCurrentOwner(userRequest.UserId)
+			err = plugStateMachine.SetOwner(ctx, userRequest.UserId)
+			if err != nil {
+				fmt.Printf("error setting owner: %v\n", err)
+				continue
+			}
 
 			// try the transition
 			transitioned := plugStateMachine.Transition(ctx, statemachine.StateMap, userRequest.RequestedState)

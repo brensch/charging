@@ -9,7 +9,9 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
+	"github.com/brensch/charging/electrical/demo"
 	"github.com/brensch/charging/electrical/shelly"
+	"github.com/brensch/charging/electrical/sonoff"
 	"github.com/brensch/charging/gen/go/contracts"
 
 	"cloud.google.com/go/pubsub"
@@ -44,8 +46,8 @@ func main() {
 	// discover plugs and fuzes
 	discoverers := []electrical.Discoverer{
 		shelly.InitShellyDiscoverer(siteID),
-		// sonoff.InitSonoffDiscoverer(siteID),
-		// demo.InitDiscoverer(siteID),
+		sonoff.InitSonoffDiscoverer(siteID),
+		demo.InitDiscoverer(siteID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 

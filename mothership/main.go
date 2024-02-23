@@ -88,7 +88,7 @@ func main() {
 		wg.Add(1)
 		go func(plugStatus *contracts.PlugStatus) {
 			defer wg.Done()
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus.GetSiteId(), plugStatus.GetId()))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus))
 		}(plugStatus)
 
 	}

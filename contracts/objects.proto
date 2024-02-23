@@ -15,20 +15,12 @@ message FuzeSettings {
 
 enum StateMachineState {
   StateMachineState_INITIALISING = 0;
-  // StateMachineState_ON = 1;
-  // StateMachineState_OFF = 2;
-  // StateMachineState_USER_REQUESTED_ON = 3;
-  // StateMachineState_USER_REQUESTED_OFF = 4;
-  // StateMachineState_LOCAL_COMMAND_ISSUED_ON = 5;
-  // StateMachineState_LOCAL_COMMAND_ISSUED_OFF = 6;
-
   StateMachineState_ACCOUNT_NULL = 7;
   StateMachineState_ACCOUNT_ADDED = 8;
   StateMachineState_ENTERING_QUEUE = 9;
   StateMachineState_IN_QUEUE = 10;
   StateMachineState_SENSING_START_REQUESTED = 11;
   StateMachineState_SENSING_START_ISSUED_LOCALLY = 12;
-  // StateMachineState_SENSING_START_ACKNOWLEDGED = 13;
   StateMachineState_SENSING_CHARGE = 14;
   StateMachineState_CHARGING = 15;
   StateMachineState_CHARGE_COMPLETE = 16;
@@ -114,6 +106,15 @@ message PlugStatus {
   string site_id = 2;
   StateMachineTransition state = 3;
   Reading latest_reading = 4;
+  StateMachineDetails state_machine_details = 5;
+}
+
+message StateMachineDetails {
+  string current_owner = 1;
+  int64 charge_start_time_ms = 2;
+  int64 queue_position = 3;
+  int64 queue_entered_ms = 4;
+  string error = 5;
 }
 
 enum RequestedState {
@@ -129,24 +130,11 @@ enum RequestedStateReason {
   RequestedStateReason_CREDIT = 3;
 }
 
-// message FuzeLocalState {
-//   string id = 1;
-//   double current = 2;
-//   FuzeState state = 3;
-// }
-
 enum FuzeState {
   FuzeState_UNKNOWN = 0;  // Default value, used as a placeholder
   FuzeState_OK = 1;
   FuzeState_LIMITING = 2;
 }
-
-// message PlugLocalState {
-//   string id = 1;
-//   Reading latest_reading = 2;
-//   string latest_command_id = 3;
-//   string latest_action_id = 4;
-// }
 
 enum ActualState {
   ActualState_UNKNOWN = 0;      // Default value, used as a placeholder
