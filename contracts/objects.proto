@@ -115,6 +115,7 @@ message StateMachineDetails {
   int64 queue_position = 3;
   int64 queue_entered_ms = 4;
   string error = 5;
+  string session_id = 6;
 }
 
 enum RequestedState {
@@ -171,4 +172,19 @@ message DeviceAnnouncement {
   string site_id = 1;
   repeated string plug_ids = 2;
   repeated string fuze_ids = 3;
+}
+
+enum SessionEventType {
+  SessionEventType_UNSPECIFIED = 0;
+  SessionEventType_START = 1;
+  SessionEventType_FINISH = 2;
+  SessionEventType_ABORT = 3;
+  // think of more as they come up
+}
+
+message SessionEvent {
+  string session_id = 1;
+  string plug_id = 2;
+  string user_id = 3;
+  SessionEventType event_type = 4;
 }

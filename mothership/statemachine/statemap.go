@@ -2,10 +2,13 @@ package statemachine
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
+	"github.com/brensch/charging/mothership/session"
+	"github.com/google/uuid"
 )
 
 var (
@@ -39,7 +42,23 @@ var (
 					p.detailsMu.Lock()
 					owner := p.details.CurrentOwner
 					p.detailsMu.Unlock()
-					return owner != ""
+
+					ownerExists := owner != ""
+					if !ownerExists {
+						return false
+					}
+
+					// create a new session
+					p.detailsMu.Lock()
+					p.details.SessionId = uuid.New().String()
+					p.detailsMu.Unlock()
+					err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_START)
+					if err != nil {
+						fmt.Println("got error updating session", err)
+						return false
+					}
+
+					return true
 				},
 				AsyncOnly: true,
 			},
@@ -109,6 +128,10 @@ var (
 					p.latestReadingMu.Unlock()
 
 					chargeCommenced := latestReading.Current > 0
+					// TODO: remove this dummy sleep in charge sense
+					if time.Now().After(time.UnixMilli(p.state.TimeMs + 5000)) {
+						chargeCommenced = true
+					}
 
 					if chargeCommenced {
 						err := p.SetChargeStartTimeMs(ctx, time.Now().UnixMilli())
@@ -161,12 +184,7 @@ var (
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
 
-					err := p.SetOwner(ctx, "")
-					if err != nil {
-						log.Println("failed to clear owner", err)
-						return false
-					}
-					err = p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
+					err := p.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
 					if err != nil {
 						log.Println("got error requesting local state", err)
 						p.Error(err)
@@ -180,6 +198,30 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
 				AsyncOnly:   true,
+				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+					// remove old session
+					err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_FINISH)
+					if err != nil {
+						fmt.Println("got error updating session", err)
+						return false
+					}
+					p.detailsMu.Lock()
+					sessionToCheck := p.details.SessionId
+					p.details.SessionId = ""
+					p.detailsMu.Unlock()
+					err = p.SetOwner(ctx, "")
+					if err != nil {
+						log.Println("failed to clear owner", err)
+						return false
+					}
+
+					err = session.CalculateSession(ctx, p.influxQueryAPI, sessionToCheck)
+					if err != nil {
+						log.Println("failed to get session", err)
+						return false
+					}
+					return true
+				},
 			},
 		},
 	}

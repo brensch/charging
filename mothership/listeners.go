@@ -71,7 +71,7 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 			if !ok {
 				fmt.Printf("reading: %+v", reading)
 				// This should not be happening. may downgrade from fatal though
-				log.Fatal("yooo", reading.PlugId, reading.Current)
+				log.Printf("Got a reading from a device not in the list. should not happen: %s", reading.PlugId)
 				return
 			}
 
@@ -93,7 +93,7 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 	panic(err)
 }
 
-func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, stateMachines *statemachine.StateMachineCollection) {
+func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, ifdbQuery influxdb2api.QueryAPI, stateMachines *statemachine.StateMachineCollection) {
 
 	_, sub, err := common.EnsureTopicAndSub(ctx, ps, common.TopicNameNewDevices)
 	if err != nil {
@@ -121,9 +121,8 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 					// don't need other fields, used solely to indicate to state machine
 					State: contracts.StateMachineState_StateMachineState_INITIALISING,
 				},
-				StateMachineDetails: &contracts.StateMachineDetails{},
 			}
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, initialStatus))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, ifdbQuery, initialStatus))
 		}
 
 		// send empty response on ack channel to site
@@ -196,7 +195,6 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 			}
 
 			// // bit of a cludge here, not sure how to unify this with state machine without accepting inputs
-			// plugStateMachine.SetCurrentOwner(userRequest.UserId)
 			err = plugStateMachine.SetOwner(ctx, userRequest.UserId)
 			if err != nil {
 				fmt.Printf("error setting owner: %v\n", err)

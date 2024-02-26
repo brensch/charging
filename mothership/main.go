@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -32,7 +33,7 @@ func main() {
 
 	// Initialize a structured logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	logger.Info("initialising", "cool", "story")
+	logger.Info("initialising")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -58,7 +59,8 @@ func main() {
 	}
 	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
 	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
-
+	ifClientRead := ifClient.QueryAPI(influxOrg)
+	_ = ifClientRead
 	// Init Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
@@ -75,7 +77,7 @@ func main() {
 	plugStatuses, err := plugStatusQuery.Documents(ctx).GetAll()
 	if err != nil {
 		logger.Error("couldn't get plug statuses", "err", err)
-		panic("ouldn't get plug statuses") // Halt the program
+		panic("couldn't get plug statuses") // Halt the program
 
 	}
 	var wg sync.WaitGroup
@@ -88,17 +90,19 @@ func main() {
 		wg.Add(1)
 		go func(plugStatus *contracts.PlugStatus) {
 			defer wg.Done()
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, plugStatus))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, ifClientRead, plugStatus))
 		}(plugStatus)
 
 	}
 
 	wg.Wait()
 
-	go ListenForNewDevices(ctx, fs, ps, ifClientWriteSites, stateMachines)
+	go ListenForNewDevices(ctx, fs, ps, ifClientWriteSites, ifClientRead, stateMachines)
 	go ListenForUserRequests(ctx, fs, stateMachines)
 	go ListenForDeviceCommandResponses(ctx, fs, ps, stateMachines)
 	go ListenForTelemetry(ctx, fs, ps, ifClientWriteSites, stateMachines)
+
+	fmt.Println("listening for cancels")
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)

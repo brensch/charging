@@ -121,6 +121,14 @@ func ensurePlugStatusDoc(ctx context.Context, fs *firestore.Client, siteID, plug
 			PlugId:      plugID,
 			// FuzeId: , //TODO: don't think i need this here. should confirm
 		},
+		StateMachineDetails: &contracts.StateMachineDetails{
+			CurrentOwner:      "",
+			ChargeStartTimeMs: 0,
+			QueuePosition:     0,
+			QueueEnteredMs:    0,
+			Error:             "",
+			SessionId:         "",
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create PlugStatus document: %v", err)

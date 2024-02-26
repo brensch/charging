@@ -15,6 +15,8 @@ type Plug struct {
 	Mac          string
 	SwitchNumber int
 
+	On bool
+
 	siteID string
 }
 
@@ -32,18 +34,28 @@ func (s *Plug) SiteID() string {
 
 func (s *Plug) SetState(req contracts.RequestedState) error {
 	log.Println("setting demo plug state: ", req.String())
+	s.On = req == contracts.RequestedState_RequestedState_ON
 	return nil
 }
 
 func (s *Plug) GetReading() (*contracts.Reading, error) {
 
+	timestamp := time.Now().UnixMilli() // Current timestamp
+	plugId := s.ID()
+
+	state := contracts.ActualState_ActualState_ON
+	if !s.On {
+		state = contracts.ActualState_ActualState_OFF
+		return &contracts.Reading{
+			State:       state,
+			TimestampMs: timestamp,
+			PlugId:      plugId,
+		}, nil
+	}
 	// Generate random values for each field
-	state := contracts.ActualState(rand.Intn(4) + 1)
 	current := rand.Float64() * 100     // Random current in watts
 	voltage := rand.Float64() * 240     // Random voltage in volts
 	powerFactor := rand.Float64()*2 - 1 // Random power factor between -1 and 1
-	timestamp := time.Now().UnixMilli() // Current timestamp
-	plugId := s.ID()
 
 	return &contracts.Reading{
 		State:       state,

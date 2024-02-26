@@ -340,6 +340,52 @@ export function actualStateToJSON(object: ActualState): string {
   }
 }
 
+export enum SessionEventType {
+  SessionEventType_UNSPECIFIED = 0,
+  SessionEventType_START = 1,
+  SessionEventType_FINISH = 2,
+  /** SessionEventType_ABORT - think of more as they come up */
+  SessionEventType_ABORT = 3,
+  UNRECOGNIZED = -1,
+}
+
+export function sessionEventTypeFromJSON(object: any): SessionEventType {
+  switch (object) {
+    case 0:
+    case "SessionEventType_UNSPECIFIED":
+      return SessionEventType.SessionEventType_UNSPECIFIED;
+    case 1:
+    case "SessionEventType_START":
+      return SessionEventType.SessionEventType_START;
+    case 2:
+    case "SessionEventType_FINISH":
+      return SessionEventType.SessionEventType_FINISH;
+    case 3:
+    case "SessionEventType_ABORT":
+      return SessionEventType.SessionEventType_ABORT;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return SessionEventType.UNRECOGNIZED;
+  }
+}
+
+export function sessionEventTypeToJSON(object: SessionEventType): string {
+  switch (object) {
+    case SessionEventType.SessionEventType_UNSPECIFIED:
+      return "SessionEventType_UNSPECIFIED";
+    case SessionEventType.SessionEventType_START:
+      return "SessionEventType_START";
+    case SessionEventType.SessionEventType_FINISH:
+      return "SessionEventType_FINISH";
+    case SessionEventType.SessionEventType_ABORT:
+      return "SessionEventType_ABORT";
+    case SessionEventType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 /**
  * FuzeGroup represents a collection of plugs that need to obey an electrical
  * limit, ie all four plugs in a shelly 4pro.
@@ -431,6 +477,7 @@ export interface StateMachineDetails {
   queue_position: number;
   queue_entered_ms: number;
   error: string;
+  session_id: string;
 }
 
 export interface Reading {
@@ -463,6 +510,13 @@ export interface DeviceAnnouncement {
   site_id: string;
   plug_ids: string[];
   fuze_ids: string[];
+}
+
+export interface SessionEvent {
+  session_id: string;
+  plug_id: string;
+  user_id: string;
+  event_type: SessionEventType;
 }
 
 function createBaseFuzeSettings(): FuzeSettings {
@@ -1506,7 +1560,14 @@ export const PlugStatus = {
 };
 
 function createBaseStateMachineDetails(): StateMachineDetails {
-  return { current_owner: "", charge_start_time_ms: 0, queue_position: 0, queue_entered_ms: 0, error: "" };
+  return {
+    current_owner: "",
+    charge_start_time_ms: 0,
+    queue_position: 0,
+    queue_entered_ms: 0,
+    error: "",
+    session_id: "",
+  };
 }
 
 export const StateMachineDetails = {
@@ -1525,6 +1586,9 @@ export const StateMachineDetails = {
     }
     if (message.error !== "") {
       writer.uint32(42).string(message.error);
+    }
+    if (message.session_id !== "") {
+      writer.uint32(50).string(message.session_id);
     }
     return writer;
   },
@@ -1571,6 +1635,13 @@ export const StateMachineDetails = {
 
           message.error = reader.string();
           continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.session_id = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1587,6 +1658,7 @@ export const StateMachineDetails = {
       queue_position: isSet(object.queue_position) ? globalThis.Number(object.queue_position) : 0,
       queue_entered_ms: isSet(object.queue_entered_ms) ? globalThis.Number(object.queue_entered_ms) : 0,
       error: isSet(object.error) ? globalThis.String(object.error) : "",
+      session_id: isSet(object.session_id) ? globalThis.String(object.session_id) : "",
     };
   },
 
@@ -1607,6 +1679,9 @@ export const StateMachineDetails = {
     if (message.error !== "") {
       obj.error = message.error;
     }
+    if (message.session_id !== "") {
+      obj.session_id = message.session_id;
+    }
     return obj;
   },
 
@@ -1620,6 +1695,7 @@ export const StateMachineDetails = {
     message.queue_position = object.queue_position ?? 0;
     message.queue_entered_ms = object.queue_entered_ms ?? 0;
     message.error = object.error ?? "";
+    message.session_id = object.session_id ?? "";
     return message;
   },
 };
@@ -2021,6 +2097,110 @@ export const DeviceAnnouncement = {
     message.site_id = object.site_id ?? "";
     message.plug_ids = object.plug_ids?.map((e) => e) || [];
     message.fuze_ids = object.fuze_ids?.map((e) => e) || [];
+    return message;
+  },
+};
+
+function createBaseSessionEvent(): SessionEvent {
+  return { session_id: "", plug_id: "", user_id: "", event_type: 0 };
+}
+
+export const SessionEvent = {
+  encode(message: SessionEvent, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.session_id !== "") {
+      writer.uint32(10).string(message.session_id);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(18).string(message.plug_id);
+    }
+    if (message.user_id !== "") {
+      writer.uint32(26).string(message.user_id);
+    }
+    if (message.event_type !== 0) {
+      writer.uint32(32).int32(message.event_type);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): SessionEvent {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSessionEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.session_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.user_id = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.event_type = reader.int32() as any;
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SessionEvent {
+    return {
+      session_id: isSet(object.session_id) ? globalThis.String(object.session_id) : "",
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      user_id: isSet(object.user_id) ? globalThis.String(object.user_id) : "",
+      event_type: isSet(object.event_type) ? sessionEventTypeFromJSON(object.event_type) : 0,
+    };
+  },
+
+  toJSON(message: SessionEvent): unknown {
+    const obj: any = {};
+    if (message.session_id !== "") {
+      obj.session_id = message.session_id;
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.user_id !== "") {
+      obj.user_id = message.user_id;
+    }
+    if (message.event_type !== 0) {
+      obj.event_type = sessionEventTypeToJSON(message.event_type);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SessionEvent>, I>>(base?: I): SessionEvent {
+    return SessionEvent.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SessionEvent>, I>>(object: I): SessionEvent {
+    const message = createBaseSessionEvent();
+    message.session_id = object.session_id ?? "";
+    message.plug_id = object.plug_id ?? "";
+    message.user_id = object.user_id ?? "";
+    message.event_type = object.event_type ?? 0;
     return message;
   },
 };

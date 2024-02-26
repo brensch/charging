@@ -31,11 +31,8 @@ type PlugStateMachine struct {
 	latestReadingPtr int
 	latestReadings   []*contracts.Reading
 
-	stateMu        sync.Mutex
-	latestStatePtr int
-	state          contracts.StateMachineState
-	// TODO: populate this fully from query on startup
-	transitions []*contracts.StateMachineTransition
+	stateMu sync.Mutex
+	state   *contracts.StateMachineTransition
 
 	detailsMu sync.Mutex
 	details   *contracts.StateMachineDetails
@@ -46,13 +43,14 @@ type PlugStateMachine struct {
 	settingsMu sync.Mutex
 	settings   *contracts.PlugSettings
 
-	influxAPI influxdb2api.WriteAPI
-	fs        *firestore.Client
+	influxWriteAPI influxdb2api.WriteAPI
+	influxQueryAPI influxdb2api.QueryAPI
+	fs             *firestore.Client
 
 	siteTopic *pubsub.Topic
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influx influxdb2api.WriteAPI, status *contracts.PlugStatus) *PlugStateMachine {
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influxWrite influxdb2api.WriteAPI, influxQuery influxdb2api.QueryAPI, status *contracts.PlugStatus) *PlugStateMachine {
 	log.Println("initialising plug", status.Id)
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
@@ -60,19 +58,19 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 	receiveTopicName := fmt.Sprintf("commands_%s", status.SiteId)
 
 	topic := pubsubClient.Topic(receiveTopicName)
-	transitions := make([]*contracts.StateMachineTransition, statesToStore)
 
 	stateMachine := &PlugStateMachine{
 		plugID:           status.Id,
 		latestReadingPtr: -1,
 		latestReadings:   latestReadings,
-		transitions:      transitions,
 		siteTopic:        topic,
 		siteID:           status.SiteId,
-		influxAPI:        influx,
-		details:          status.StateMachineDetails,
-		fs:               fs,
-		state:            status.State.State,
+		details:          &contracts.StateMachineDetails{}, // no need to init to zero for internal use
+		state:            status.State,
+
+		fs:             fs,
+		influxWriteAPI: influxWrite,
+		influxQueryAPI: influxQuery,
 	}
 
 	err := setup.EnsurePlugIsInFirestore(ctx, fs, status.SiteId, status.Id)
@@ -106,7 +104,7 @@ func (p *PlugStateMachine) Error(err error) {
 	p.errMu.Unlock()
 }
 
-func (p *PlugStateMachine) State() contracts.StateMachineState {
+func (p *PlugStateMachine) State() *contracts.StateMachineTransition {
 	p.stateMu.Lock()
 	defer p.stateMu.Unlock()
 	return p.state
@@ -196,7 +194,7 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 
 	log.Println("checking transition for ", p.plugID, p.state, targetState)
 
-	potentialStates, ok := StateMap[p.state]
+	potentialStates, ok := StateMap[p.state.State]
 	if !ok {
 		log.Println("no such state in statemap, very odd", p.state)
 		return false
@@ -249,7 +247,7 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 		for {
 			select {
 			case <-ticker.C:
-				state, ok := StateMap[p.state]
+				state, ok := StateMap[p.state.State]
 				if !ok {
 					fmt.Println("no definition for state", p.state)
 					break
@@ -388,7 +386,7 @@ func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contra
 		AddField("current", reading.Current).
 		AddField("voltage", reading.Voltage).
 		AddField("power_factor", reading.PowerFactor)
-	p.influxAPI.WritePoint(point)
+	p.influxWriteAPI.WritePoint(point)
 
 	// keeping the error here in case the internals of this function end up throwing an error
 	return nil
@@ -396,10 +394,7 @@ func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contra
 
 func (p *PlugStateMachine) performTransition(ctx context.Context, transition *contracts.StateMachineTransition) error {
 
-	p.state = transition.GetState()
-	nextStatePtr := (p.latestStatePtr + 1) % statesToStore
-	p.transitions[nextStatePtr] = transition
-	p.latestStatePtr = nextStatePtr
+	p.state = transition
 
 	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
@@ -411,7 +406,35 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 		AddTag("plug_id", p.plugID).
 		AddField("state", transition.GetState().String()).
 		AddField("reason", transition.GetReason())
-	p.influxAPI.WritePoint(point)
+	p.influxWriteAPI.WritePoint(point)
+
+	return err
+}
+
+// this is just for doing the transition. setting of session id and user need to be done before this step.
+// unsetting user should be after.
+// TODO: slight jank detection, may want to separate objects out
+func (p *PlugStateMachine) updateSession(ctx context.Context, eventType contracts.SessionEventType) error {
+
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	if p.details.CurrentOwner == "" {
+		return fmt.Errorf("current owner not set. must be set when calling updatesession: %s", eventType)
+	}
+
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.session_id", Value: p.details.SessionId},
+	})
+	fmt.Println("writing session point")
+
+	point := influxdb2.NewPointWithMeasurement("sessions").
+		SetTime(time.Now()).
+		AddTag("site_id", p.siteID).
+		AddTag("plug_id", p.plugID).
+		AddField("state", eventType.String()).
+		AddField("owner", p.details.CurrentOwner).
+		AddField("session_id", p.details.SessionId)
+	p.influxWriteAPI.WritePoint(point)
 
 	return err
 }
