@@ -7,14 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/firestore"
-	"cloud.google.com/go/pubsub"
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/brensch/charging/mothership/setup"
+
+	"cloud.google.com/go/firestore"
+	"cloud.google.com/go/pubsub"
+	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
 	"github.com/google/uuid"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
 	"google.golang.org/api/iterator"
 )
 
@@ -43,14 +43,19 @@ type PlugStateMachine struct {
 	settingsMu sync.Mutex
 	settings   *contracts.PlugSettings
 
-	influxWriteAPI influxdb2api.WriteAPI
-	influxQueryAPI influxdb2api.QueryAPI
-	fs             *firestore.Client
+	pointsCHAN chan PointToAck
+	ifClient   *influxdb3.Client
+	fs         *firestore.Client
 
 	siteTopic *pubsub.Topic
 }
 
-func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, influxWrite influxdb2api.WriteAPI, influxQuery influxdb2api.QueryAPI, status *contracts.PlugStatus) *PlugStateMachine {
+type PointToAck struct {
+	Point *influxdb3.Point
+	Msg   *pubsub.Message
+}
+
+func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClient *pubsub.Client, ifClient *influxdb3.Client, pointsCHAN chan PointToAck, status *contracts.PlugStatus) *PlugStateMachine {
 	log.Println("initialising plug", status.Id)
 
 	latestReadings := make([]*contracts.Reading, secondsToStore)
@@ -68,9 +73,9 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 		details:          &contracts.StateMachineDetails{}, // no need to init to zero for internal use
 		state:            status.State,
 
-		fs:             fs,
-		influxWriteAPI: influxWrite,
-		influxQueryAPI: influxQuery,
+		fs:         fs,
+		pointsCHAN: pointsCHAN,
+		ifClient:   ifClient,
 	}
 
 	err := setup.EnsurePlugIsInFirestore(ctx, fs, status.SiteId, status.Id)
@@ -376,17 +381,20 @@ func (p *PlugStateMachine) RequestLocalState(ctx context.Context, state contract
 	return err
 }
 
-func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contracts.Reading) error {
-	point := influxdb2.NewPointWithMeasurement("plug_readings").
-		SetTime(time.UnixMilli(reading.GetTimestampMs())).
-		AddTag("site_id", p.siteID).
-		AddTag("plug_id", reading.PlugId).
-		AddTag("fuze_id", reading.FuzeId).
-		AddField("state", reading.State).
-		AddField("current", reading.Current).
-		AddField("voltage", reading.Voltage).
-		AddField("power_factor", reading.PowerFactor)
-	p.influxWriteAPI.WritePoint(point)
+func (p *PlugStateMachine) writeReadingToDB(ctx context.Context, reading *contracts.Reading, msg *pubsub.Message) error {
+	point := influxdb3.NewPointWithMeasurement("plug_readings").
+		SetTimestamp(time.UnixMilli(reading.GetTimestampMs())).
+		SetTag("site_id", p.siteID).
+		SetTag("plug_id", reading.PlugId).
+		SetTag("fuze_id", reading.FuzeId).
+		SetField("state", reading.State).
+		SetField("current", reading.Current).
+		SetField("voltage", reading.Voltage).
+		SetField("power_factor", reading.PowerFactor)
+	p.pointsCHAN <- PointToAck{
+		Point: point,
+		Msg:   msg,
+	}
 
 	// keeping the error here in case the internals of this function end up throwing an error
 	return nil
@@ -399,16 +407,18 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
 	})
+	if err != nil {
+		return err
+	}
 
-	point := influxdb2.NewPointWithMeasurement("plug_transitions").
-		SetTime(time.Now()).
-		AddTag("site_id", p.siteID).
-		AddTag("plug_id", p.plugID).
-		AddField("state", transition.GetState().String()).
-		AddField("reason", transition.GetReason())
-	p.influxWriteAPI.WritePoint(point)
+	point := influxdb3.NewPointWithMeasurement("plug_transitions").
+		SetTimestamp(time.Now()).
+		SetTag("site_id", p.siteID).
+		SetTag("plug_id", p.plugID).
+		SetField("state", transition.GetState().String()).
+		SetField("reason", transition.GetReason())
+	return p.ifClient.WritePoints(ctx, point)
 
-	return err
 }
 
 // this is just for doing the transition. setting of session id and user need to be done before this step.
@@ -425,16 +435,18 @@ func (p *PlugStateMachine) updateSession(ctx context.Context, eventType contract
 	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state_machine_details.session_id", Value: p.details.SessionId},
 	})
+	if err != nil {
+		return err
+	}
 	fmt.Println("writing session point")
 
-	point := influxdb2.NewPointWithMeasurement("sessions").
-		SetTime(time.Now()).
-		AddTag("site_id", p.siteID).
-		AddTag("plug_id", p.plugID).
-		AddField("state", eventType.String()).
-		AddField("owner", p.details.CurrentOwner).
-		AddField("session_id", p.details.SessionId)
-	p.influxWriteAPI.WritePoint(point)
+	point := influxdb3.NewPointWithMeasurement("sessions").
+		SetTimestamp(time.Now()).
+		SetTag("site_id", p.siteID).
+		SetTag("plug_id", p.plugID).
+		SetField("state", eventType.String()).
+		SetField("owner", p.details.CurrentOwner).
+		SetField("session_id", p.details.SessionId)
+	return p.ifClient.WritePoints(ctx, point)
 
-	return err
 }

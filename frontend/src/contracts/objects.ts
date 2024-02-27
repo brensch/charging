@@ -519,6 +519,17 @@ export interface SessionEvent {
   event_type: SessionEventType;
 }
 
+export interface Session {
+  session_id: string;
+  start_ms: number;
+  finish_ms: number;
+  plug_id: string;
+  site_id: string;
+  owner_id: string;
+  total_kwh: number;
+  cents: number;
+}
+
 function createBaseFuzeSettings(): FuzeSettings {
   return { id: "", name: "", current_limit: 0, site_id: "" };
 }
@@ -2201,6 +2212,170 @@ export const SessionEvent = {
     message.plug_id = object.plug_id ?? "";
     message.user_id = object.user_id ?? "";
     message.event_type = object.event_type ?? 0;
+    return message;
+  },
+};
+
+function createBaseSession(): Session {
+  return { session_id: "", start_ms: 0, finish_ms: 0, plug_id: "", site_id: "", owner_id: "", total_kwh: 0, cents: 0 };
+}
+
+export const Session = {
+  encode(message: Session, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.session_id !== "") {
+      writer.uint32(10).string(message.session_id);
+    }
+    if (message.start_ms !== 0) {
+      writer.uint32(16).int64(message.start_ms);
+    }
+    if (message.finish_ms !== 0) {
+      writer.uint32(24).int64(message.finish_ms);
+    }
+    if (message.plug_id !== "") {
+      writer.uint32(34).string(message.plug_id);
+    }
+    if (message.site_id !== "") {
+      writer.uint32(42).string(message.site_id);
+    }
+    if (message.owner_id !== "") {
+      writer.uint32(50).string(message.owner_id);
+    }
+    if (message.total_kwh !== 0) {
+      writer.uint32(57).double(message.total_kwh);
+    }
+    if (message.cents !== 0) {
+      writer.uint32(64).int64(message.cents);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Session {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSession();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.session_id = reader.string();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.start_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.finish_ms = longToNumber(reader.int64() as Long);
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.plug_id = reader.string();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.site_id = reader.string();
+          continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.owner_id = reader.string();
+          continue;
+        case 7:
+          if (tag !== 57) {
+            break;
+          }
+
+          message.total_kwh = reader.double();
+          continue;
+        case 8:
+          if (tag !== 64) {
+            break;
+          }
+
+          message.cents = longToNumber(reader.int64() as Long);
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Session {
+    return {
+      session_id: isSet(object.session_id) ? globalThis.String(object.session_id) : "",
+      start_ms: isSet(object.start_ms) ? globalThis.Number(object.start_ms) : 0,
+      finish_ms: isSet(object.finish_ms) ? globalThis.Number(object.finish_ms) : 0,
+      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
+      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
+      owner_id: isSet(object.owner_id) ? globalThis.String(object.owner_id) : "",
+      total_kwh: isSet(object.total_kwh) ? globalThis.Number(object.total_kwh) : 0,
+      cents: isSet(object.cents) ? globalThis.Number(object.cents) : 0,
+    };
+  },
+
+  toJSON(message: Session): unknown {
+    const obj: any = {};
+    if (message.session_id !== "") {
+      obj.session_id = message.session_id;
+    }
+    if (message.start_ms !== 0) {
+      obj.start_ms = Math.round(message.start_ms);
+    }
+    if (message.finish_ms !== 0) {
+      obj.finish_ms = Math.round(message.finish_ms);
+    }
+    if (message.plug_id !== "") {
+      obj.plug_id = message.plug_id;
+    }
+    if (message.site_id !== "") {
+      obj.site_id = message.site_id;
+    }
+    if (message.owner_id !== "") {
+      obj.owner_id = message.owner_id;
+    }
+    if (message.total_kwh !== 0) {
+      obj.total_kwh = message.total_kwh;
+    }
+    if (message.cents !== 0) {
+      obj.cents = Math.round(message.cents);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<Session>, I>>(base?: I): Session {
+    return Session.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<Session>, I>>(object: I): Session {
+    const message = createBaseSession();
+    message.session_id = object.session_id ?? "";
+    message.start_ms = object.start_ms ?? 0;
+    message.finish_ms = object.finish_ms ?? 0;
+    message.plug_id = object.plug_id ?? "";
+    message.site_id = object.site_id ?? "";
+    message.owner_id = object.owner_id ?? "";
+    message.total_kwh = object.total_kwh ?? 0;
+    message.cents = object.cents ?? 0;
     return message;
   },
 };

@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
@@ -16,7 +17,10 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+
+	// influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
+
 	"google.golang.org/api/option"
 )
 
@@ -33,6 +37,8 @@ func main() {
 
 	// Initialize a structured logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+
+	logger.Debug("hi")
 	logger.Info("initialising")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -40,32 +46,98 @@ func main() {
 	projectID, _, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {
 		logger.Error("Failed to get identity", "err", err)
-		panic("Failed to get identity") // Halt the program
+		panic("Failed to get identity")
 	}
 
 	// Init google pubsub client
 	ps, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
 		logger.Error("Failed to create client", "err", err)
-		panic("Failed to create client") // Halt the program
+		panic("Failed to create client")
 	}
 
 	// Init InfluxDB client
-	options := influxdb2.DefaultOptions().SetBatchSize(1000).SetFlushInterval(60000)
 	influxTokenBytes, err := os.ReadFile("influx.key")
 	if err != nil {
 		logger.Error("Problem reading influx token", "err", err)
-		panic("Problem reading influx token") // Halt the program
+		panic("Problem reading influx token")
 	}
-	ifClient := influxdb2.NewClientWithOptions(influxHost, string(influxTokenBytes), options)
-	ifClientWriteSites := ifClient.WriteAPI(influxOrg, influxBucketSites)
-	ifClientRead := ifClient.QueryAPI(influxOrg)
-	_ = ifClientRead
+	ifClient, err := influxdb3.New(influxdb3.ClientConfig{
+		Host:         influxHost,
+		Token:        string(influxTokenBytes),
+		Organization: influxOrg,
+		Database:     influxBucketSites,
+	})
+	if err != nil {
+		logger.Error("problem setting up influxdb client", "err", err)
+		panic("problem setting up influxdb client")
+	}
+
+	pointsCHAN := make(chan statemachine.PointToAck, 300)
+
+	var flushWG sync.WaitGroup
+	flushWG.Add(1)
+	go func() {
+		defer flushWG.Done()
+		points := make([]*influxdb3.Point, 300)
+		messages := make([]*pubsub.Message, 300)
+		ptr := 0
+		countdown := time.NewTimer(10 * time.Second)
+		timedOut := false
+
+		for {
+			select {
+			case point := <-pointsCHAN:
+				points[ptr] = point.Point
+				messages[ptr] = point.Msg
+				ptr++
+			case <-countdown.C:
+				timedOut = true
+			case <-ctx.Done():
+
+			}
+
+			if !timedOut && ptr < 300 && ctx.Err() == nil {
+				continue
+			}
+			if timedOut {
+				countdown.Reset(10 * time.Second)
+			}
+			timedOut = false
+
+			// first submit all points
+			// this should use background context so flush works
+			err := ifClient.WritePoints(context.Background(), points[0:ptr]...)
+			if err != nil {
+				// points will get resent if we don't ack messages so just delete and start again
+				logger.Error("failed to write points", "error", err)
+				ptr = 0
+				if ctx.Err() != nil {
+					return
+				}
+				continue
+			}
+
+			// if we succeeded though ack all the messages
+			for i := 0; i < ptr; i++ {
+				messages[i].Ack()
+			}
+			logger.Info("flushed points", "count", ptr)
+			ptr = 0
+
+			if ctx.Err() != nil {
+				return
+			}
+
+		}
+
+	}()
+
 	// Init Firestore client
 	fs, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(keyFile))
 	if err != nil {
 		logger.Error("Failed to create Firestore client", "err", err)
-		panic("Failed to create Firestore client") // Halt the program
+		panic("Failed to create Firestore client")
 	}
 	defer fs.Close()
 
@@ -77,7 +149,7 @@ func main() {
 	plugStatuses, err := plugStatusQuery.Documents(ctx).GetAll()
 	if err != nil {
 		logger.Error("couldn't get plug statuses", "err", err)
-		panic("couldn't get plug statuses") // Halt the program
+		panic("couldn't get plug statuses")
 
 	}
 	var wg sync.WaitGroup
@@ -90,17 +162,17 @@ func main() {
 		wg.Add(1)
 		go func(plugStatus *contracts.PlugStatus) {
 			defer wg.Done()
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClientWriteSites, ifClientRead, plugStatus))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClient, pointsCHAN, plugStatus))
 		}(plugStatus)
 
 	}
 
 	wg.Wait()
 
-	go ListenForNewDevices(ctx, fs, ps, ifClientWriteSites, ifClientRead, stateMachines)
+	go ListenForNewDevices(ctx, fs, ps, ifClient, pointsCHAN, stateMachines)
 	go ListenForUserRequests(ctx, fs, stateMachines)
 	go ListenForDeviceCommandResponses(ctx, fs, ps, stateMachines)
-	go ListenForTelemetry(ctx, fs, ps, ifClientWriteSites, stateMachines)
+	go ListenForTelemetry(ctx, ps, stateMachines)
 
 	fmt.Println("listening for cancels")
 
@@ -109,8 +181,9 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan // Block until a signal is received
 	cancel()  // Cancel context to stop background routines
+	logger.Info("waiting for flush")
+	flushWG.Wait()
+	ifClient.Close()
 
-	logger.Info("Shutting down, flushing InfluxDB data")
-	ifClientWriteSites.Flush()
 	logger.Info("Shutdown complete")
 }

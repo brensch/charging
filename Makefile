@@ -37,12 +37,16 @@ build-mothership:
 
 # Deploy the relaymanager binary to the relaymanager
 deploy-relaymanager: build-relaymanager
+	@echo "Stopping existing relaymanager service..."
+	tsh ssh root@$(RELAYMANAGER_HOST) 'systemctl stop relaymanager.service || true'
 	@echo "Deploying relaymanager to relaymanager..."
 	tsh scp $(RELAYMANAGER_BINARY) \
 		$(RELAYMANAGER_USER)@$(RELAYMANAGER_HOST):.
 
 # Deploy the mothership binary to the mothership
 deploy-mothership: build-mothership
+	@echo "Stopping existing mothership service..."
+	tsh ssh root@$(MOTHERSHIP_HOST) 'systemctl stop mothership.service || true'
 	@echo "Deploying mothership to mothership..."
 	tsh scp $(MOTHERSHIP_BINARY) \
 		$(MOTHERSHIP_USER)@$(MOTHERSHIP_HOST):.
@@ -62,7 +66,7 @@ deploy-mothership-service: deploy-mothership
 		systemctl start mothership.service'
 
 # Deploy the relaymanager systemd service and journald configuration to the relaymanager
-deploy-relaymanager-service:
+deploy-relaymanager-service: deploy-relaymanager
 	@echo "Deploying relaymanager service to relaymanager..."
 	tsh scp ./relaymanager/$(RELAYMANAGER_SERVICE_FILE) \
 		root@$(RELAYMANAGER_HOST):/tmp

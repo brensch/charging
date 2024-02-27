@@ -8,7 +8,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
-	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
 	"google.golang.org/api/iterator"
 
 	"github.com/brensch/charging/common"
@@ -54,7 +54,7 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 
 }
 
-func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClientWriteSites influxdb2api.WriteAPI, stateMachines *statemachine.StateMachineCollection) {
+func ListenForTelemetry(ctx context.Context, ps *pubsub.Client, stateMachines *statemachine.StateMachineCollection) {
 
 	telemetrySub := ps.Subscription(common.TopicNameTelemetry)
 	err := telemetrySub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
@@ -63,6 +63,8 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 		err := common.UnpackData(msg.Data, chunk)
 		if err != nil {
 			log.Printf("Failed to read message: %v", err)
+			// will never succeed, ack.
+			msg.Ack()
 			return
 		}
 
@@ -75,7 +77,7 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 				return
 			}
 
-			err = plugStateMachine.WriteReading(ctx, reading)
+			err = plugStateMachine.WriteReading(ctx, reading, msg)
 			if err != nil {
 				log.Println("failed to write reading")
 				// want to return here so we don't ack a message that didn't get recorded
@@ -83,17 +85,16 @@ func ListenForTelemetry(ctx context.Context, fs *firestore.Client, ps *pubsub.Cl
 			}
 		}
 
-		// now we've successfully written to ifdb we can ack.
-		// NB we need to be certain that we can flush.
-		// we may want to not write async to ensure this
-		msg.Ack()
+		// do not ack message, write reading does this on flush.
 
 	})
 
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifdb influxdb2api.WriteAPI, ifdbQuery influxdb2api.QueryAPI, stateMachines *statemachine.StateMachineCollection) {
+func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.Client, ifClient *influxdb3.Client, pointsCHAN chan statemachine.PointToAck, stateMachines *statemachine.StateMachineCollection) {
 
 	_, sub, err := common.EnsureTopicAndSub(ctx, ps, common.TopicNameNewDevices)
 	if err != nil {
@@ -122,7 +123,7 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 					State: contracts.StateMachineState_StateMachineState_INITIALISING,
 				},
 			}
-			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifdb, ifdbQuery, initialStatus))
+			stateMachines.AddStateMachine(statemachine.InitPlugStateMachine(ctx, fs, ps, ifClient, pointsCHAN, initialStatus))
 		}
 
 		// send empty response on ack channel to site

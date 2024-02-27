@@ -3,74 +3,107 @@ package session
 import (
 	"context"
 	"fmt"
+	"time"
 
-	influxdb2api "github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
+	"github.com/apache/arrow/go/v13/arrow"
+	"github.com/brensch/charging/gen/go/contracts"
 )
 
-func CalculateSession(ctx context.Context, ifdb influxdb2api.QueryAPI, sessionID string) error {
-	// 1. Query InfluxDB for session start and end times
-	startQuery := fmt.Sprintf(`
+const (
+	fixedPricePerkWh = 0.3
+)
+
+func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID string) (*contracts.Session, error) {
+
+	sessionQuery := fmt.Sprintf(`
+		SELECT *
 		FROM "sessions"
-		WHERE "session_id" = '%s' AND "state" = 'START'
-	`, sessionID)
-	endQuery := fmt.Sprintf(`
-		FROM "sessions"
-		WHERE "session_id" = '%s' AND "state" = 'FINISH'
-	`, sessionID)
+		WHERE "session_id" = '%s'`, sessionID)
 
-	startResult, err := ifdb.Query(ctx, startQuery)
+	results, err := ifClient.Query(ctx, sessionQuery)
 	if err != nil {
-		return fmt.Errorf("failed to query InfluxDB for session start: %v", err)
-	}
-	var startTime int64
-	for startResult.Next() {
-		startTime = startResult.Record().Time().UnixMilli()
+		return nil, fmt.Errorf("failed to query InfluxDB for session start: %v", err)
 	}
 
-	endResult, err := ifdb.Query(ctx, endQuery)
-	if err != nil {
-		return fmt.Errorf("failed to query InfluxDB for session end: %v", err)
-	}
-	var endTime int64
-	for endResult.Next() {
-		endTime = endResult.Record().Time().UnixMilli()
+	var start, finish time.Time
+	for results.Next() {
+		state, ok := results.Value()["state"].(string)
+		if !ok {
+			continue
+		}
+
+		timeStamp, ok := results.Value()["time"].(arrow.Timestamp)
+		if !ok {
+			fmt.Println("Error: time field missing")
+			continue
+		}
+
+		t := timeStamp.ToTime(arrow.Nanosecond)
+
+		switch state {
+		case contracts.SessionEventType_SessionEventType_START.String():
+			start = t
+		case contracts.SessionEventType_SessionEventType_FINISH.String():
+			finish = t
+		}
 	}
 
-	if startResult.Err() != nil {
-		return fmt.Errorf("error processing start query results: %v", startResult.Err())
-	}
-	if endResult.Err() != nil {
-		return fmt.Errorf("error processing end query results: %v", endResult.Err())
-	}
+	// TODO: catch panics from malformed data
+	plugID := results.Value()["plug_id"].(string)
+	siteID := results.Value()["site_id"].(string)
+	ownerID := results.Value()["owner"].(string)
 
 	// 2. Query InfluxDB for readings within the session time range
 	readingsQuery := fmt.Sprintf(`
+		SELECT *
 		FROM "plug_readings"
-		WHERE "session_id" = '%s'
-		AND time >= %dms AND time <= %dms
-	`, sessionID, startTime, endTime)
+		WHERE time >= '%s' 
+		AND time <= '%s'
+		AND plug_id == '%s'
+		order by time
+	`,
+		start.Format(time.RFC3339Nano),
+		finish.Format(time.RFC3339Nano),
+		plugID,
+	)
 
-	readingsResult, err := ifdb.Query(ctx, readingsQuery)
+	fmt.Println(readingsQuery)
+
+	readingsResult, err := ifClient.Query(ctx, readingsQuery)
 	if err != nil {
-		return fmt.Errorf("failed to query InfluxDB for plug readings: %v", err)
+		return nil, fmt.Errorf("failed to query InfluxDB for plug readings: %v", err)
 	}
 
-	// 3. Calculate total kWh consumed
-	totalKWh := 0.0
+	var totalKWh float64
+	var previousTimestamp time.Time // Initialize to track the previous reading's timestamp
+
 	for readingsResult.Next() {
-		// Assuming power is calculated as (current * voltage * power_factor)
-		current := readingsResult.Record().ValueByKey("current").(float64)
-		voltage := readingsResult.Record().ValueByKey("voltage").(float64)
-		powerFactor := readingsResult.Record().ValueByKey("power_factor").(float64)
-		power := current * voltage * powerFactor
+		current := readingsResult.Value()["current"].(float64)
+		voltage := readingsResult.Value()["voltage"].(float64)
+		// powerFactor := readingsResult.Value()["power_factor"].(float64)
+		// power := current * voltage * powerFactor // TODO: decide on power factor accuracy
+		power := current * voltage // Power in Watts
 
-		// Assuming readings are 1 minute apart. Adjust as necessary.
-		totalKWh += power * (1.0 / 60.0) / 1000.0 // Convert W to kW and add to total
-	}
-	if readingsResult.Err() != nil {
-		return fmt.Errorf("error processing readings query results: %v", readingsResult.Err())
+		currentTimestamp := readingsResult.Value()["time"].(arrow.Timestamp).ToTime(arrow.Nanosecond)
+
+		if !previousTimestamp.IsZero() {
+			duration := currentTimestamp.Sub(previousTimestamp).Seconds() / 3600 // Convert duration from seconds to hours
+			kWh := power * duration / 1000                                       // Convert power from Watts to kWh based on the duration
+			totalKWh += kWh
+		}
+
+		previousTimestamp = currentTimestamp
 	}
 
-	fmt.Printf("Total kWh consumed in session %s: %f\n", sessionID, totalKWh)
-	return nil
+	return &contracts.Session{
+		SessionId: sessionID,
+		StartMs:   start.UnixMilli(),
+		FinishMs:  finish.UnixMilli(),
+		PlugId:    plugID,
+		SiteId:    siteID,
+		OwnerId:   ownerID,
+		TotalKwh:  totalKWh,
+		Cents:     int64(totalKWh * fixedPricePerkWh * 100), // TODO: real prices
+	}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/brensch/charging/gen/go/contracts"
 )
 
@@ -31,7 +32,7 @@ func (s *StateMachineCollection) AddStateMachine(stateMachine *PlugStateMachine)
 	s.stateMachinesMu.Unlock()
 }
 
-func (p *PlugStateMachine) WriteReading(ctx context.Context, reading *contracts.Reading) error {
+func (p *PlugStateMachine) WriteReading(ctx context.Context, reading *contracts.Reading, msg *pubsub.Message) error {
 	// write latest reading to pointer location in rolling slice
 	p.latestReadingMu.Lock()
 	nextPtr := (p.latestReadingPtr + 1) % secondsToStore
@@ -40,5 +41,5 @@ func (p *PlugStateMachine) WriteReading(ctx context.Context, reading *contracts.
 	p.latestReadingMu.Unlock()
 
 	// async so ok to do in telemetry loop (ie fast)
-	return p.writeReadingToDB(ctx, reading)
+	return p.writeReadingToDB(ctx, reading, msg)
 }

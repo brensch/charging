@@ -50,6 +50,7 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 			State:       state,
 			TimestampMs: timestamp,
 			PlugId:      plugId,
+			FuzeId:      s.FuzeID(),
 		}, nil
 	}
 	// Generate random values for each field
@@ -64,5 +65,6 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 		PowerFactor: powerFactor,
 		TimestampMs: timestamp,
 		PlugId:      plugId,
+		FuzeId:      s.FuzeID(),
 	}, nil
 }

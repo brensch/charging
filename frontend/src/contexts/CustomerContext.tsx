@@ -22,6 +22,7 @@ import {
   Transaction,
 } from "../contracts/stripe"
 import { useAuth } from "./AuthContext"
+import { Session } from "../contracts/objects"
 
 // Define the context value's type
 interface CustomerContextValue {
@@ -29,12 +30,14 @@ interface CustomerContextValue {
   stripeCustomer: StripeCustomer | null
   autoTopupPreferences: AutoTopupPreferences | null
   transactions: Transaction[]
+  sessions: Session[]
 }
 export const CustomerContext = createContext<CustomerContextValue>({
   customerBalance: null,
   stripeCustomer: null,
   autoTopupPreferences: null,
   transactions: [],
+  sessions: [],
 })
 interface CustomerProviderProps {
   children: ReactNode
@@ -54,6 +57,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
   const [autoTopupPreferences, setAutoTopupPreferences] =
     useState<AutoTopupPreferences | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -102,11 +106,27 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
         },
       )
 
+      const sessionsQuery = query(
+        collection(db, "sessions"),
+        where("owner_id", "==", auth.currentUser.uid),
+        orderBy("finish_ms", "desc"),
+        limit(10),
+      )
+
+      const unsubscribeSessions = onSnapshot(sessionsQuery, (querySnapshot) => {
+        const sessionsArray: Session[] = []
+        querySnapshot.forEach((doc) => {
+          sessionsArray.push(Session.fromJSON(doc.data()))
+        })
+        setSessions(sessionsArray)
+      })
+
       return () => {
         unsubscribeBalance()
         unsubscribeStripe()
         unsubscribeTopup()
         unsubscribeTransactions()
+        unsubscribeSessions()
       }
     }
   }, [auth.currentUser])
@@ -116,6 +136,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
     stripeCustomer,
     autoTopupPreferences,
     transactions,
+    sessions,
   }
 
   return (

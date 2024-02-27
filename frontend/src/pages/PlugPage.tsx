@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useContext } from "react"
 import {
   Typography,
   TextField,
@@ -43,6 +43,7 @@ import { v4 as uuidv4 } from "uuid"
 import { UserRequestStatus } from "../contracts/objects"
 import QrCode2Icon from "@mui/icons-material/QrCode2"
 import BarcodeScannerDialog from "../objects/BarcodeScanner"
+import { CustomerContext } from "../contexts/CustomerContext"
 const useQuery = () => {
   return new URLSearchParams(useLocation().search)
 }
@@ -51,6 +52,14 @@ const PlugPage = () => {
   const urlQuery = useQuery()
   const navigate = useNavigate()
   const auth = useAuth()
+
+  const { sessions } = useContext(CustomerContext)
+
+  const uniquePlugIds = new Set<string>()
+
+  sessions.forEach((session) => {
+    uniquePlugIds.add(session.plug_id)
+  })
 
   const [plugID, setPlugID] = useState(urlQuery.get("plug") || "")
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
@@ -222,8 +231,19 @@ const PlugPage = () => {
       <BarcodeScannerDialog open={openScanner} onClose={handleScannerClose} />
       {loadingPlugStatus && <Typography>loading plug state</Typography>}
       {!plugStatus && (
-        <Typography>Previously used plugs - TODO feature</Typography>
+        <Typography variant="h6">Previously used plugs:</Typography>
       )}
+      {!plugStatus &&
+        Array.from(uniquePlugIds).map((previousPlugID) => (
+          <Typography
+            onClick={() => {
+              setPlugID(previousPlugID)
+              navigate(`?plug=${previousPlugID}`)
+            }}
+          >
+            {previousPlugID}
+          </Typography>
+        ))}
 
       {plugStatus && plugStatus.state?.state && (
         <React.Fragment>

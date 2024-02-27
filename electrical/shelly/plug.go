@@ -183,10 +183,10 @@ func (s *ShellyPlug) GetReading() (*contracts.Reading, error) {
 		return nil, err
 	}
 
-	return ConvertToReading(statusResult, s.ID()), nil
+	return ConvertToReading(statusResult, s.ID(), s.FuzeID()), nil
 }
 
-func ConvertToReading(statusResult GetStatusResult, plugID string) *contracts.Reading {
+func ConvertToReading(statusResult GetStatusResult, plugID, fuzeID string) *contracts.Reading {
 	state := ConvertToPlugState(statusResult.Output)
 	return &contracts.Reading{
 		TimestampMs: time.Now().UnixMilli(),
@@ -196,6 +196,7 @@ func ConvertToReading(statusResult GetStatusResult, plugID string) *contracts.Re
 		PowerFactor: statusResult.Pf,
 
 		PlugId: plugID,
+		FuzeId: fuzeID,
 	}
 }
 

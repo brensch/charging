@@ -11,6 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	dummyChargeDuration = 1 * time.Hour
+)
+
 var (
 	// note do not lock stateMu inside DoTransition since it's already locked during execution
 	StateMap = map[contracts.StateMachineState][]StateTransition{
@@ -128,11 +132,6 @@ var (
 					p.latestReadingMu.Unlock()
 
 					chargeCommenced := latestReading.Current > 0
-					// TODO: remove this dummy sleep in charge sense
-					if time.Now().After(time.UnixMilli(p.state.TimeMs + 5000)) {
-						chargeCommenced = true
-					}
-
 					if chargeCommenced {
 						err := p.SetChargeStartTimeMs(ctx, time.Now().UnixMilli())
 						if err != nil {
@@ -162,10 +161,10 @@ var (
 					chargeStartTimeMS := p.details.ChargeStartTimeMs
 					p.detailsMu.Unlock()
 
-					// if it never goes to 0, also stop after 1 minute
+					// if it never goes to 0, also stop after dummyChargeDuration time
 					// TODO: remove time limitation
 					return latestReading.Current == 0 ||
-						time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(1*time.Minute))
+						time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
 				},
 			},
 		},
@@ -209,15 +208,22 @@ var (
 					sessionToCheck := p.details.SessionId
 					p.details.SessionId = ""
 					p.detailsMu.Unlock()
-					err = p.SetOwner(ctx, "")
+
+					session, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
 					if err != nil {
-						log.Println("failed to clear owner", err)
+						log.Println("failed to get session", err)
 						return false
 					}
 
-					err = session.CalculateSession(ctx, p.influxQueryAPI, sessionToCheck)
+					_, err = p.fs.Collection("sessions").Doc(sessionToCheck).Set(ctx, session)
 					if err != nil {
-						log.Println("failed to get session", err)
+						log.Println("failed to write session", err)
+						return false
+					}
+
+					err = p.SetOwner(ctx, "")
+					if err != nil {
+						log.Println("failed to clear owner", err)
 						return false
 					}
 					return true
