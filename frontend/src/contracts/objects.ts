@@ -406,11 +406,6 @@ export interface StateMachineTransition {
   owner_id: string;
 }
 
-export interface StateMachinePossibleNextStates {
-  plug_id: string;
-  possible_states: StateMachineState[];
-}
-
 /** plug settings are all the things the user can update in the UI */
 export interface PlugSettings {
   id: string;
@@ -469,6 +464,8 @@ export interface PlugStatus {
   state: StateMachineTransition | undefined;
   latest_reading: Reading | undefined;
   state_machine_details: StateMachineDetails | undefined;
+  possible_next_states: StateMachineState[];
+  possible_next_states_labels: string[];
 }
 
 export interface StateMachineDetails {
@@ -764,96 +761,6 @@ export const StateMachineTransition = {
     message.time_ms = object.time_ms ?? 0;
     message.plug_id = object.plug_id ?? "";
     message.owner_id = object.owner_id ?? "";
-    return message;
-  },
-};
-
-function createBaseStateMachinePossibleNextStates(): StateMachinePossibleNextStates {
-  return { plug_id: "", possible_states: [] };
-}
-
-export const StateMachinePossibleNextStates = {
-  encode(message: StateMachinePossibleNextStates, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.plug_id !== "") {
-      writer.uint32(10).string(message.plug_id);
-    }
-    writer.uint32(18).fork();
-    for (const v of message.possible_states) {
-      writer.int32(v);
-    }
-    writer.ldelim();
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): StateMachinePossibleNextStates {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseStateMachinePossibleNextStates();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.plug_id = reader.string();
-          continue;
-        case 2:
-          if (tag === 16) {
-            message.possible_states.push(reader.int32() as any);
-
-            continue;
-          }
-
-          if (tag === 18) {
-            const end2 = reader.uint32() + reader.pos;
-            while (reader.pos < end2) {
-              message.possible_states.push(reader.int32() as any);
-            }
-
-            continue;
-          }
-
-          break;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): StateMachinePossibleNextStates {
-    return {
-      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      possible_states: globalThis.Array.isArray(object?.possible_states)
-        ? object.possible_states.map((e: any) => stateMachineStateFromJSON(e))
-        : [],
-    };
-  },
-
-  toJSON(message: StateMachinePossibleNextStates): unknown {
-    const obj: any = {};
-    if (message.plug_id !== "") {
-      obj.plug_id = message.plug_id;
-    }
-    if (message.possible_states?.length) {
-      obj.possible_states = message.possible_states.map((e) => stateMachineStateToJSON(e));
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<StateMachinePossibleNextStates>, I>>(base?: I): StateMachinePossibleNextStates {
-    return StateMachinePossibleNextStates.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<StateMachinePossibleNextStates>, I>>(
-    object: I,
-  ): StateMachinePossibleNextStates {
-    const message = createBaseStateMachinePossibleNextStates();
-    message.plug_id = object.plug_id ?? "";
-    message.possible_states = object.possible_states?.map((e) => e) || [];
     return message;
   },
 };
@@ -1443,7 +1350,15 @@ export const UserRequestResult = {
 };
 
 function createBasePlugStatus(): PlugStatus {
-  return { id: "", site_id: "", state: undefined, latest_reading: undefined, state_machine_details: undefined };
+  return {
+    id: "",
+    site_id: "",
+    state: undefined,
+    latest_reading: undefined,
+    state_machine_details: undefined,
+    possible_next_states: [],
+    possible_next_states_labels: [],
+  };
 }
 
 export const PlugStatus = {
@@ -1462,6 +1377,14 @@ export const PlugStatus = {
     }
     if (message.state_machine_details !== undefined) {
       StateMachineDetails.encode(message.state_machine_details, writer.uint32(42).fork()).ldelim();
+    }
+    writer.uint32(50).fork();
+    for (const v of message.possible_next_states) {
+      writer.int32(v);
+    }
+    writer.ldelim();
+    for (const v of message.possible_next_states_labels) {
+      writer.uint32(58).string(v!);
     }
     return writer;
   },
@@ -1508,6 +1431,30 @@ export const PlugStatus = {
 
           message.state_machine_details = StateMachineDetails.decode(reader, reader.uint32());
           continue;
+        case 6:
+          if (tag === 48) {
+            message.possible_next_states.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 50) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.possible_next_states.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+        case 7:
+          if (tag !== 58) {
+            break;
+          }
+
+          message.possible_next_states_labels.push(reader.string());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1526,6 +1473,12 @@ export const PlugStatus = {
       state_machine_details: isSet(object.state_machine_details)
         ? StateMachineDetails.fromJSON(object.state_machine_details)
         : undefined,
+      possible_next_states: globalThis.Array.isArray(object?.possible_next_states)
+        ? object.possible_next_states.map((e: any) => stateMachineStateFromJSON(e))
+        : [],
+      possible_next_states_labels: globalThis.Array.isArray(object?.possible_next_states_labels)
+        ? object.possible_next_states_labels.map((e: any) => globalThis.String(e))
+        : [],
     };
   },
 
@@ -1545,6 +1498,12 @@ export const PlugStatus = {
     }
     if (message.state_machine_details !== undefined) {
       obj.state_machine_details = StateMachineDetails.toJSON(message.state_machine_details);
+    }
+    if (message.possible_next_states?.length) {
+      obj.possible_next_states = message.possible_next_states.map((e) => stateMachineStateToJSON(e));
+    }
+    if (message.possible_next_states_labels?.length) {
+      obj.possible_next_states_labels = message.possible_next_states_labels;
     }
     return obj;
   },
@@ -1566,6 +1525,8 @@ export const PlugStatus = {
       (object.state_machine_details !== undefined && object.state_machine_details !== null)
         ? StateMachineDetails.fromPartial(object.state_machine_details)
         : undefined;
+    message.possible_next_states = object.possible_next_states?.map((e) => e) || [];
+    message.possible_next_states_labels = object.possible_next_states_labels?.map((e) => e) || [];
     return message;
   },
 };

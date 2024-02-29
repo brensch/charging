@@ -31,10 +31,12 @@ import {
 } from "firebase/firestore"
 import { firestore } from "../firebase" // Assume you have a Firebase config file
 import {
+  ActualState,
   PlugStatus,
   StateMachineState,
   UserRequest,
   UserRequestResult,
+  actualStateToJSON,
   stateMachineStateToJSON,
   userRequestStatusToJSON,
 } from "../contracts/objects"
@@ -255,7 +257,7 @@ const PlugPage = () => {
                 style={{ padding: 16, borderBottom: "2px solid black" }}
               >
                 <Typography variant="h6" style={{ fontWeight: "bold" }}>
-                  Current Plug State {plugStatus.latest_reading?.state}
+                  Current Plug State
                 </Typography>
               </Grid>
               <Grid
@@ -292,43 +294,83 @@ const PlugPage = () => {
               </Grid>
               <Grid
                 item
-                xs={12}
-                style={{ padding: 16, borderBottom: "2px solid black" }}
+                xs={10}
+                style={{
+                  padding: 16,
+                  borderBottom: "2px solid black",
+                  borderRight: "2px solid black",
+                  backgroundColor: "ff00ff",
+                }}
               >
                 <Typography
                   variant="body1"
-                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                  style={{
+                    fontWeight: "bold",
+                    wordWrap: "break-word",
+                  }}
                 >
                   {plugStatus.state.reason}
                 </Typography>
               </Grid>
               <Grid
                 item
-                xs={12}
-                style={{ padding: 16, borderBottom: "2px solid black" }}
+                xs={2}
+                style={{
+                  padding: 16,
+                  borderBottom: "2px solid black",
+                  backgroundColor:
+                    plugStatus.latest_reading?.state ===
+                    ActualState.ActualState_ON
+                      ? "#00ff00"
+                      : "#f1f1f1",
+                }}
               >
                 <Typography
                   variant="body1"
-                  style={{ fontWeight: "bold", wordWrap: "break-word" }}
+                  style={{
+                    fontWeight: "bold",
+                    wordWrap: "break-word",
+                  }}
                 >
-                  {new Date(plugStatus.state.time_ms).toLocaleString()}
+                  {plugStatus.latest_reading?.state &&
+                    actualStateToJSON(plugStatus.latest_reading?.state).replace(
+                      "ActualState_",
+                      "",
+                    )}
                 </Typography>
               </Grid>
             </Grid>
             <Grid item xs={12} style={{ padding: 16 }}>
               <Box display="flex" justifyContent="space-around" padding={1}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() =>
-                    handleCreateRequest(
-                      StateMachineState.StateMachineState_ACCOUNT_ADDED,
+                {plugStatus.possible_next_states_labels.map(
+                  (possibleState, index) => {
+                    return (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() =>
+                          handleCreateRequest(
+                            plugStatus.possible_next_states[index],
+                          )
+                        }
+                        style={{ fontWeight: "bold", margin: "0 10px" }}
+                      >
+                        {possibleState}
+                      </Button>
                     )
-                  }
-                  style={{ fontWeight: "bold", margin: "0 10px" }}
-                >
-                  Take control of plug
-                </Button>
+                  },
+                )}
+                {plugStatus.possible_next_states_labels.length === 0 && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    disabled
+                    style={{ fontWeight: "bold", margin: "0 10px" }}
+                  >
+                    Waiting for system. Patience.
+                  </Button>
+                )}
+
                 {/* <Button
                   variant="contained"
                   color="primary"
@@ -346,7 +388,7 @@ const PlugPage = () => {
           </Paper>
         </React.Fragment>
       )}
-      {recentRequests.length > 0 && (
+      {/* {recentRequests.length > 0 && (
         <React.Fragment>
           <Typography
             variant="h6"
@@ -385,7 +427,7 @@ const PlugPage = () => {
             </Table>
           </TableContainer>
         </React.Fragment>
-      )}
+      )} */}
     </Container>
   )
 }

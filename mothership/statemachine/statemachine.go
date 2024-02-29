@@ -98,9 +98,9 @@ type StateTransition struct {
 	DoTransition TransitionFunc
 
 	// This means that we should not attempt this transition from the state loop
-	AsyncOnly            bool
-	Reason               string
-	ConditionExplanation string
+	AsyncOnly  bool
+	Reason     string
+	UserPrompt string // if this is set, users are able to select it
 }
 
 func (p *PlugStateMachine) Error(err error) {
@@ -404,8 +404,27 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 
 	p.state = transition
 
+	// get the next possible states from what we're transition to
+	nextStates, ok := StateMap[transition.State]
+	if !ok {
+		return fmt.Errorf("could not find next state in state map. bug.")
+	}
+
+	states := []contracts.StateMachineState{}
+	stateLabels := []string{}
+
+	for _, state := range nextStates {
+		if state.UserPrompt == "" {
+			continue
+		}
+		states = append(states, state.TargetState)
+		stateLabels = append(stateLabels, state.UserPrompt)
+	}
+
 	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
 		{Path: "state", Value: transition},
+		{Path: "possible_next_states", Value: states},
+		{Path: "possible_next_states_labels", Value: stateLabels},
 	})
 	if err != nil {
 		return err

@@ -38,11 +38,6 @@ message StateMachineTransition {
   string owner_id = 6;
 }
 
-message StateMachinePossibleNextStates {
-  string plug_id = 1;
-  repeated StateMachineState possible_states = 2;
-}
-
 // plug settings are all the things the user can update in the UI
 message PlugSettings {
   string id = 1;
@@ -107,6 +102,8 @@ message PlugStatus {
   StateMachineTransition state = 3;
   Reading latest_reading = 4;
   StateMachineDetails state_machine_details = 5;
+  repeated StateMachineState possible_next_states = 6;
+  repeated string possible_next_states_labels = 7;
 }
 
 message StateMachineDetails {

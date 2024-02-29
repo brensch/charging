@@ -36,7 +36,6 @@ var (
 					p.detailsMu.Unlock()
 					return owner != ""
 				},
-				ConditionExplanation: "can start with account on mothership startup if went offline during session",
 			},
 		},
 		contracts.StateMachineState_StateMachineState_ACCOUNT_NULL: {
@@ -64,13 +63,15 @@ var (
 
 					return true
 				},
-				AsyncOnly: true,
+				AsyncOnly:  true,
+				UserPrompt: "Enable Socket",
 			},
 		},
 		contracts.StateMachineState_StateMachineState_ACCOUNT_ADDED: {
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ENTERING_QUEUE,
 			},
+			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_ENTERING_QUEUE: {
 			{
@@ -84,6 +85,7 @@ var (
 					return true
 				},
 			},
+			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_IN_QUEUE: {
 			{
@@ -97,6 +99,7 @@ var (
 					return time.Now().UnixMilli()-queueEnteredTime > 5000
 				},
 			},
+			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_SENSING_START_REQUESTED: {
 			{
@@ -143,6 +146,7 @@ var (
 					return chargeCommenced
 				},
 			},
+			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_CHARGING: {
 			{
@@ -167,6 +171,7 @@ var (
 						time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
 				},
 			},
+			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE: {
 			{
@@ -230,5 +235,11 @@ var (
 				},
 			},
 		},
+	}
+
+	manuallyDisableSocket = StateTransition{
+		TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_REQUESTED,
+		UserPrompt:  "Disable Socket",
+		AsyncOnly:   true,
 	}
 )
