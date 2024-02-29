@@ -294,7 +294,7 @@ const PlugPage = () => {
               </Grid>
               <Grid
                 item
-                xs={10}
+                xs={9}
                 style={{
                   padding: 16,
                   borderBottom: "2px solid black",
@@ -314,7 +314,7 @@ const PlugPage = () => {
               </Grid>
               <Grid
                 item
-                xs={2}
+                xs={3}
                 style={{
                   padding: 16,
                   borderBottom: "2px solid black",
