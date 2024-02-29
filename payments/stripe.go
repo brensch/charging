@@ -199,7 +199,7 @@ func (h *Handler) HandleManageCustomer(c *gin.Context) {
 
 	configParams := &stripe.BillingPortalConfigurationParams{
 		BusinessProfile: &stripe.BillingPortalConfigurationBusinessProfileParams{
-			Headline: stripe.String("SparkPlugs partners with Stripe for simplified billing."),
+			Headline: stripe.String("Magic Charge partners with Stripe for simplified billing."),
 		},
 		Features: &stripe.BillingPortalConfigurationFeaturesParams{
 			PaymentMethodUpdate: &stripe.BillingPortalConfigurationFeaturesPaymentMethodUpdateParams{
