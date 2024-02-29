@@ -129,7 +129,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
         unsubscribeSessions()
       }
     }
-  }, [auth.currentUser])
+  }, [auth])
 
   const contextValue = {
     customerBalance,

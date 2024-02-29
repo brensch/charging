@@ -14,7 +14,26 @@ import {
 import { CustomerContext } from "../contexts/CustomerContext"
 
 const SessionsPage = () => {
-  const { transactions, sessions } = useContext(CustomerContext)
+  const { sessions } = useContext(CustomerContext)
+
+  const calculateDuration = (start_ms: number, finish_ms: number) => {
+    const milliseconds = finish_ms - start_ms
+    const hours = Math.floor(milliseconds / (1000 * 60 * 60))
+    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}m`
+  }
+
+  // Helper function to format date
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp)
+    return date.toLocaleDateString()
+  }
+
+  // Helper function to format time
+  const formatTime = (timestamp: number) => {
+    const time = new Date(timestamp)
+    return time.toLocaleTimeString()
+  }
 
   return (
     <Container>
@@ -23,52 +42,31 @@ const SessionsPage = () => {
           Charging Sessions
         </Typography>
         <TableContainer component={Paper}>
-          <Table aria-label="transactions table">
+          <Table aria-label="charging sessions table">
             <TableHead>
               <TableRow>
-                <TableCell>Start</TableCell>
-                <TableCell>Finish</TableCell>
-                <TableCell>Energy Used</TableCell>
-                <TableCell>Cost (AUD)</TableCell>
+                <TableCell>Date</TableCell> {/* Added Date column */}
+                <TableCell>Time</TableCell> {/* Added Time column */}
+                <TableCell>Duration</TableCell>
+                <TableCell>Energy</TableCell>
+                <TableCell>Cost</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {sessions.map((session) => (
                 <TableRow key={session.session_id}>
                   <TableCell>
-                    {new Date(session.start_ms).toLocaleString()}
+                    {formatDate(session.start_ms)} {/* Display Date */}
                   </TableCell>
                   <TableCell>
-                    {new Date(session.finish_ms).toLocaleString()}
+                    {formatTime(session.start_ms)} {/* Display Time */}
+                  </TableCell>
+                  <TableCell>
+                    {calculateDuration(session.start_ms, session.finish_ms)}
                   </TableCell>
                   <TableCell>{session.total_kwh.toFixed(3)}kWh</TableCell>
                   <TableCell component="th" scope="row">
                     ${session.cents / 100}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Typography variant="h6" mb={2} mt={2}>
-          Topups
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table aria-label="transactions table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Amount (AUD)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.payment_id}>
-                  <TableCell>
-                    {new Date(transaction.completed_ms).toLocaleString()}
-                  </TableCell>
-                  <TableCell component="th" scope="row">
-                    ${transaction.cents_aud / 100}
                   </TableCell>
                 </TableRow>
               ))}

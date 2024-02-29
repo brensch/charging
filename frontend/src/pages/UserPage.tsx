@@ -30,7 +30,7 @@ function UserPage() {
   return (
     <Container>
       <Typography variant="body1">
-        You are a valued customer. Keep it up.
+        We're going to let you set preferences here soon.
       </Typography>
     </Container>
   )

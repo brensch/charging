@@ -76,10 +76,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   const menuItems: MenuItem[] = [
     { label: "Plug", icon: <ElectricalServicesIcon />, path: "/plug" },
     {
-      label: `Money: $${
-        customer.customerBalance?.cents_aud &&
-        customer.customerBalance?.cents_aud / 100
-      }`,
+      label: `Money`,
       icon: <AttachMoneyIcon />,
       path: "/money",
     },
@@ -185,6 +182,11 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Magic Charge
             </Typography>
+            {customer.customerBalance?.cents_aud && (
+              <Typography variant="h6">
+                ${customer.customerBalance?.cents_aud / 100}
+              </Typography>
+            )}
             {authState.currentUser && (
               <IconButton
                 edge="end"

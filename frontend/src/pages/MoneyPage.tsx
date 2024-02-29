@@ -8,6 +8,12 @@ import {
   Grid,
   Paper,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material"
@@ -80,8 +86,8 @@ const MoneyPage = () => {
       <Grid container spacing={2}>
         <Grid item xs={12}>
           {customerBalance && (
-            <Typography variant="h4">
-              Credit: ${customerBalance?.cents_aud / 100}
+            <Typography variant="h4" mt={2} mb={2}>
+              You've got ${customerBalance?.cents_aud / 100}
             </Typography>
           )}
         </Grid>
@@ -124,6 +130,14 @@ const MoneyPage = () => {
             </Typography>
           </Grid>
         )}
+
+        {/* TODO: i dont love this and it does tell you that once you go to the stripe page. */}
+        {/* <Grid item xs={12}>
+          <Typography variant="body1">
+            Payment is managed through Stripe to ensure your money is handled
+            securely.
+          </Typography>
+        </Grid> */}
 
         <Grid item xs={12}>
           {stripeCustomer?.payment_methods.length !== 0 && (
@@ -194,6 +208,33 @@ const MoneyPage = () => {
             </Paper>
           </Grid>
         )}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="h6">Topups</Typography>
+            <TableContainer>
+              <Table aria-label="transactions table">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Amount (AUD)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.payment_id}>
+                      <TableCell>
+                        {new Date(transaction.completed_ms).toLocaleString()}
+                      </TableCell>
+                      <TableCell component="th" scope="row">
+                        ${transaction.cents_aud / 100}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
       </Grid>
     </Container>
   )
