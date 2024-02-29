@@ -32,7 +32,7 @@ func main() {
 			// Strip the prefix from the state names
 			fromState := strings.TrimPrefix(state.String(), "StateMachineState_")
 			toState := strings.TrimPrefix(transition.TargetState.String(), "StateMachineState_")
-			condition := transition.ConditionExplanation
+			condition := transition.UserPrompt
 			if condition != "" {
 				condition = ": " + condition // Prepend the colon only if there is a condition
 			}

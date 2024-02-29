@@ -407,7 +407,7 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 	// get the next possible states from what we're transition to
 	nextStates, ok := StateMap[transition.State]
 	if !ok {
-		return fmt.Errorf("could not find next state in state map. bug.")
+		return fmt.Errorf("could not find next state in state map. bug")
 	}
 
 	states := []contracts.StateMachineState{}
@@ -442,7 +442,6 @@ func (p *PlugStateMachine) performTransition(ctx context.Context, transition *co
 
 // this is just for doing the transition. setting of session id and user need to be done before this step.
 // unsetting user should be after.
-// TODO: slight jank detection, may want to separate objects out
 func (p *PlugStateMachine) updateSession(ctx context.Context, eventType contracts.SessionEventType) error {
 
 	p.detailsMu.Lock()

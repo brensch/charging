@@ -160,15 +160,18 @@ var (
 					p.latestReadingMu.Lock()
 					latestReading := p.latestReadings[p.latestReadingPtr]
 					p.latestReadingMu.Unlock()
+					// count as stopped only at exactly 0
+					return latestReading.Current == 0
 
-					p.detailsMu.Lock()
-					chargeStartTimeMS := p.details.ChargeStartTimeMs
-					p.detailsMu.Unlock()
+					// This code allows us to have a dummy timeout
+					// p.detailsMu.Lock()
+					// chargeStartTimeMS := p.details.ChargeStartTimeMs
+					// p.detailsMu.Unlock()
 
 					// if it never goes to 0, also stop after dummyChargeDuration time
 					// TODO: remove time limitation
-					return latestReading.Current == 0 ||
-						time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
+					// return latestReading.Current == 0 ||
+					// 	time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
 				},
 			},
 			manuallyDisableSocket,
@@ -214,13 +217,19 @@ var (
 					p.details.SessionId = ""
 					p.detailsMu.Unlock()
 
-					session, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
+					calculatedSession, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
 					if err != nil {
 						log.Println("failed to get session", err)
 						return false
 					}
 
-					_, err = p.fs.Collection("sessions").Doc(sessionToCheck).Set(ctx, session)
+					err = session.UpdateBalance(ctx, p.fs, calculatedSession)
+					if err != nil {
+						log.Println("failed to subtract session balance. critical error", err)
+						return false
+					}
+
+					_, err = p.fs.Collection("sessions").Doc(sessionToCheck).Set(ctx, calculatedSession)
 					if err != nil {
 						log.Println("failed to write session", err)
 						return false

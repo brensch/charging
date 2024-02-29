@@ -367,7 +367,7 @@ const PlugPage = () => {
                     disabled
                     style={{ fontWeight: "bold", margin: "0 10px" }}
                   >
-                    Waiting for system. Patience.
+                    Waiting for system.
                   </Button>
                 )}
 
