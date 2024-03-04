@@ -5,28 +5,7 @@ on:
     branches:
       - main
 
-env:
-  DEPLOY_CONF: ${{ github.workspace }}/.github/workflows/deploy.conf
-
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      project_id: ${{ steps.set-vars.outputs.project_id }}
-      service_account: ${{ steps.set-vars.outputs.service_account }}
-      workload_identity_provider: ${{ steps.set-vars.outputs.workload_identity_provider }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set Environment Variables from deploy.conf
-        id: set-vars
-        run: |
-          echo "Reading deploy.conf..."
-          source $DEPLOY_CONF
-          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
-          echo "service_account=$SERVICE_ACCOUNT" >> $GITHUB_OUTPUT
-          echo "workload_identity_provider=$WORKLOAD_IDENTITY_PROVIDER" >> $GITHUB_OUTPUT
-
   deploy:
     needs: setup
     runs-on: ubuntu-latest
@@ -36,16 +15,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - id: "Auth"
-        uses: "google-github-actions/auth@v1"
-        with:
-          workload_identity_provider: ${{ needs.setup.outputs.workload_identity_provider }}
-          service_account: ${{ needs.setup.outputs.service_account }}
 
       - name: Deploy using Firebase Action
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only firestore:rules,firestore:indexes
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          PROJECT_ID: ${{ needs.setup.outputs.project_id }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CHARGING_402405 }}
+          PROJECT_ID: charging-402405
