@@ -25,7 +25,7 @@ jobs:
           echo "service_account=$SERVICE_ACCOUNT" >> $GITHUB_OUTPUT
           echo "workload_identity_provider=$WORKLOAD_IDENTITY_PROVIDER" >> $GITHUB_OUTPUT
 
-  build_and_preview:
+  preview:
     needs: setup
     permissions:
       contents: "read"
