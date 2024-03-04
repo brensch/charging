@@ -1,0 +1,61 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "plug_commands",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "plug_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "acked_at_ms",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "owner_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "finish_ms",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "firestore_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "completed_ms",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "user_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "plug_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "time_requested",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
