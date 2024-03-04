@@ -15,10 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Deploy using Firebase Action
+      - name: Deploy rules
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only firestore:rules,firestore:indexes
+          args: deploy --only firestore:rules
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          PROJECT_ID: charging-402405
+      - name: Deploy indexes
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:indexes
         env:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
           PROJECT_ID: charging-402405
