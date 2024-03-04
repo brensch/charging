@@ -2,18 +2,75 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
+    // General rule for mothership to have access to everything
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2024, 11, 20);
+      allow read, write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+    }
+
+    // Specific rules for autotopup_preferences collection
+    match /autotopup_preferences/{docId} {
+      // Allow read if the user's ID matches the document ID or if it's the mothership account
+      allow read: if request.auth.uid == docId || request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+      // Allow update only if the user's ID matches the document ID
+      allow update: if request.auth.uid == docId;
+    }
+
+    // Specific rules for customer_balances collection
+    match /customer_balances/{userId} {
+      // Allow users to read their own balance
+      allow read: if request.auth.uid == userId;
+      // Allow write only by mothership or cloud functions
+      allow write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com' || request.auth.token.email == '368022146565-compute@developer.gserviceaccount.com';
+    }
+
+    // Rules for the sessions collection
+    match /sessions/{sessionId} {
+      // Allow read if the document's owner_id field matches the user's ID
+      // or if it's the mothership account
+      allow read: if resource.data.owner_id == request.auth.uid || request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+      // Allow write only by the mothership account
+      allow write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+    }
+
+    // Rules for the transactions collection
+    match /transactions/{transactionId} {
+      // Allow read if the document's firestore_id field matches the user's ID
+      allow read: if resource.data.firestore_id == request.auth.uid;
+      // Allow write only by the cloud functions service account
+      allow write: if request.auth.token.email == '368022146565-compute@developer.gserviceaccount.com';
+    }
+
+    // Rules for the plug_settings collection
+    match /plug_settings/{settingId} {
+      // Allow read and write by anyone
+      allow read, write: if true;
+    }
+
+    // Rules for the plug_status collection
+    match /plug_status/{statusId} {
+      // Allow read by anyone
+      allow read: if true;
+      // Allow write only by the mothership account
+      allow write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+    }
+
+    // Rules for the user_requests collection
+    match /user_requests/{requestId} {
+      // Allow write by anyone if the user_id field matches the current user's ID
+      allow write: if request.resource.data.user_id == request.auth.uid;
+      // Allow read only by the mothership account
+      allow read: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+    }
+
+    // Rules for the stripe_customers collection
+    match /stripe_customers/{customerId} {
+      // Allow read access if the firestore_id field matches the user's ID
+      // or if the request is from the functions service account
+      allow read: if resource.data.firestore_id == request.auth.uid 
+                  || request.auth.token.email == '368022146565-compute@developer.gserviceaccount.com';
+
+      // Allow update and read access only for the functions service account
+      allow update: if request.auth.token.email == '368022146565-compute@developer.gserviceaccount.com';
     }
   }
 }
