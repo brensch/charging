@@ -48,12 +48,11 @@ import { UserRequestStatus } from "../contracts/objects"
 import QrCode2Icon from "@mui/icons-material/QrCode2"
 import BarcodeScannerDialog from "../objects/BarcodeScanner"
 import { CustomerContext } from "../contexts/CustomerContext"
-import PlugDetails from "../objects/PlugDetails"
 const useQuery = () => {
   return new URLSearchParams(useLocation().search)
 }
 
-const PlugPage = () => {
+const PlugSettingsPage = () => {
   const urlQuery = useQuery()
   const navigate = useNavigate()
   const auth = useAuth()
@@ -396,7 +395,14 @@ const PlugPage = () => {
         <React.Fragment>
           In use plugs
           {inUsePlugStatuses.map((plugStatus) => (
-            <PlugDetails plugId={plugStatus.id} />
+            <Typography
+            // onClick={() => {
+            //   setPlugID(previousPlugID)
+            //   navigate(`?plug=${previousPlugID}`)
+            // }}
+            >
+              {plugStatus.id}
+            </Typography>
           ))}
         </React.Fragment>
       )}
@@ -415,4 +421,4 @@ const PlugPage = () => {
   )
 }
 
-export default PlugPage
+export default PlugSettingsPage

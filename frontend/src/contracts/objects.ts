@@ -418,6 +418,7 @@ export interface PlugSettings {
    * value.
    */
   last_time_user_checking_ms: number;
+  qr_code: string;
 }
 
 export interface LocalStateRequest {
@@ -766,7 +767,7 @@ export const StateMachineTransition = {
 };
 
 function createBasePlugSettings(): PlugSettings {
-  return { id: "", name: "", current_limit: 0, site_id: "", last_time_user_checking_ms: 0 };
+  return { id: "", name: "", current_limit: 0, site_id: "", last_time_user_checking_ms: 0, qr_code: "" };
 }
 
 export const PlugSettings = {
@@ -785,6 +786,9 @@ export const PlugSettings = {
     }
     if (message.last_time_user_checking_ms !== 0) {
       writer.uint32(40).int64(message.last_time_user_checking_ms);
+    }
+    if (message.qr_code !== "") {
+      writer.uint32(50).string(message.qr_code);
     }
     return writer;
   },
@@ -831,6 +835,13 @@ export const PlugSettings = {
 
           message.last_time_user_checking_ms = longToNumber(reader.int64() as Long);
           continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.qr_code = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -849,6 +860,7 @@ export const PlugSettings = {
       last_time_user_checking_ms: isSet(object.last_time_user_checking_ms)
         ? globalThis.Number(object.last_time_user_checking_ms)
         : 0,
+      qr_code: isSet(object.qr_code) ? globalThis.String(object.qr_code) : "",
     };
   },
 
@@ -869,6 +881,9 @@ export const PlugSettings = {
     if (message.last_time_user_checking_ms !== 0) {
       obj.last_time_user_checking_ms = Math.round(message.last_time_user_checking_ms);
     }
+    if (message.qr_code !== "") {
+      obj.qr_code = message.qr_code;
+    }
     return obj;
   },
 
@@ -882,6 +897,7 @@ export const PlugSettings = {
     message.current_limit = object.current_limit ?? 0;
     message.site_id = object.site_id ?? "";
     message.last_time_user_checking_ms = object.last_time_user_checking_ms ?? 0;
+    message.qr_code = object.qr_code ?? "";
     return message;
   },
 };

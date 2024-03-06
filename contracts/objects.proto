@@ -48,6 +48,7 @@ message PlugSettings {
   // if a user has checked recently, update, otherwise, do not write readings
   // value.
   int64 last_time_user_checking_ms = 5;
+  string qr_code = 6;
 }
 
 message LocalStateRequest {

@@ -7,7 +7,7 @@ service cloud.firestore {
       allow read, write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
     }
 
-    // Specific rules for autotopup_preferences collection
+    // Rules for autotopup_preferences collection
     match /autotopup_preferences/{docId} {
       // Allow read if the user's ID matches the document ID or if it's the mothership account
       allow read: if request.auth.uid == docId || request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
@@ -15,7 +15,7 @@ service cloud.firestore {
       allow update: if request.auth.uid == docId;
     }
 
-    // Specific rules for customer_balances collection
+    // Rules for customer_balances collection
     match /customer_balances/{userId} {
       // Allow users to read their own balance
       allow read: if request.auth.uid == userId;
@@ -42,8 +42,17 @@ service cloud.firestore {
 
     // Rules for the plug_settings collection
     match /plug_settings/{settingId} {
-      // Allow read and write by anyone
-      allow read, write: if true;
+      // Allow read by anyone
+      allow read: if true;
+      
+      // Allow the 'mothership' user to update without restrictions
+      allow update: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+      
+      // Allow others to update, but only if 'id' and 'site_id' are not being modified
+      allow update: if request.auth != null 
+                    && !(request.resource.data.keys().hasAny(['id', 'site_id'])
+                        && (resource.data.id != request.resource.data.id
+                            || resource.data.site_id != request.resource.data.site_id));
     }
 
     // Rules for the plug_status collection
