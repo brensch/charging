@@ -90,7 +90,7 @@ const CommissioningPage = () => {
     setOpenScanner(!openScanner)
   }
 
-  const activateCommissioning = async (plugID: string) => {
+  const activateCommissioning = async (plugID: string, siteID: string) => {
     const userRequest: CommissioningStateRequest = {
       site_id: siteID,
       requestor_id: auth.currentUser?.uid!,
@@ -185,11 +185,11 @@ const CommissioningPage = () => {
           ),
         }}
       />
-      {(commissioningResponse === null || !commissioningResponse?.active) && (
+      {commissioningResponse && !commissioningResponse?.active && (
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => activateCommissioning("init")}
+          onClick={() => activateCommissioning("init", siteID)}
         >
           Activate Commissioning mode
         </Button>

@@ -55,6 +55,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "commissioning_responses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "site_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "time_actioned_ms",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
