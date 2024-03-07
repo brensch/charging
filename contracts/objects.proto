@@ -197,3 +197,24 @@ message Session {
   double total_kwh = 7;
   int64 cents = 8;
 }
+
+message CommissioningStateRequest {
+  string site_id = 1;
+  string requestor_id = 2;
+  int64 time_requested_ms = 3;
+  string active_plug = 4;
+}
+
+message CommissioningPlugState {
+  string plug_id = 1;
+  bool on = 2;
+  string error = 3;
+}
+
+message CommissioningStateResponse {
+  string site_id = 1;
+  int64 time_actioned_ms = 2;
+  string error = 3;
+  repeated CommissioningPlugState plugs = 4;
+  bool active = 5;
+}

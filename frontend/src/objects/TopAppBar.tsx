@@ -165,7 +165,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           >
             Sign Out
           </Button>
-          <Button variant="outlined">Contact Us</Button>
+          <Button
+            variant="outlined"
+            component="a"
+            href="mailto:help@niquist.com"
+          >
+            Contact Us
+          </Button>
         </Box>
       </Box>
     </Slide>

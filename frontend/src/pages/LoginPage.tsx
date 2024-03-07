@@ -81,6 +81,9 @@ const LoginPage: React.FC = () => {
             disabled={sending || email === ""}
             variant="outlined"
             sx={{ mt: 3, mb: 2 }}
+            style={{
+              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
+            }}
           >
             Send Sign-in Link
           </Button>

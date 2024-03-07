@@ -60,31 +60,28 @@ const PlugPage = () => {
 
   const { sessions } = useContext(CustomerContext)
 
-  const uniquePlugIds = new Set<string>()
-
-  sessions.forEach((session) => {
-    uniquePlugIds.add(session.plug_id)
-  })
+  const updatePlug = (id: string) => {
+    setPlugID(id)
+    navigate(`?plug=${id}`)
+  }
 
   const [plugID, setPlugID] = useState(urlQuery.get("plug") || "")
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [plugSettings, setPlugSettings] = useState<PlugSettings | null>(null)
-  const [inUsePlugStatuses, setInUsePlugStatuses] = useState<PlugStatus[]>([])
+  const [inUsePlugs, setInUsePlugs] = useState<string[]>([])
   const [openScanner, setOpenScanner] = useState<boolean>(false)
   const [loadingPlugStatus, setLoadingPlugStatus] = useState<boolean>(false)
+  const [previousPlugIDs, setPreviousPlugIDs] = useState<string[]>([])
 
   const handleScannerClose = (scannedUrl?: string) => {
     setOpenScanner(false)
 
     if (scannedUrl) {
-      // Use the URL constructor and searchParams to extract the plug value
       const url = new URL(scannedUrl)
       const plugValue = url.searchParams.get("plug")
 
       if (plugValue) {
-        setPlugID(plugValue)
-        navigate(`?plug=${plugValue}`)
-        // Handle the plug value as needed, like setting it to an input field
+        updatePlug(plugValue)
       }
     }
   }
@@ -121,6 +118,17 @@ const PlugPage = () => {
   }
 
   useEffect(() => {
+    const uniquePlugIds = new Set<string>()
+    sessions.forEach((session) => {
+      if (session.plug_id === plugID) {
+        return
+      }
+      uniquePlugIds.add(session.plug_id)
+    })
+    setPreviousPlugIDs(Array.from(uniquePlugIds))
+  }, [plugID, sessions])
+
+  useEffect(() => {
     // Define a function to update the Firestore document
     const updatePlugSettings = async () => {
       const currentTimeInMs = Date.now()
@@ -147,45 +155,48 @@ const PlugPage = () => {
   }, [plugID])
 
   useEffect(() => {
-    if (plugID) {
-      let loadingCounter = 2 // Start with 2 to represent the two subscriptions we're about to make
-      setLoadingPlugStatus(true)
+    if (!plugID) {
+      setPlugSettings(null)
+      setPlugStatus(null)
+      return
+    }
+    let loadingCounter = 2 // Start with 2 to represent the two subscriptions we're about to make
+    setLoadingPlugStatus(true)
 
-      // Subscribe to plug_status document
-      const unsubscribeStatus = onSnapshot(
-        doc(firestore, "plug_status", plugID),
-        (doc) => {
-          if (doc.exists()) {
-            setPlugStatus(PlugStatus.fromJSON(doc.data()))
-          }
-          // Decrement the loading counter and check if all data has been loaded
-          loadingCounter -= 1
-          if (loadingCounter === 0) {
-            setLoadingPlugStatus(false)
-          }
-        },
-      )
+    // Subscribe to plug_status document
+    const unsubscribeStatus = onSnapshot(
+      doc(firestore, "plug_status", plugID),
+      (doc) => {
+        if (doc.exists()) {
+          setPlugStatus(PlugStatus.fromJSON(doc.data()))
+        }
+        // Decrement the loading counter and check if all data has been loaded
+        loadingCounter -= 1
+        if (loadingCounter === 0) {
+          setLoadingPlugStatus(false)
+        }
+      },
+    )
 
-      // Subscribe to plug_settings document
-      const unsubscribeSettings = onSnapshot(
-        doc(firestore, "plug_settings", plugID), // Assuming plugID is also used for plug_settings; adjust if necessary
-        (doc) => {
-          if (doc.exists()) {
-            setPlugSettings(PlugSettings.fromJSON(doc.data()))
-          }
-          // Decrement the loading counter and check if all data has been loaded
-          loadingCounter -= 1
-          if (loadingCounter === 0) {
-            setLoadingPlugStatus(false)
-          }
-        },
-      )
+    // Subscribe to plug_settings document
+    const unsubscribeSettings = onSnapshot(
+      doc(firestore, "plug_settings", plugID), // Assuming plugID is also used for plug_settings; adjust if necessary
+      (doc) => {
+        if (doc.exists()) {
+          setPlugSettings(PlugSettings.fromJSON(doc.data()))
+        }
+        // Decrement the loading counter and check if all data has been loaded
+        loadingCounter -= 1
+        if (loadingCounter === 0) {
+          setLoadingPlugStatus(false)
+        }
+      },
+    )
 
-      // Return a cleanup function that unsubscribes from both documents
-      return () => {
-        unsubscribeStatus()
-        unsubscribeSettings()
-      }
+    // Return a cleanup function that unsubscribes from both documents
+    return () => {
+      unsubscribeStatus()
+      unsubscribeSettings()
     }
   }, [plugID]) // Dependencies array, re-run effect if plugID changes
 
@@ -200,11 +211,15 @@ const PlugPage = () => {
 
     // Subscribe to the query
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const statuses: PlugStatus[] = []
+      const inUsePlugs: string[] = []
       querySnapshot.forEach((doc) => {
-        statuses.push(PlugStatus.fromJSON(doc.data()))
+        const status = PlugStatus.fromJSON(doc.data())
+        if (status.id === plugID) {
+          return
+        }
+        inUsePlugs.push(status.id)
       })
-      setInUsePlugStatuses(statuses) // Update state with the new list of requests
+      setInUsePlugs(inUsePlugs)
     })
 
     // Clean up the subscription when the component unmounts
@@ -213,8 +228,7 @@ const PlugPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
-    setPlugID(value)
-    navigate(`?plug=${value}`)
+    updatePlug(value)
   }
 
   useEffect(() => {
@@ -224,16 +238,13 @@ const PlugPage = () => {
     }
   }, [urlQuery])
 
+  const previousPlugs = previousPlugIDs.filter(
+    (previousPlug) => !inUsePlugs.includes(previousPlug),
+  )
+
   const formatState = (state: StateMachineState) =>
     stateMachineStateToJSON(state)
       .replace(/^StateMachineState_/, "")
-      .replace(/_/g, " ")
-      .toLowerCase()
-      .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
-
-  const formatRequestStatus = (state: UserRequestStatus) =>
-    userRequestStatusToJSON(state)
-      .replace(/^RequestedStatus_/, "")
       .replace(/_/g, " ")
       .toLowerCase()
       .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
@@ -257,7 +268,11 @@ const PlugPage = () => {
           ),
         }}
       />
-      <BarcodeScannerDialog open={openScanner} onClose={handleScannerClose} />
+      <BarcodeScannerDialog
+        open={openScanner}
+        onClose={handleScannerClose}
+        banner="Scan QR Code on plug"
+      />
       {loadingPlugStatus && <Typography>loading plug state</Typography>}
       {!loadingPlugStatus &&
         plugStatus &&
@@ -389,28 +404,36 @@ const PlugPage = () => {
             </Paper>
           </React.Fragment>
         )}
-      {!plugStatus && (
-        <Typography variant="h6">Previously used plugs:</Typography>
-      )}
-      {inUsePlugStatuses.length > 0 && (
-        <React.Fragment>
-          In use plugs
-          {inUsePlugStatuses.map((plugStatus) => (
-            <PlugDetails plugId={plugStatus.id} />
-          ))}
-        </React.Fragment>
-      )}
-      Previous plugs
-      {Array.from(uniquePlugIds).map((previousPlugID) => (
-        <Typography
-          onClick={() => {
-            setPlugID(previousPlugID)
-            navigate(`?plug=${previousPlugID}`)
-          }}
-        >
-          {previousPlugID}
-        </Typography>
-      ))}
+      <Grid container spacing={1}>
+        {inUsePlugs.length > 0 && (
+          <React.Fragment>
+            <Grid item xs={12}>
+              <Typography variant="h6">Your plugs in use right now</Typography>
+            </Grid>
+            {inUsePlugs.map((inUsePlugID) => (
+              <Grid item xs={4}>
+                <PlugDetails
+                  plugId={inUsePlugID}
+                  updateSelectedPlug={updatePlug}
+                />
+              </Grid>
+            ))}
+          </React.Fragment>
+        )}
+        {previousPlugs.length > 0 && (
+          <Grid item xs={12}>
+            <Typography variant="h6">Previous plugs you've used</Typography>
+          </Grid>
+        )}
+        {previousPlugs.map((previousPlugID) => (
+          <Grid item xs={4}>
+            <PlugDetails
+              plugId={previousPlugID}
+              updateSelectedPlug={updatePlug}
+            />
+          </Grid>
+        ))}
+      </Grid>
     </Container>
   )
 }

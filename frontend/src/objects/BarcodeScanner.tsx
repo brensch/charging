@@ -13,11 +13,13 @@ import useMediaQuery from "@mui/material/useMediaQuery"
 interface BarcodeScannerDialogProps {
   open: boolean
   onClose: (scannedCode?: string) => void
+  banner: string
 }
 
 const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
   open,
   onClose,
+  banner,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const codeReader = useRef<BrowserMultiFormatReader | null>(null)
@@ -85,7 +87,7 @@ const BarcodeScannerDialog: React.FC<BarcodeScannerDialogProps> = ({
     <Dialog open={dialogOpen} onClose={() => onClose()}>
       <Box sx={{ padding: 2 }}>
         <Typography variant="h6" sx={{ marginBottom: 2 }}>
-          Scan QR code on plug
+          {banner}
         </Typography>
         <Paper
           elevation={3}

@@ -34,6 +34,7 @@ import MoneyPage from "./pages/MoneyPage"
 import SessionsPage from "./pages/SessionsPage"
 import { useState } from "react"
 import UnprotectedRoute from "./UnprotectedRoute"
+import CommissioningPage from "./pages/CommissioningPage"
 
 const theme = createTheme({
   palette: {
@@ -198,6 +199,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <PlugPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/commissioning"
+                  element={
+                    <ProtectedRoute>
+                      <CommissioningPage />
                     </ProtectedRoute>
                   }
                 />

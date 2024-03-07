@@ -81,5 +81,20 @@ service cloud.firestore {
       // Allow update and read access only for the functions service account
       allow update: if request.auth.token.email == '368022146565-compute@developer.gserviceaccount.com';
     }
+
+    // Rules for the commissioning_requests collection
+    match /commissioning_requests/{requestId} {
+      allow write: if request.resource.data.requestor_id == request.auth.uid;
+
+      allow read: if true;
+    }
+
+    // Rules for the commissioning_responses collection
+    match /commissioning_responses/{responseId} {
+      // Allow read by anyone
+      allow read: if true;
+      // Allow write only by the mothership account
+      allow write: if request.auth.token.email == 'mothership@charging-402405.iam.gserviceaccount.com';
+    }
   }
 }
