@@ -2,6 +2,8 @@ package statemachine
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"sync"
 
 	"cloud.google.com/go/pubsub"
@@ -42,4 +44,44 @@ func (p *PlugStateMachine) WriteReading(ctx context.Context, reading *contracts.
 
 	// async so ok to do in telemetry loop (ie fast)
 	return p.writeReadingToDB(ctx, reading, msg)
+}
+
+func (s *StateMachineCollection) PutSiteIntoCommissioningMode(ctx context.Context, siteID, plugToEnable string, commissioning bool) error {
+
+	s.stateMachinesMu.Lock()
+	defer s.stateMachinesMu.Unlock()
+	plugsFound := false
+	for _, stateMachine := range s.stateMachines {
+		if stateMachine.siteID != siteID {
+			continue
+		}
+		plugsFound = true
+		stateMachine.stateMu.Lock()
+		if commissioning {
+			stateMachine.state.State = contracts.StateMachineState_StateMachineState_COMMISSIONING
+		} else {
+			stateMachine.state.State = contracts.StateMachineState_StateMachineState_INITIALISING
+		}
+		stateMachine.state.Reason = "Technician is commissioning this site."
+		stateMachine.stateMu.Unlock()
+
+		// TODO: use latest readings to only tell it off if it's on.
+		if stateMachine.plugID != plugToEnable {
+			err := stateMachine.RequestLocalState(ctx, contracts.RequestedState_RequestedState_OFF)
+			if err != nil {
+				log.Println("error requesting local state off", err)
+			}
+			continue
+		}
+
+		err := stateMachine.RequestLocalState(ctx, contracts.RequestedState_RequestedState_ON)
+		if err != nil {
+			log.Println("error requesting local state on", err)
+		}
+	}
+
+	if !plugsFound {
+		return fmt.Errorf("no plugs found for site %s", siteID)
+	}
+	return nil
 }

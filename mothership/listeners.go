@@ -237,3 +237,60 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 		}
 	}
 }
+
+func ListenForCommissioningRequests(ctx context.Context, fs *firestore.Client, stateMachines *statemachine.StateMachineCollection) {
+	// listen to user requests
+	userRequests := fs.Collection(common.CollectionCommissioningRequests)
+	query := userRequests.Where("acked", "==", false)
+	iter := query.Snapshots(ctx)
+	defer iter.Stop()
+
+	// Handle commands coming from document changes
+	for {
+		// Await the next snapshot.
+		snap, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			fmt.Printf("Error listening to user request changes: %v\n", err)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		for _, change := range snap.Changes {
+			if change.Kind != firestore.DocumentAdded {
+				continue
+			}
+			// Decode the document into the UserRequest struct
+			var userRequest *contracts.CommissioningStateRequest
+			err = change.Doc.DataTo(&userRequest)
+			if err != nil {
+				fmt.Printf("Error decoding document: %v\n", err)
+				continue
+			}
+
+			// todo: this properly
+			if userRequest.RequestorId != "brendo" {
+				log.Println("invalid user. will eventually exit here once allowlist sorted")
+			}
+
+			// put all plugs into commissioning state
+			err = stateMachines.PutSiteIntoCommissioningMode(ctx, userRequest.SiteId, userRequest.ActivePlug, true)
+			if err != nil {
+				log.Println("failed to put site into commissioning mode", err)
+				continue
+			}
+
+			// update that we received the request
+			_, err = fs.Collection(common.CollectionUserRequests).Doc(change.Doc.Ref.ID).Update(ctx, []firestore.Update{
+				{Path: "acked", Value: true},
+			})
+			if err != nil {
+				fmt.Printf("Error updating user requests: %v\n", err)
+				continue
+			}
+
+		}
+	}
+}

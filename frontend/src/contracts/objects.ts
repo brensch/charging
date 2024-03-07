@@ -18,6 +18,7 @@ export enum StateMachineState {
   StateMachineState_ACCOUNT_REMOVAL_REQUESTED = 17,
   StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY = 18,
   StateMachineState_WAITING_FOR_PLUG_IN = 19,
+  StateMachineState_COMMISSIONING = 20,
   UNRECOGNIZED = -1,
 }
 
@@ -62,6 +63,9 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case 19:
     case "StateMachineState_WAITING_FOR_PLUG_IN":
       return StateMachineState.StateMachineState_WAITING_FOR_PLUG_IN;
+    case 20:
+    case "StateMachineState_COMMISSIONING":
+      return StateMachineState.StateMachineState_COMMISSIONING;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -97,6 +101,8 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
       return "StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY";
     case StateMachineState.StateMachineState_WAITING_FOR_PLUG_IN:
       return "StateMachineState_WAITING_FOR_PLUG_IN";
+    case StateMachineState.StateMachineState_COMMISSIONING:
+      return "StateMachineState_COMMISSIONING";
     case StateMachineState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -533,20 +539,7 @@ export interface CommissioningStateRequest {
   requestor_id: string;
   time_requested_ms: number;
   active_plug: string;
-}
-
-export interface CommissioningPlugState {
-  plug_id: string;
-  on: boolean;
-  error: string;
-}
-
-export interface CommissioningStateResponse {
-  site_id: string;
-  time_actioned_ms: number;
-  error: string;
-  plugs: CommissioningPlugState[];
-  active: boolean;
+  acked: boolean;
 }
 
 function createBaseFuzeSettings(): FuzeSettings {
@@ -2379,7 +2372,7 @@ export const Session = {
 };
 
 function createBaseCommissioningStateRequest(): CommissioningStateRequest {
-  return { site_id: "", requestor_id: "", time_requested_ms: 0, active_plug: "" };
+  return { site_id: "", requestor_id: "", time_requested_ms: 0, active_plug: "", acked: false };
 }
 
 export const CommissioningStateRequest = {
@@ -2395,6 +2388,9 @@ export const CommissioningStateRequest = {
     }
     if (message.active_plug !== "") {
       writer.uint32(34).string(message.active_plug);
+    }
+    if (message.acked === true) {
+      writer.uint32(40).bool(message.acked);
     }
     return writer;
   },
@@ -2434,6 +2430,13 @@ export const CommissioningStateRequest = {
 
           message.active_plug = reader.string();
           continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.acked = reader.bool();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2449,6 +2452,7 @@ export const CommissioningStateRequest = {
       requestor_id: isSet(object.requestor_id) ? globalThis.String(object.requestor_id) : "",
       time_requested_ms: isSet(object.time_requested_ms) ? globalThis.Number(object.time_requested_ms) : 0,
       active_plug: isSet(object.active_plug) ? globalThis.String(object.active_plug) : "",
+      acked: isSet(object.acked) ? globalThis.Boolean(object.acked) : false,
     };
   },
 
@@ -2466,6 +2470,9 @@ export const CommissioningStateRequest = {
     if (message.active_plug !== "") {
       obj.active_plug = message.active_plug;
     }
+    if (message.acked === true) {
+      obj.acked = message.acked;
+    }
     return obj;
   },
 
@@ -2478,216 +2485,7 @@ export const CommissioningStateRequest = {
     message.requestor_id = object.requestor_id ?? "";
     message.time_requested_ms = object.time_requested_ms ?? 0;
     message.active_plug = object.active_plug ?? "";
-    return message;
-  },
-};
-
-function createBaseCommissioningPlugState(): CommissioningPlugState {
-  return { plug_id: "", on: false, error: "" };
-}
-
-export const CommissioningPlugState = {
-  encode(message: CommissioningPlugState, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.plug_id !== "") {
-      writer.uint32(10).string(message.plug_id);
-    }
-    if (message.on === true) {
-      writer.uint32(16).bool(message.on);
-    }
-    if (message.error !== "") {
-      writer.uint32(26).string(message.error);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): CommissioningPlugState {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCommissioningPlugState();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.plug_id = reader.string();
-          continue;
-        case 2:
-          if (tag !== 16) {
-            break;
-          }
-
-          message.on = reader.bool();
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.error = reader.string();
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): CommissioningPlugState {
-    return {
-      plug_id: isSet(object.plug_id) ? globalThis.String(object.plug_id) : "",
-      on: isSet(object.on) ? globalThis.Boolean(object.on) : false,
-      error: isSet(object.error) ? globalThis.String(object.error) : "",
-    };
-  },
-
-  toJSON(message: CommissioningPlugState): unknown {
-    const obj: any = {};
-    if (message.plug_id !== "") {
-      obj.plug_id = message.plug_id;
-    }
-    if (message.on === true) {
-      obj.on = message.on;
-    }
-    if (message.error !== "") {
-      obj.error = message.error;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<CommissioningPlugState>, I>>(base?: I): CommissioningPlugState {
-    return CommissioningPlugState.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<CommissioningPlugState>, I>>(object: I): CommissioningPlugState {
-    const message = createBaseCommissioningPlugState();
-    message.plug_id = object.plug_id ?? "";
-    message.on = object.on ?? false;
-    message.error = object.error ?? "";
-    return message;
-  },
-};
-
-function createBaseCommissioningStateResponse(): CommissioningStateResponse {
-  return { site_id: "", time_actioned_ms: 0, error: "", plugs: [], active: false };
-}
-
-export const CommissioningStateResponse = {
-  encode(message: CommissioningStateResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.site_id !== "") {
-      writer.uint32(10).string(message.site_id);
-    }
-    if (message.time_actioned_ms !== 0) {
-      writer.uint32(16).int64(message.time_actioned_ms);
-    }
-    if (message.error !== "") {
-      writer.uint32(26).string(message.error);
-    }
-    for (const v of message.plugs) {
-      CommissioningPlugState.encode(v!, writer.uint32(34).fork()).ldelim();
-    }
-    if (message.active === true) {
-      writer.uint32(40).bool(message.active);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): CommissioningStateResponse {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCommissioningStateResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.site_id = reader.string();
-          continue;
-        case 2:
-          if (tag !== 16) {
-            break;
-          }
-
-          message.time_actioned_ms = longToNumber(reader.int64() as Long);
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.error = reader.string();
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.plugs.push(CommissioningPlugState.decode(reader, reader.uint32()));
-          continue;
-        case 5:
-          if (tag !== 40) {
-            break;
-          }
-
-          message.active = reader.bool();
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): CommissioningStateResponse {
-    return {
-      site_id: isSet(object.site_id) ? globalThis.String(object.site_id) : "",
-      time_actioned_ms: isSet(object.time_actioned_ms) ? globalThis.Number(object.time_actioned_ms) : 0,
-      error: isSet(object.error) ? globalThis.String(object.error) : "",
-      plugs: globalThis.Array.isArray(object?.plugs)
-        ? object.plugs.map((e: any) => CommissioningPlugState.fromJSON(e))
-        : [],
-      active: isSet(object.active) ? globalThis.Boolean(object.active) : false,
-    };
-  },
-
-  toJSON(message: CommissioningStateResponse): unknown {
-    const obj: any = {};
-    if (message.site_id !== "") {
-      obj.site_id = message.site_id;
-    }
-    if (message.time_actioned_ms !== 0) {
-      obj.time_actioned_ms = Math.round(message.time_actioned_ms);
-    }
-    if (message.error !== "") {
-      obj.error = message.error;
-    }
-    if (message.plugs?.length) {
-      obj.plugs = message.plugs.map((e) => CommissioningPlugState.toJSON(e));
-    }
-    if (message.active === true) {
-      obj.active = message.active;
-    }
-    return obj;
-  },
-
-  create<I extends Exact<DeepPartial<CommissioningStateResponse>, I>>(base?: I): CommissioningStateResponse {
-    return CommissioningStateResponse.fromPartial(base ?? ({} as any));
-  },
-  fromPartial<I extends Exact<DeepPartial<CommissioningStateResponse>, I>>(object: I): CommissioningStateResponse {
-    const message = createBaseCommissioningStateResponse();
-    message.site_id = object.site_id ?? "";
-    message.time_actioned_ms = object.time_actioned_ms ?? 0;
-    message.error = object.error ?? "";
-    message.plugs = object.plugs?.map((e) => CommissioningPlugState.fromPartial(e)) || [];
-    message.active = object.active ?? false;
+    message.acked = object.acked ?? false;
     return message;
   },
 };

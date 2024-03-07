@@ -33,7 +33,6 @@ import { firestore } from "../firebase" // Assume you have a Firebase config fil
 import {
   ActualState,
   CommissioningStateRequest,
-  CommissioningStateResponse,
   PlugSettings,
   PlugStatus,
   StateMachineState,
@@ -68,8 +67,9 @@ const CommissioningPage = () => {
   const [siteID, setSiteID] = useState(urlQuery.get("site") || "")
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [plugsSettings, setPlugsSettings] = useState<PlugSettings[]>([])
-  const [commissioningResponse, setCommissioningResponse] =
-    useState<CommissioningStateResponse | null>(null)
+  const [commissioningRequest, setCommissioningRequest] =
+    useState<CommissioningStateRequest | null>(null)
+
   const [openScanner, setOpenScanner] = useState<boolean>(false)
   const [loadingPlugStatus, setLoadingPlugStatus] = useState<boolean>(false)
   const [previousPlugIDs, setPreviousPlugIDs] = useState<string[]>([])
@@ -96,6 +96,7 @@ const CommissioningPage = () => {
       requestor_id: auth.currentUser?.uid!,
       time_requested_ms: Date.now(),
       active_plug: plugID,
+      acked: false,
     }
 
     try {
@@ -133,7 +134,7 @@ const CommissioningPage = () => {
   // get latest commissioning state response
   useEffect(() => {
     const q = query(
-      collection(firestore, "commissioning_responses"),
+      collection(firestore, "commissioning_requests"),
       where("site_id", "==", siteID),
       orderBy("time_actioned_ms", "desc"),
       limit(1),
@@ -142,9 +143,7 @@ const CommissioningPage = () => {
     // Subscribe to the query
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       querySnapshot.forEach((doc) => {
-        setCommissioningResponse(
-          CommissioningStateResponse.fromJSON(doc.data()),
-        )
+        setCommissioningRequest(CommissioningStateRequest.fromJSON(doc.data()))
       })
     })
 
@@ -163,8 +162,6 @@ const CommissioningPage = () => {
       setSiteID(plugId || "")
     }
   }, [urlQuery])
-
-  console.log(commissioningResponse)
 
   return (
     <Container>
@@ -185,7 +182,7 @@ const CommissioningPage = () => {
           ),
         }}
       />
-      {commissioningResponse && !commissioningResponse?.active && (
+      {plugsSettings.length > 0 && commissioningRequest?.active_plug !== "" && (
         <Button
           fullWidth
           variant="outlined"
@@ -194,11 +191,11 @@ const CommissioningPage = () => {
           Activate Commissioning mode
         </Button>
       )}
-      {commissioningResponse?.active && (
+      {/* {commissioningResponse?.active && (
         <Button fullWidth variant="outlined">
           Deactivate Commissioning mode
         </Button>
-      )}
+      )} */}
       <BarcodeScannerDialog
         open={openScanner}
         onClose={handleScannerClose}
