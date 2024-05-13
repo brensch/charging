@@ -9,9 +9,7 @@ import (
 
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/electrical"
-	"github.com/brensch/charging/electrical/demo"
-	"github.com/brensch/charging/electrical/shelly"
-	"github.com/brensch/charging/electrical/sonoff"
+	"github.com/brensch/charging/electrical/tasmota"
 	"github.com/brensch/charging/gen/go/contracts"
 
 	"cloud.google.com/go/pubsub"
@@ -45,16 +43,17 @@ func main() {
 
 	// discover plugs and fuzes
 	discoverers := []electrical.Discoverer{
-		shelly.InitShellyDiscoverer(siteID),
-		sonoff.InitSonoffDiscoverer(siteID),
-		demo.InitDiscoverer(siteID),
+		// shelly.InitShellyDiscoverer(siteID),
+		// sonoff.InitSonoffDiscoverer(siteID),
+		tasmota.InitTasmotaDiscoverer(siteID),
+		// demo.InitDiscoverer(siteID),
 		// as we make more plug brands we can add their discoverers here.
 	}
 
 	plugs := make(map[string]electrical.Plug, 0)
 	fuzes := make(map[string]electrical.Fuze, 0)
 	for _, discoverer := range discoverers {
-		fmt.Println("discovering")
+		log.Println("discovering", discoverer)
 		discoveredPlugs, discoveredFuzes, err := discoverer.Discover(ctx)
 		if err != nil {
 			log.Fatalf("Failed to discover plugs: %v", err)
