@@ -83,7 +83,6 @@ func main() {
 		case <-ticker.C:
 		case <-ctx.Done():
 		}
-		log.Println("getting readings")
 		readings, err := GetReadings(ctx, plugs)
 		if err != nil {
 			log.Println("got error reading readings")

@@ -191,13 +191,8 @@ func (p *PlugStateMachine) SetError(ctx context.Context, error string) error {
 }
 
 func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contracts.StateMachineState][]StateTransition, targetState contracts.StateMachineState) bool {
-	log.Println("waiting for lock")
 	p.stateMu.Lock()
-	log.Println("got lock")
-
 	defer p.stateMu.Unlock()
-
-	log.Println("checking transition for ", p.plugID, p.state, targetState)
 
 	potentialStates, ok := StateMap[p.state.State]
 	if !ok {
@@ -209,7 +204,6 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 		if potentialState.TargetState != targetState {
 			continue
 		}
-		log.Println("seeing if state works", p.state, potentialState.TargetState)
 
 		transitioned := true
 		if potentialState.DoTransition != nil {
@@ -218,7 +212,7 @@ func (p *PlugStateMachine) Transition(ctx context.Context, StateMap map[contract
 		if !transitioned {
 			continue
 		}
-		log.Println("transitioned", p.state, potentialState.TargetState)
+		log.Println("transitioned state", p.plugID, p.state, potentialState.TargetState)
 
 		p.detailsMu.Lock()
 		owner := p.details.CurrentOwner

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -27,10 +28,10 @@ func ListenForCommands(ctx context.Context, ps *pubsub.Client, clientID string, 
 	// listen to commandRequestSub
 	err = commandRequestSub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		// request, err := ReceiveCommandRequest(ctx, msg)
-		var request contracts.LocalStateRequest
-		err := common.UnpackData(msg.Data, &request)
+		request := &contracts.LocalStateRequest{}
+		err := common.UnpackData(msg.Data, request)
 		if err != nil {
-			log.Println("Failed to read message: %v", err)
+			log.Printf("Failed to read message: %v", err)
 			return
 		}
 		if err != nil {
@@ -43,6 +44,9 @@ func ListenForCommands(ctx context.Context, ps *pubsub.Client, clientID string, 
 			log.Println("could not find plug id", request.PlugId)
 			return
 		}
+
+		requestJSON, _ := json.Marshal(request)
+		log.Printf("received command: %s", string(requestJSON))
 
 		err = plug.SetState(request.GetRequestedState())
 		if err != nil {
