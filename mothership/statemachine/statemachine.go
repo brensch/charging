@@ -254,7 +254,7 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 			case <-ticker.C:
 				state, ok := StateMap[p.state.State]
 				if !ok {
-					fmt.Println("no definition for state", p.state)
+					log.Println("no definition for state", p.state)
 					break
 				}
 
@@ -336,7 +336,7 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 				break
 			}
 			if err != nil {
-				fmt.Printf("Error listening to settings changes: %v\n", err)
+				log.Printf("Error listening to settings changes: %v\n", err)
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -345,7 +345,7 @@ func (p *PlugStateMachine) ListenToSettings(ctx context.Context, fs *firestore.C
 				var updatedPlugSetting *contracts.PlugSettings
 				err = change.Doc.DataTo(&updatedPlugSetting)
 				if err != nil {
-					fmt.Println("failed to read plug setting", err)
+					log.Println("failed to read plug setting", err)
 					continue
 				}
 
@@ -456,7 +456,7 @@ func (p *PlugStateMachine) updateSession(ctx context.Context, eventType contract
 	if err != nil {
 		return err
 	}
-	fmt.Println("writing session point")
+	log.Println("writing session point")
 
 	point := influxdb3.NewPointWithMeasurement("sessions").
 		SetTimestamp(time.Now()).

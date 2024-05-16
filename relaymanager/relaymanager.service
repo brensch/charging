@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=niquist
+User=root
 WorkingDirectory=/home/niquist
 ExecStart=/home/niquist/relaymanager-bin
 Restart=on-failure

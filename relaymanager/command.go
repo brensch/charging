@@ -31,7 +31,7 @@ package main
 // 		return err
 // 	}
 
-// 	fmt.Println("sent local state response: ", sendID)
+// 	log.Println("sent local state response: ", sendID)
 // 	return nil
 // }
 
@@ -63,7 +63,7 @@ package main
 // 	}
 
 // 	// Process the ReadingChunk
-// 	fmt.Printf("Received request for plug%s %s\n", localStateRequest.SiteId, localStateRequest.PlugId)
+// 	log.Printf("Received request for plug%s %s\n", localStateRequest.SiteId, localStateRequest.PlugId)
 
 // 	// Acknowledge the message
 // 	msg.Ack()

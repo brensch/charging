@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -39,7 +38,7 @@ func main() {
 
 	telemetrySendTopic := ps.Topic(common.TopicNameTelemetry)
 
-	fmt.Println(siteID, projectID)
+	log.Println(siteID, projectID)
 
 	// discover plugs and fuzes
 	discoverers := []electrical.Discoverer{
@@ -67,24 +66,27 @@ func main() {
 			fuzes[fuze.ID()] = fuze
 		}
 	}
-	fmt.Println("finished discovering, informing mothership of devices")
+	log.Println("finished discovering, informing mothership of devices")
 
 	err = AnnounceDevices(ctx, ps, siteID, plugs, fuzes)
 	if err != nil {
 		log.Fatalf("got error announcing devices: %+v", err)
 	}
 	// command listening loop
+	log.Println("listening for commands")
 	go ListenForCommands(ctx, ps, siteID, plugs)
 
+	log.Println("start reader loop")
 	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
 		}
+		log.Println("getting readings")
 		readings, err := GetReadings(ctx, plugs)
 		if err != nil {
-			fmt.Println("got error reading readings")
+			log.Println("got error reading readings")
 			continue
 		}
 
@@ -95,7 +97,7 @@ func main() {
 
 		readingBytes, err := common.PackData(readingChunk)
 		if err != nil {
-			fmt.Println("failed to pack readings", err)
+			log.Println("failed to pack readings", err)
 			continue
 		}
 
@@ -104,7 +106,7 @@ func main() {
 		})
 		_, err = res.Get(ctx)
 		if err != nil {
-			fmt.Println("failed to send readings", err)
+			log.Println("failed to send readings", err)
 			continue
 		}
 

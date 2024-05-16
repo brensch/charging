@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
@@ -43,16 +44,16 @@ func main() {
 	// Write to a Markdown file
 	file, err := os.Create("state_diagram.md")
 	if err != nil {
-		fmt.Println("Error creating Markdown file:", err)
+		log.Println("Error creating Markdown file:", err)
 		return
 	}
 	defer file.Close()
 
 	_, err = file.WriteString("```mermaid\n" + builder.String() + "```\n")
 	if err != nil {
-		fmt.Println("Error writing to Markdown file:", err)
+		log.Println("Error writing to Markdown file:", err)
 		return
 	}
 
-	fmt.Println("Mermaid diagram written to state_diagram.md successfully")
+	log.Println("Mermaid diagram written to state_diagram.md successfully")
 }

@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/InfluxCommunity/influxdb3-go/influxdb3"
@@ -35,7 +36,7 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 
 		timeStamp, ok := results.Value()["time"].(arrow.Timestamp)
 		if !ok {
-			fmt.Println("Error: time field missing")
+			log.Println("Error: time field missing")
 			continue
 		}
 
@@ -68,7 +69,7 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 		plugID,
 	)
 
-	fmt.Println(readingsQuery)
+	log.Println(readingsQuery)
 
 	readingsResult, err := ifClient.Query(ctx, readingsQuery)
 	if err != nil {

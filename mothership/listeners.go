@@ -39,7 +39,7 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 
 		plug, ok := stateMachines.GetStateMachine(response.GetPlugId())
 		if !ok {
-			fmt.Println("no plug state machine....", response.GetPlugId())
+			log.Println("no plug state machine....", response.GetPlugId())
 			return
 		}
 
@@ -71,9 +71,11 @@ func ListenForTelemetry(ctx context.Context, ps *pubsub.Client, stateMachines *s
 		for _, reading := range chunk.Readings {
 			plugStateMachine, ok := stateMachines.GetStateMachine(reading.PlugId)
 			if !ok {
-				fmt.Printf("reading: %+v", reading)
-				// This should not be happening. may downgrade from fatal though
+				log.Printf("reading: %+v", reading)
+				// This should not be happening.
+				// TODO: alarm here
 				log.Printf("Got a reading from a device not in the list. should not happen: %s", reading.PlugId)
+				msg.Ack()
 				return
 			}
 
@@ -109,8 +111,12 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 			return
 		}
 		log.Println("received device announcement", deviceAnnouncement.SiteId)
+		if len(deviceAnnouncement.PlugIds) == 0 {
+			log.Println("warning, no plugs found")
+		}
 
 		for _, plugID := range deviceAnnouncement.PlugIds {
+			log.Printf("device announced, setting up state machine: %s", plugID)
 			_, ok := stateMachines.GetStateMachine(plugID)
 			if ok {
 				continue
@@ -135,7 +141,7 @@ func ListenForNewDevices(ctx context.Context, fs *firestore.Client, ps *pubsub.C
 			log.Printf("failed to ack new devices: %+v", err)
 		}
 
-		fmt.Println("acknowledged device announcement", deviceAnnouncement.SiteId)
+		log.Println("acknowledged device announcement", deviceAnnouncement.SiteId)
 
 		msg.Ack()
 
@@ -158,7 +164,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 			break
 		}
 		if err != nil {
-			fmt.Printf("Error listening to user request changes: %v\n", err)
+			log.Printf("Error listening to user request changes: %v\n", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -171,7 +177,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 			var userRequest *contracts.UserRequest
 			err = change.Doc.DataTo(&userRequest)
 			if err != nil {
-				fmt.Printf("Error decoding document: %v\n", err)
+				log.Printf("Error decoding document: %v\n", err)
 				continue
 			}
 
@@ -184,7 +190,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				{Path: "result", Value: resRequestResult},
 			})
 			if err != nil {
-				fmt.Printf("Error updating user requests: %v\n", err)
+				log.Printf("Error updating user requests: %v\n", err)
 				continue
 			}
 
@@ -198,7 +204,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 			// // bit of a cludge here, not sure how to unify this with state machine without accepting inputs
 			err = plugStateMachine.SetOwner(ctx, userRequest.UserId)
 			if err != nil {
-				fmt.Printf("error setting owner: %v\n", err)
+				log.Printf("error setting owner: %v\n", err)
 				continue
 			}
 
@@ -216,7 +222,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 					{Path: "result", Value: resRequestResult},
 				})
 				if err != nil {
-					fmt.Printf("Error updating user requests: %v\n", err)
+					log.Printf("Error updating user requests: %v\n", err)
 				}
 				continue
 			}
@@ -230,7 +236,7 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				{Path: "result", Value: resRequestResult},
 			})
 			if err != nil {
-				fmt.Printf("Error updating user requests: %v\n", err)
+				log.Printf("Error updating user requests: %v\n", err)
 				continue
 			}
 
@@ -253,7 +259,7 @@ func ListenForCommissioningRequests(ctx context.Context, fs *firestore.Client, s
 			break
 		}
 		if err != nil {
-			fmt.Printf("Error listening to user request changes: %v\n", err)
+			log.Printf("Error listening to user request changes: %v\n", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -266,7 +272,7 @@ func ListenForCommissioningRequests(ctx context.Context, fs *firestore.Client, s
 			var userRequest *contracts.CommissioningStateRequest
 			err = change.Doc.DataTo(&userRequest)
 			if err != nil {
-				fmt.Printf("Error decoding document: %v\n", err)
+				log.Printf("Error decoding document: %v\n", err)
 				continue
 			}
 
@@ -287,7 +293,7 @@ func ListenForCommissioningRequests(ctx context.Context, fs *firestore.Client, s
 				{Path: "acked", Value: true},
 			})
 			if err != nil {
-				fmt.Printf("Error updating user requests: %v\n", err)
+				log.Printf("Error updating user requests: %v\n", err)
 				continue
 			}
 

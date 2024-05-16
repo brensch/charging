@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -34,6 +35,9 @@ func AnnounceDevices(ctx context.Context, ps *pubsub.Client, siteID string, plug
 		FuzeIds: fuzeIDs,
 	}
 
+	deviceBlob, _ := json.Marshal(newDevicesAnnouncement)
+	log.Printf("announcing devices: %s", string(deviceBlob))
+
 	newDevicesAnnouncementBytes, err := common.PackData(newDevicesAnnouncement)
 	if err != nil {
 		return err
@@ -58,6 +62,7 @@ func AnnounceDevices(ctx context.Context, ps *pubsub.Client, siteID string, plug
 		m.Ack()
 		cancel()
 	})
+	log.Println("mothership acked devices")
 
 	return nil
 

@@ -2,7 +2,6 @@ package statemachine
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -57,7 +56,7 @@ var (
 					p.detailsMu.Unlock()
 					err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_START)
 					if err != nil {
-						fmt.Println("got error updating session", err)
+						log.Println("got error updating session", err)
 						return false
 					}
 
@@ -209,7 +208,7 @@ var (
 					// remove old session
 					err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_FINISH)
 					if err != nil {
-						fmt.Println("got error updating session", err)
+						log.Println("got error updating session", err)
 						return false
 					}
 					p.detailsMu.Lock()

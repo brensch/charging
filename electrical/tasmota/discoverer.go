@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/brensch/charging/electrical"
 )
@@ -21,9 +23,8 @@ func InitTasmotaDiscoverer(siteID string) *TasmotaDiscoverer {
 	return &TasmotaDiscoverer{siteID: siteID}
 }
 
-// this function breaks this being a pure go implementation but fine as an interim
 func scanNetwork() ([]string, error) {
-	cmd := exec.Command("sudo", "arp-scan", "-l") // '-l' scans the local network
+	cmd := exec.Command("sudo", "arp-scan", "-l")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -59,47 +60,49 @@ func (d *TasmotaDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []
 	var fuzes []electrical.Fuze
 
 	for _, ip := range ips {
-		if isTasmota, _ := checkTasmotaDevice(ip); isTasmota {
-			plugs = append(plugs, &TasmotaPlug{
-				plugID:  ip,
-				siteID:  d.siteID,
-				address: ip,
-			})
-			// Assuming each Tasmota device can also represent a Fuze
-			fuzes = append(fuzes, &TasmotaFuze{
-				fuzeID:  ip,
-				siteID:  d.siteID,
-				address: ip,
-			})
+		isTasmota, status := checkTasmotaDevice(ip)
+		if !isTasmota {
+			continue
 		}
+		newPlugs, newFuze := NewTasmotaFuze(ctx, d.siteID, ip, status)
+		plugs = append(plugs, newPlugs...)
+		fuzes = append(fuzes, newFuze)
 	}
 
 	return plugs, fuzes, nil
 }
 
-func checkTasmotaDevice(ip string) (bool, string) {
-	resp, err := http.Get(fmt.Sprintf("http://%s/cm?cmnd=Status 0", ip))
+func checkTasmotaDevice(ip string) (bool, Status) {
+	log.Printf("checking %s", ip)
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+	resp, err := client.Get(fmt.Sprintf("http://%s/cm?cmnd=Status%%200", ip))
 	if err != nil {
-		log.Println("Error while checking Tasmota device:", err)
-		return false, ""
+		log.Printf("not a tasmota device, failed get: %s [%s]", ip, err)
+		return false, Status{}
 	}
 	defer resp.Body.Close()
 
-	var status struct {
-		Status struct {
-			DeviceName string `json:"DeviceName"`
-		} `json:"Status"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&status)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Error decoding Tasmota status:", err)
-		return false, ""
+		log.Printf("not a tasmota device, failed readall: %s [%s]", ip, err)
+		return false, Status{}
 	}
 
-	// Assume if a device name is received, it's a Tasmota device
-	if status.Status.DeviceName != "" {
-		return true, ip
+	var status Status // Define Status struct to decode the JSON response into
+	err = json.Unmarshal(bodyBytes, &status)
+	if err != nil {
+		log.Printf("not a tasmota device, failed decode: %s [%s]", ip, err)
+		return false, Status{}
 	}
 
-	return false, ""
+	// Check for a valid response structure to confirm it's a Tasmota device
+	if len(status.StatusSNS.SPM.Energy) > 0 {
+		log.Printf("found a tasmota device: %s", ip)
+		return true, status
+	}
+	log.Printf("not a tasmota device, no energy: %s [%s]", ip, string(bodyBytes))
+
+	return false, Status{}
 }

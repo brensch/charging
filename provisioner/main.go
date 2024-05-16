@@ -29,7 +29,7 @@ func waitForServiceAccountCreation(iamService *iam.Service, name string) error {
 			return nil
 		}
 		time.Sleep(retryDelay)
-		fmt.Println("waiting")
+		log.Println("waiting")
 	}
 	return fmt.Errorf("Service account not available after waiting")
 }
@@ -141,7 +141,7 @@ func CreateFirestoreServiceAccount(projectID, accountID, accountDisplayName stri
 		})
 	}
 
-	fmt.Println("got policy:", policy.Bindings)
+	log.Println("got policy:", policy.Bindings)
 
 	// Set the modified policy back to the project
 	_, err = crmService.Projects.SetIamPolicy(projectID, &cloudresourcemanager.SetIamPolicyRequest{
@@ -201,5 +201,5 @@ func main() {
 		log.Fatalf("Failed to write to file: %v", err)
 	}
 
-	fmt.Printf("Service account key saved to %s\n", fileName)
+	log.Printf("Service account key saved to %s\n", fileName)
 }

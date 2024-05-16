@@ -116,7 +116,7 @@ func FetchSubDeviceList(ip, deviceID string) (*ResponseBody, error) {
 		return nil, err
 	}
 
-	fmt.Println("response", string(body))
+	log.Println("response", string(body))
 
 	// Unmarshal the response body into the ResponseBody struct
 	var responseBody ResponseBody
@@ -147,14 +147,14 @@ func (d *SonoffDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []e
 
 	// Iterate over the IP addresses in the ips map
 	for ip, id := range ips {
-		fmt.Println("looking up subdevices of device", id, ip)
+		log.Println("looking up subdevices of device", id, ip)
 		// get the subdevicelist for the spm main
 		subDeviceList, err := FetchSubDeviceList(ip, id)
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, subDevice := range subDeviceList.Data.SubDevList {
-			fmt.Println("found subdevice", subDevice.SubDevId, subDevice.Type)
+			log.Println("found subdevice", subDevice.SubDevId, subDevice.Type)
 
 			for i := 0; i < 4; i++ { // Assuming Shelly Pro 4 PM has 4 switches
 				plug := &SonoffPlug{
@@ -308,7 +308,7 @@ func startMonitorListener(port int, plug *SonoffPlug) {
 	}
 	defer listener.Close()
 
-	fmt.Printf("Listening on %s\n", listenAddr)
+	log.Printf("Listening on %s\n", listenAddr)
 
 	for {
 		conn, err := listener.Accept()

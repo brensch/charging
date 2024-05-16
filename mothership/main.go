@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -174,7 +173,7 @@ func main() {
 	go ListenForDeviceCommandResponses(ctx, fs, ps, stateMachines)
 	go ListenForTelemetry(ctx, ps, stateMachines)
 
-	fmt.Println("listening for cancels")
+	log.Println("listening for cancels")
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
