@@ -50,6 +50,7 @@ import BarcodeScannerDialog from "../objects/BarcodeScanner"
 import { CustomerContext } from "../contexts/CustomerContext"
 import PlugDetails from "../objects/PlugDetails"
 import { useParams } from "react-router-dom"
+import { format, formatDistanceToNow } from "date-fns"
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search)
@@ -203,22 +204,22 @@ const PlugDetailPage = () => {
           plugSettings &&
           plugStatus.state?.state && (
             <React.Fragment>
-              <Grid item xs={12}>
-                <Typography variant="h6">
-                  Plug Name:{" "}
+              <Grid item xs={12} sx={{ marginBottom: "50px" }}>
+                <Typography variant="h4" mt={2} mb={2}>
+                  Plug{" "}
                   {plugSettings?.name === ""
-                    ? plugStatus.id.slice(-20)
-                    : plugSettings.name.slice(-20)}{" "}
+                    ? plugStatus.id.slice(-15)
+                    : plugSettings.name.slice(-15)}{" "}
                 </Typography>
               </Grid>
-              <Grid item xs={12} container justifyContent="space-around">
+
+              <Grid item xs={12} container>
                 {plugStatus.possible_next_states_labels.map(
                   (possibleState, index) => (
                     <Button
                       key={index}
                       variant="outlined"
                       color="primary"
-                      fullWidth
                       onClick={() =>
                         handleCreateRequest(
                           plugStatus.possible_next_states[index],
@@ -236,25 +237,31 @@ const PlugDetailPage = () => {
                 )}
               </Grid>
               <Grid item xs={12}>
-                <Paper elevation={0} style={{ padding: 0 }}>
+                <Paper elevation={0} sx={{ padding: 0 }}>
                   <Grid container>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" style={{ padding: 16 }}>
-                        Current State:
+                    <Grid item xs={3}>
+                      <Typography variant="body1" sx={{ padding: 1 }}>
+                        State:
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" style={{ padding: 16 }}>
+                    <Grid item xs={9}>
+                      <Typography
+                        variant="body1"
+                        sx={{ padding: 1, textAlign: "right" }}
+                      >
                         {formatState(plugStatus.state.state)}
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" style={{ padding: 16 }}>
-                        Current Power:
+                    <Grid item xs={3}>
+                      <Typography variant="body1" sx={{ padding: 1 }}>
+                        Power:
                       </Typography>
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" style={{ padding: 16 }}>
+                    <Grid item xs={9}>
+                      <Typography
+                        variant="body1"
+                        sx={{ padding: 1, textAlign: "right" }}
+                      >
                         {(
                           plugStatus.latest_reading?.current! *
                           plugStatus.latest_reading?.voltage!
@@ -262,10 +269,43 @@ const PlugDetailPage = () => {
                         W
                       </Typography>
                     </Grid>
+                    {plugStatus.state_machine_details?.charge_start_time_ms !==
+                      0 && (
+                      <>
+                        <Grid item xs={3}>
+                          <Typography variant="body1" sx={{ padding: 1 }}>
+                            Charge Start:
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={9}>
+                          <Typography
+                            variant="body1"
+                            sx={{ padding: 1, textAlign: "right" }}
+                          >
+                            {plugStatus.state_machine_details
+                              ?.charge_start_time_ms &&
+                              format(
+                                new Date(
+                                  plugStatus.state_machine_details.charge_start_time_ms,
+                                ),
+                                "PPpp",
+                              )}
+                            <br />{" "}
+                            {plugStatus.state_machine_details
+                              ?.charge_start_time_ms &&
+                              `${formatDistanceToNow(
+                                new Date(
+                                  plugStatus.state_machine_details.charge_start_time_ms,
+                                ),
+                              )} ago`}
+                          </Typography>
+                        </Grid>
+                      </>
+                    )}
                     <Grid
                       item
                       xs={12}
-                      style={{
+                      sx={{
                         backgroundColor:
                           plugStatus.latest_reading?.state ===
                           ActualState.ActualState_ON
@@ -276,8 +316,8 @@ const PlugDetailPage = () => {
                     >
                       <Typography
                         variant="body1"
-                        style={{
-                          padding: 16,
+                        sx={{
+                          padding: 1,
                           textAlign: "center",
                           height: "100%",
                           display: "flex",

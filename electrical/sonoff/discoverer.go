@@ -191,7 +191,7 @@ func (d *SonoffDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []e
 				// start a loop to request monitoring
 				// This is a bit dirty but fine for the time being
 				go func(plug *SonoffPlug) {
-					ticker := time.NewTicker(5 * time.Second)
+					ticker := time.NewTicker(2 * time.Second)
 					for {
 						err = plug.requestDeviceToSendTelemetry(localIP, port)
 						if err != nil {

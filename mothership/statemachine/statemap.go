@@ -240,7 +240,7 @@ var (
 		},
 		contracts.StateMachineState_StateMachineState_SENSING_START_NOT_RESPONDING: {
 			{
-				TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_ISSUED_LOCALLY,
+				TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_REQUESTED,
 				AsyncOnly:   true,
 				UserPrompt:  "Request Enable Again",
 			},
@@ -287,15 +287,11 @@ var (
 				return false
 			}
 
-			err = p.SetOwner(ctx, "")
+			err = p.ResetStateMachineDetails(ctx)
 			if err != nil {
-				log.Println("failed to clear owner", err)
+				log.Println("failed to reset state machine details", err)
 				return false
 			}
-
-			p.detailsMu.Lock()
-			p.details.SessionId = ""
-			p.detailsMu.Unlock()
 
 			return true
 		},

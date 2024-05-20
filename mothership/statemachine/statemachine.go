@@ -120,6 +120,21 @@ func (p *PlugStateMachine) State() *contracts.StateMachineTransition {
 	return p.state
 }
 
+func (p *PlugStateMachine) ResetStateMachineDetails(ctx context.Context) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details", Value: &contracts.StateMachineDetails{}},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details = &contracts.StateMachineDetails{}
+
+	return nil
+}
+
 func (p *PlugStateMachine) SetOwner(ctx context.Context, owner string) error {
 	p.detailsMu.Lock()
 	defer p.detailsMu.Unlock()
@@ -285,7 +300,6 @@ func (p *PlugStateMachine) Start(ctx context.Context, fs *firestore.Client) {
 				plugID := p.plugID
 
 				if latestViewing > time.Now().UnixMilli()-30*1000 {
-					log.Println("updating latest readings in firestore", plugID, latestViewing, time.Now().UnixMilli()-30*1000)
 					go func() {
 						fs.Collection(common.CollectionPlugStatus).Doc(plugID).Update(ctx, []firestore.Update{
 							{Path: "latest_reading", Value: latestReading},
