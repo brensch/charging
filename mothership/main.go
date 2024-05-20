@@ -85,6 +85,10 @@ func main() {
 		timedOut := false
 
 		for {
+			if ctx.Err() != nil {
+				log.Println("context error in acking loop")
+				return
+			}
 			select {
 			case point := <-pointsCHAN:
 				points[ptr] = point.Point
@@ -93,28 +97,39 @@ func main() {
 			case <-countdown.C:
 				timedOut = true
 			case <-ctx.Done():
-
 			}
 
 			if !timedOut && ptr < 300 && ctx.Err() == nil {
 				continue
 			}
+
+			// if we are doing the flush based on a timeout, reset the counter
 			if timedOut {
 				countdown.Reset(10 * time.Second)
 			}
 			timedOut = false
 
+			if ptr == 0 {
+				continue
+			}
+
 			// first submit all points
 			// this should use background context so flush works
-			err := ifClient.WritePoints(context.Background(), points[0:ptr]...)
-			if err != nil {
-				// points will get resent if we don't ack messages so just delete and start again
-				logger.Error("failed to write points", "error", err)
-				ptr = 0
-				if ctx.Err() != nil {
-					return
+			// try this for up to five minutes if we have to. we really don't want this breaking.
+			retryCount := 0
+			for {
+				err := ifClient.WritePoints(context.Background(), points[0:ptr]...)
+				if err != nil {
+					logger.Error("failed to write points. looping", "error", err)
+					retryCount++
+					if retryCount > 30 {
+						panic("failing to flush to influx. panic! at the disco")
+					}
+					time.Sleep(10 * time.Second)
+					continue
 				}
-				continue
+				// we succeeded so can escape
+				break
 			}
 
 			// if we succeeded though ack all the messages
@@ -123,10 +138,6 @@ func main() {
 			}
 			logger.Info("flushed points", "count", ptr)
 			ptr = 0
-
-			if ctx.Err() != nil {
-				return
-			}
 
 		}
 

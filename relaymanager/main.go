@@ -77,7 +77,7 @@ func main() {
 	go ListenForCommands(ctx, ps, siteID, plugs)
 
 	log.Println("start reader loop")
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
 		case <-ticker.C:

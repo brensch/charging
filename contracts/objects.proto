@@ -28,6 +28,8 @@ enum StateMachineState {
   StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY = 18;
   StateMachineState_WAITING_FOR_PLUG_IN = 19;
   StateMachineState_COMMISSIONING = 20;
+  StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21;
+  StateMachineState_SENSING_START_NOT_RESPONDING = 22;
 }
 
 message StateMachineTransition {

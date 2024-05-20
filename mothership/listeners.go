@@ -43,7 +43,11 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 			return
 		}
 
-		plug.Transition(ctx, statemachine.StateMap, state)
+		successfulTransition := plug.Transition(ctx, statemachine.StateMap, state)
+		if !successfulTransition {
+			log.Println("didn't successfully transition, skipping", plug.State().GetPlugId())
+			return
+		}
 		// we always want to ack this, or we'll have spurious state commands updating state
 		msg.Ack()
 
@@ -162,6 +166,9 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 		snap, err := iter.Next()
 		if err == iterator.Done {
 			break
+		}
+		if ctx.Err() != nil {
+			log.Println("context cancelled for user request listener", err)
 		}
 		if err != nil {
 			log.Printf("Error listening to user request changes: %v\n", err)

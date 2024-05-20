@@ -19,6 +19,8 @@ export enum StateMachineState {
   StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY = 18,
   StateMachineState_WAITING_FOR_PLUG_IN = 19,
   StateMachineState_COMMISSIONING = 20,
+  StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21,
+  StateMachineState_SENSING_START_NOT_RESPONDING = 22,
   UNRECOGNIZED = -1,
 }
 
@@ -66,6 +68,12 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case 20:
     case "StateMachineState_COMMISSIONING":
       return StateMachineState.StateMachineState_COMMISSIONING;
+    case 21:
+    case "StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING":
+      return StateMachineState.StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING;
+    case 22:
+    case "StateMachineState_SENSING_START_NOT_RESPONDING":
+      return StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -103,6 +111,10 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
       return "StateMachineState_WAITING_FOR_PLUG_IN";
     case StateMachineState.StateMachineState_COMMISSIONING:
       return "StateMachineState_COMMISSIONING";
+    case StateMachineState.StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING:
+      return "StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING";
+    case StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING:
+      return "StateMachineState_SENSING_START_NOT_RESPONDING";
     case StateMachineState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

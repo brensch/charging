@@ -2,6 +2,7 @@ package statemachine
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -196,51 +197,32 @@ var (
 						p.Error(err)
 						return false
 					}
+
 					return true
 				},
 			},
 		},
 		contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY: {
+			accountNullTransition,
 			{
-				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
-				AsyncOnly:   true,
+				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					// remove old session
-					err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_FINISH)
-					if err != nil {
-						log.Println("got error updating session", err)
-						return false
-					}
-					p.detailsMu.Lock()
-					sessionToCheck := p.details.SessionId
-					p.details.SessionId = ""
-					p.detailsMu.Unlock()
 
-					calculatedSession, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
-					if err != nil {
-						log.Println("failed to get session", err)
-						return false
+					fmt.Println("checking if account removal request expired")
+					// enter this state if we failed to transition in 60 seconds
+					if p.state.State == contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY &&
+						time.Since(time.UnixMilli(p.state.TimeMs)) > 10*time.Second {
+						return true
 					}
-
-					err = session.UpdateBalance(ctx, p.fs, calculatedSession)
-					if err != nil {
-						log.Println("failed to subtract session balance. critical error", err)
-						return false
-					}
-
-					_, err = p.fs.Collection("sessions").Doc(sessionToCheck).Set(ctx, calculatedSession)
-					if err != nil {
-						log.Println("failed to write session", err)
-						return false
-					}
-
-					err = p.SetOwner(ctx, "")
-					if err != nil {
-						log.Println("failed to clear owner", err)
-						return false
-					}
-					return true
+					return false
 				},
+			},
+		},
+		contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING: {
+			accountNullTransition,
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_REQUESTED,
+				AsyncOnly:   true,
 			},
 		},
 	}
@@ -249,5 +231,49 @@ var (
 		TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_REQUESTED,
 		UserPrompt:  "Disable Socket",
 		AsyncOnly:   true,
+	}
+)
+
+var (
+	accountNullTransition = StateTransition{
+		TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
+		AsyncOnly:   true,
+		DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+			// remove old session
+			err := p.updateSession(ctx, contracts.SessionEventType_SessionEventType_FINISH)
+			if err != nil {
+				log.Println("got error updating session", err)
+				return false
+			}
+			p.detailsMu.Lock()
+			sessionToCheck := p.details.SessionId
+			p.details.SessionId = ""
+			p.detailsMu.Unlock()
+
+			calculatedSession, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
+			if err != nil {
+				log.Println("failed to get session", err)
+				return false
+			}
+
+			err = session.UpdateBalance(ctx, p.fs, calculatedSession)
+			if err != nil {
+				log.Println("failed to subtract session balance. critical error", err)
+				return false
+			}
+
+			_, err = p.fs.Collection("sessions").Doc(sessionToCheck).Set(ctx, calculatedSession)
+			if err != nil {
+				log.Println("failed to write session", err)
+				return false
+			}
+
+			err = p.SetOwner(ctx, "")
+			if err != nil {
+				log.Println("failed to clear owner", err)
+				return false
+			}
+			return true
+		},
 	}
 )

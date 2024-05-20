@@ -67,7 +67,6 @@ func NewTasmotaFuze(ctx context.Context, siteID, ip string, status Status) ([]el
 
 	go func() {
 		fuze.StartPolling(ctx)
-
 	}()
 
 	return plugs, fuze
@@ -76,12 +75,13 @@ func NewTasmotaFuze(ctx context.Context, siteID, ip string, status Status) ([]el
 func (tf *TasmotaFuze) StartPolling(ctx context.Context) {
 
 	go func() {
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ctx.Done():
+				log.Println("exiting polling loop", ctx.Err())
 				return
 			case <-ticker.C:
 				tf.pollDevice()
@@ -91,11 +91,14 @@ func (tf *TasmotaFuze) StartPolling(ctx context.Context) {
 }
 
 func (tf *TasmotaFuze) pollDevice() {
+	log.Println("polling", tf.fuzeID)
+	start := time.Now()
 	readings, err := tf.getDeviceReadings()
 	if err != nil {
 		log.Printf("Error polling device at %s: %v\n", tf.address, err)
 		return
 	}
+	log.Println("finished polling", tf.fuzeID, time.Since(start).Milliseconds())
 
 	if len(readings) != len(tf.plugs) {
 		log.Println("wrong length readings")
@@ -109,7 +112,7 @@ func (tf *TasmotaFuze) pollDevice() {
 	}
 }
 
-type Status10Response struct {
+type CombinedStatusResponse struct {
 	StatusSNS struct {
 		Time string `json:"Time"`
 		SPM  struct {
@@ -121,9 +124,6 @@ type Status10Response struct {
 			Current       []float64 `json:"Current"`
 		} `json:"SPM"`
 	} `json:"StatusSNS"`
-}
-
-type Status11Response struct {
 	StatusSTS struct {
 		Time      string   `json:"Time"`
 		Uptime    string   `json:"Uptime"`
@@ -132,20 +132,23 @@ type Status11Response struct {
 	} `json:"StatusSTS"`
 }
 
-func (s *Status11Response) UnmarshalJSON(data []byte) error {
-	type Alias Status11Response
+func (csr *CombinedStatusResponse) UnmarshalJSON(data []byte) error {
+	type Alias CombinedStatusResponse
 	aux := &struct {
 		*Alias
 	}{
-		Alias: (*Alias)(s),
+		Alias: (*Alias)(csr),
 	}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
+
 	var rawMap map[string]json.RawMessage
 	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return err
 	}
+
+	// Handle custom unmarshaling for StatusSTS.Power array based on POWER keys
 	stsMap, ok := rawMap["StatusSTS"]
 	if !ok {
 		return fmt.Errorf("missing StatusSTS key")
@@ -153,7 +156,7 @@ func (s *Status11Response) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(stsMap, &rawMap); err != nil {
 		return err
 	}
-	// Extract only POWER keys in order
+
 	for i := 1; ; i++ {
 		key := fmt.Sprintf("POWER%d", i)
 		if val, exists := rawMap[key]; exists {
@@ -161,40 +164,37 @@ func (s *Status11Response) UnmarshalJSON(data []byte) error {
 			if err := json.Unmarshal(val, &state); err != nil {
 				continue // skip if parsing fails
 			}
-			s.StatusSTS.Power = append(s.StatusSTS.Power, state)
+			csr.StatusSTS.Power = append(csr.StatusSTS.Power, state)
 		} else {
 			break // stop when no more POWER keys are found
 		}
 	}
+
 	return nil
 }
 
 func (tf *TasmotaFuze) getDeviceReadings() ([]*contracts.Reading, error) {
-	status10, err := tf.getStatus10()
+	combinedStatus, err := tf.getStatusCombined()
 	if err != nil {
+		log.Printf("Error polling device at %s: %v\n", tf.address, err)
 		return nil, err
 	}
 
-	status11, err := tf.getStatus11()
-	if err != nil {
-		return nil, err
-	}
-
-	readings := make([]*contracts.Reading, len(status11.StatusSTS.Power))
-	for i, powerState := range status11.StatusSTS.Power {
-		if i >= len(status10.StatusSNS.SPM.Energy) {
+	readings := make([]*contracts.Reading, len(combinedStatus.StatusSTS.Power))
+	for i, powerState := range combinedStatus.StatusSTS.Power {
+		if i >= len(combinedStatus.StatusSNS.SPM.Energy) {
 			continue // skip if index is out of range for Status 10 data
 		}
 
-		powerFactor := 0.0                                // Default to zero if ApparentPower is zero
-		if status10.StatusSNS.SPM.ApparentPower[i] != 0 { // Check to avoid division by zero
-			powerFactor = status10.StatusSNS.SPM.ReactivePower[i] / status10.StatusSNS.SPM.ApparentPower[i]
+		powerFactor := 0.0                                      // Default to zero if ApparentPower is zero
+		if combinedStatus.StatusSNS.SPM.ApparentPower[i] != 0 { // Check to avoid division by zero
+			powerFactor = combinedStatus.StatusSNS.SPM.ReactivePower[i] / combinedStatus.StatusSNS.SPM.ApparentPower[i]
 		}
 
 		reading := &contracts.Reading{
 			State:       convertPowerStateToActualState(powerState),
-			Current:     status10.StatusSNS.SPM.Current[i],
-			Voltage:     status10.StatusSNS.SPM.Voltage[i],
+			Current:     combinedStatus.StatusSNS.SPM.Current[i],
+			Voltage:     combinedStatus.StatusSNS.SPM.Voltage[i],
 			PowerFactor: powerFactor,
 			TimestampMs: time.Now().UnixNano() / int64(time.Millisecond),
 			PlugId:      getPlugID(tf.siteID, tf.ID(), i+1),
@@ -206,32 +206,19 @@ func (tf *TasmotaFuze) getDeviceReadings() ([]*contracts.Reading, error) {
 	return readings, nil
 }
 
-func (tf *TasmotaFuze) getStatus10() (*Status10Response, error) {
-	url := fmt.Sprintf("http://%s/cm?cmnd=Status%%2010", tf.address)
+func (tf *TasmotaFuze) getStatusCombined() (*CombinedStatusResponse, error) {
+	url := fmt.Sprintf("http://%s/cm?cmnd=Status%%200", tf.address) // Update the URL
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var status Status10Response
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return nil, err
-	}
-	return &status, nil
-}
 
-func (tf *TasmotaFuze) getStatus11() (*Status11Response, error) {
-	url := fmt.Sprintf("http://%s/cm?cmnd=Status%%2011", tf.address)
-	resp, err := http.Get(url)
-	if err != nil {
+	var combinedStatus CombinedStatusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&combinedStatus); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-	var status Status11Response
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return nil, err
-	}
-	return &status, nil
+	return &combinedStatus, nil
 }
 
 func convertPowerStateToActualState(power string) contracts.ActualState {

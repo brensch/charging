@@ -75,7 +75,7 @@ func (d *TasmotaDiscoverer) Discover(ctx context.Context) ([]electrical.Plug, []
 func checkTasmotaDevice(ip string) (bool, Status) {
 	log.Printf("checking %s", ip)
 	client := &http.Client{
-		Timeout: 2 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 	resp, err := client.Get(fmt.Sprintf("http://%s/cm?cmnd=Status%%200", ip))
 	if err != nil {

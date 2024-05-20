@@ -58,6 +58,16 @@ func (tp *TasmotaPlug) SetState(requestedState contracts.RequestedState) error {
 
 func (tp *TasmotaPlug) GetReading() (*contracts.Reading, error) {
 	tp.latestReadingMu.Lock()
-	defer tp.latestReadingMu.Unlock()
-	return tp.latestReading, nil
+	reading := &contracts.Reading{
+		State:       tp.latestReading.GetState(),
+		Current:     tp.latestReading.GetCurrent(),
+		Voltage:     tp.latestReading.GetVoltage(),
+		PowerFactor: tp.latestReading.GetPowerFactor(),
+		PlugId:      tp.latestReading.GetPlugId(),
+		FuzeId:      tp.latestReading.GetFuzeId(),
+
+		TimestampMs: tp.latestReading.GetTimestampMs(),
+	}
+	tp.latestReadingMu.Unlock()
+	return reading, nil
 }
