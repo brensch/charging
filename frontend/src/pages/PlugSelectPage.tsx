@@ -1,59 +1,19 @@
-import React, { useState, useEffect, useContext } from "react"
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
 import {
-  Typography,
-  TextField,
-  Box,
-  Button,
   Container,
+  Grid,
   IconButton,
   InputAdornment,
-  Paper,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Divider,
+  TextField,
+  Typography,
 } from "@mui/material"
-import { useLocation, useNavigate } from "react-router-dom"
-import {
-  addDoc,
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore"
-import { firestore } from "../firebase" // Assume you have a Firebase config file
-import {
-  ActualState,
-  PlugSettings,
-  PlugStatus,
-  StateMachineState,
-  UserRequest,
-  UserRequestResult,
-  actualStateToJSON,
-  stateMachineStateToJSON,
-  userRequestStatusFromJSON,
-  userRequestStatusToJSON,
-} from "../contracts/objects"
+import { doc, updateDoc } from "firebase/firestore"
+import React, { useContext, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
-import { v4 as uuidv4 } from "uuid"
-import { UserRequestStatus } from "../contracts/objects"
-import QrCode2Icon from "@mui/icons-material/QrCode2"
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
-import BarcodeScannerDialog from "../objects/BarcodeScanner"
 import { CustomerContext } from "../contexts/CustomerContext"
-import PlugDetails from "../objects/PlugDetails"
-const useQuery = () => {
-  return new URLSearchParams(useLocation().search)
-}
+import { firestore } from "../firebase" // Assume you have a Firebase config file
+import BarcodeScannerDialog from "../objects/BarcodeScanner"
 
 const PlugSelectPage = () => {
   // const urlQuery = useQuery()
@@ -68,7 +28,6 @@ const PlugSelectPage = () => {
 
   const [plugID, setPlugID] = useState("")
 
-  // const [inUsePlugs, setInUsePlugs] = useState<string[]>([])
   const [previousPlugIDs, setPreviousPlugIDs] = useState<string[]>([])
 
   const handleScannerClose = (scannedUrl?: string) => {
@@ -129,32 +88,6 @@ const PlugSelectPage = () => {
     // Clean up the interval when the component unmounts
     return () => clearInterval(intervalId)
   }, [plugID])
-
-  // // get all currently controlled plugs
-  // useEffect(() => {
-  //   // Create a query against the "user_requests" collection, ordered by "time_requested" descending, limited to 5 documents
-  //   const q = query(
-  //     collection(firestore, "plug_status"),
-  //     where("state.owner_id", "==", auth.currentUser?.uid),
-  //     limit(5),
-  //   )
-
-  //   // Subscribe to the query
-  //   const unsubscribe = onSnapshot(q, (querySnapshot) => {
-  //     const inUsePlugs: string[] = []
-  //     querySnapshot.forEach((doc) => {
-  //       const status = PlugStatus.fromJSON(doc.data())
-  //       if (status.id === plugID) {
-  //         return
-  //       }
-  //       inUsePlugs.push(status.id)
-  //     })
-  //     setInUsePlugs(inUsePlugs)
-  //   })
-
-  //   // Clean up the subscription when the component unmounts
-  //   return () => unsubscribe()
-  // }, [plugID]) // Empty dependency array means this effect runs once on mount
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value

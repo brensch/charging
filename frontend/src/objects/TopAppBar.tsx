@@ -19,6 +19,10 @@ import { Button, Container, Divider } from "@mui/material"
 import { useAuth } from "../contexts/AuthContext"
 import { auth } from "../firebase"
 import { useCustomer } from "../contexts/CustomerContext"
+import {
+  StateMachineState,
+  stateMachineStateToJSON,
+} from "../contracts/objects"
 
 interface MenuItem {
   label: string
@@ -29,6 +33,13 @@ interface MenuItem {
 interface TopAppBarProps {
   setAppBarHeight: React.Dispatch<React.SetStateAction<number>>
 }
+
+const formatState = (state: StateMachineState) =>
+  stateMachineStateToJSON(state)
+    .replace(/^StateMachineState_/, "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 
 const appBarHeight = "64px"
 
@@ -74,13 +85,17 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   }
 
   const menuItems: MenuItem[] = [
-    { label: "Plug", icon: <ElectricalServicesIcon />, path: "/plug" },
     {
-      label: `Money`,
+      label: "Start Charging",
+      icon: <ElectricalServicesIcon />,
+      path: "/plug",
+    },
+    {
+      label: `Get Credit`,
       icon: <AttachMoneyIcon />,
       path: "/money",
     },
-    { label: "Sessions", icon: <ReceiptIcon />, path: "/sessions" },
+    { label: "View Charge Sessions", icon: <ReceiptIcon />, path: "/sessions" },
     {
       label: auth.currentUser?.displayName
         ? auth.currentUser?.displayName
@@ -146,7 +161,46 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           ))}
         </List>
 
+        {customer.inUsePlugs.length > 0 && (
+          <Divider sx={{ border: "1px solid black" }} />
+        )}
+        <List disablePadding>
+          {customer.inUsePlugs.map((item, index) => (
+            <ListItem
+              key={index}
+              onClick={() => handleListItemClick(`/plug/${item}`)}
+              sx={{
+                "&:hover": {
+                  backgroundColor: "#bafca2", // Light grey background on hover
+                  cursor: "pointer", // Change cursor to pointer on hover
+
+                  // Change icon color on hover
+                  "& .MuiListItemIcon-root": {
+                    color: "black", // Change this to your desired color on hover
+                  },
+
+                  // Change text color on hover
+                  "& .MuiListItemText-primary": {
+                    color: "black", // Change this to your desired color on hover
+                  },
+                },
+              }}
+            >
+              <Container maxWidth="sm">
+                <ListItem key={`${index}-inside`} disablePadding>
+                  <ListItemText
+                    primary={`Your plug ${item.id.slice(-15)} - ${formatState(
+                      item.state?.state,
+                    )}`}
+                  />
+                </ListItem>{" "}
+              </Container>
+            </ListItem>
+          ))}
+        </List>
+
         <Divider sx={{ border: "1px solid black" }} />
+
         <Box
           sx={{
             display: "flex",

@@ -22,7 +22,7 @@ import {
   Transaction,
 } from "../contracts/stripe"
 import { useAuth } from "./AuthContext"
-import { Session } from "../contracts/objects"
+import { PlugStatus, Session } from "../contracts/objects"
 
 // Define the context value's type
 interface CustomerContextValue {
@@ -31,6 +31,7 @@ interface CustomerContextValue {
   autoTopupPreferences: AutoTopupPreferences | null
   transactions: Transaction[]
   sessions: Session[]
+  inUsePlugs: PlugStatus[]
 }
 export const CustomerContext = createContext<CustomerContextValue>({
   customerBalance: null,
@@ -38,6 +39,7 @@ export const CustomerContext = createContext<CustomerContextValue>({
   autoTopupPreferences: null,
   transactions: [],
   sessions: [],
+  inUsePlugs: [],
 })
 interface CustomerProviderProps {
   children: ReactNode
@@ -58,6 +60,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
     useState<AutoTopupPreferences | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
+  const [inUsePlugs, setInUsePlugs] = useState<PlugStatus[]>([])
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -106,6 +109,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
         },
       )
 
+      // sessions
       const sessionsQuery = query(
         collection(db, "sessions"),
         where("owner_id", "==", auth.currentUser.uid),
@@ -121,12 +125,34 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
         setSessions(sessionsArray)
       })
 
+      // get all currently controlled plugs
+      // Create a query against the "user_requests" collection, ordered by "time_requested" descending, limited to 5 documents
+      const q = query(
+        collection(firestore, "plug_status"),
+        where("state.owner_id", "==", auth.currentUser?.uid),
+        limit(5),
+      )
+
+      // Subscribe to the query
+      const unsubscribeInUsePlugs = onSnapshot(q, (querySnapshot) => {
+        const inUsePlugs: PlugStatus[] = []
+        querySnapshot.forEach((doc) => {
+          const status = PlugStatus.fromJSON(doc.data())
+
+          inUsePlugs.push(status)
+        })
+        setInUsePlugs(inUsePlugs)
+      })
+
+      // Clean up the subscription when the component unmounts
+
       return () => {
         unsubscribeBalance()
         unsubscribeStripe()
         unsubscribeTopup()
         unsubscribeTransactions()
         unsubscribeSessions()
+        unsubscribeInUsePlugs()
       }
     }
   }, [auth])
@@ -137,6 +163,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
     autoTopupPreferences,
     transactions,
     sessions,
+    inUsePlugs,
   }
 
   return (
