@@ -168,7 +168,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
           {customer.inUsePlugs.map((item, index) => (
             <ListItem
               key={index}
-              onClick={() => handleListItemClick(`/plug/${item}`)}
+              onClick={() => handleListItemClick(`/plug/${item.id}`)}
               sx={{
                 "&:hover": {
                   backgroundColor: "#bafca2", // Light grey background on hover
