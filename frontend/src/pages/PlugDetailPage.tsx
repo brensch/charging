@@ -49,47 +49,26 @@ import QrCode2Icon from "@mui/icons-material/QrCode2"
 import BarcodeScannerDialog from "../objects/BarcodeScanner"
 import { CustomerContext } from "../contexts/CustomerContext"
 import PlugDetails from "../objects/PlugDetails"
+import { useParams } from "react-router-dom"
+
 const useQuery = () => {
   return new URLSearchParams(useLocation().search)
 }
 
-const PlugPage = () => {
-  const urlQuery = useQuery()
-  const navigate = useNavigate()
+const PlugDetailPage = () => {
   const auth = useAuth()
 
-  const { sessions } = useContext(CustomerContext)
-
-  const updatePlug = (id: string) => {
-    setPlugID(id)
-    navigate(`?plug=${id}`)
-  }
-
-  const [plugID, setPlugID] = useState(urlQuery.get("plug") || "")
+  const { plugID } = useParams()
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
   const [plugSettings, setPlugSettings] = useState<PlugSettings | null>(null)
-  const [inUsePlugs, setInUsePlugs] = useState<string[]>([])
-  const [openScanner, setOpenScanner] = useState<boolean>(false)
+
   const [loadingPlugStatus, setLoadingPlugStatus] = useState<boolean>(false)
-  const [previousPlugIDs, setPreviousPlugIDs] = useState<string[]>([])
-
-  const handleScannerClose = (scannedUrl?: string) => {
-    setOpenScanner(false)
-
-    if (scannedUrl) {
-      const url = new URL(scannedUrl)
-      const plugValue = url.searchParams.get("plug")
-
-      if (plugValue) {
-        updatePlug(plugValue)
-      }
-    }
-  }
-  const toggleScanner = () => {
-    setOpenScanner(!openScanner)
-  }
+  const [invalidPlugStatus, setInvalidPlugStatus] = useState<boolean>(false)
 
   const handleCreateRequest = async (state: StateMachineState) => {
+    if (!plugID) {
+      return
+    }
     const id = uuidv4() // Generate a unique UUID
 
     const userRequest: UserRequest = {
@@ -118,17 +97,9 @@ const PlugPage = () => {
   }
 
   useEffect(() => {
-    const uniquePlugIds = new Set<string>()
-    sessions.forEach((session) => {
-      if (session.plug_id === plugID) {
-        return
-      }
-      uniquePlugIds.add(session.plug_id)
-    })
-    setPreviousPlugIDs(Array.from(uniquePlugIds))
-  }, [plugID, sessions])
-
-  useEffect(() => {
+    if (!plugID) {
+      return
+    }
     // Define a function to update the Firestore document
     const updatePlugSettings = async () => {
       const currentTimeInMs = Date.now()
@@ -169,6 +140,8 @@ const PlugPage = () => {
       (doc) => {
         if (doc.exists()) {
           setPlugStatus(PlugStatus.fromJSON(doc.data()))
+        } else {
+          setInvalidPlugStatus(true)
         }
         // Decrement the loading counter and check if all data has been loaded
         loadingCounter -= 1
@@ -184,6 +157,8 @@ const PlugPage = () => {
       (doc) => {
         if (doc.exists()) {
           setPlugSettings(PlugSettings.fromJSON(doc.data()))
+        } else {
+          setInvalidPlugStatus(true)
         }
         // Decrement the loading counter and check if all data has been loaded
         loadingCounter -= 1
@@ -200,48 +175,6 @@ const PlugPage = () => {
     }
   }, [plugID]) // Dependencies array, re-run effect if plugID changes
 
-  // get all currently controlled plugs
-  useEffect(() => {
-    // Create a query against the "user_requests" collection, ordered by "time_requested" descending, limited to 5 documents
-    const q = query(
-      collection(firestore, "plug_status"),
-      where("state.owner_id", "==", auth.currentUser?.uid),
-      limit(5),
-    )
-
-    // Subscribe to the query
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const inUsePlugs: string[] = []
-      querySnapshot.forEach((doc) => {
-        const status = PlugStatus.fromJSON(doc.data())
-        if (status.id === plugID) {
-          return
-        }
-        inUsePlugs.push(status.id)
-      })
-      setInUsePlugs(inUsePlugs)
-    })
-
-    // Clean up the subscription when the component unmounts
-    return () => unsubscribe()
-  }, [plugID]) // Empty dependency array means this effect runs once on mount
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    updatePlug(value)
-  }
-
-  useEffect(() => {
-    const plugId = urlQuery.get("plug")
-    if (plugId !== plugID) {
-      setPlugID(plugId || "")
-    }
-  }, [urlQuery])
-
-  const previousPlugs = previousPlugIDs.filter(
-    (previousPlug) => !inUsePlugs.includes(previousPlug),
-  )
-
   const formatState = (state: StateMachineState) =>
     stateMachineStateToJSON(state)
       .replace(/^StateMachineState_/, "")
@@ -251,29 +184,9 @@ const PlugPage = () => {
 
   return (
     <Container>
-      <TextField
-        label="Enter Plug Code or scan"
-        variant="outlined"
-        value={plugID}
-        onChange={handleInputChange}
-        fullWidth
-        margin="normal"
-        InputProps={{
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton onClick={toggleScanner}>
-                <QrCode2Icon />
-              </IconButton>
-            </InputAdornment>
-          ),
-        }}
-      />
-      <BarcodeScannerDialog
-        open={openScanner}
-        onClose={handleScannerClose}
-        banner="Scan QR Code on plug"
-      />
       {loadingPlugStatus && <Typography>loading plug state</Typography>}
+      {invalidPlugStatus &&
+        "Invalid plug. Try scanning again. If problem persists, contact support."}
       {!loadingPlugStatus &&
         plugStatus &&
         plugSettings &&
@@ -404,7 +317,7 @@ const PlugPage = () => {
             </Paper>
           </React.Fragment>
         )}
-      <Grid container spacing={1}>
+      {/* <Grid container spacing={1}>
         {inUsePlugs.length > 0 && (
           <React.Fragment>
             <Grid item xs={12}>
@@ -433,9 +346,9 @@ const PlugPage = () => {
             />
           </Grid>
         ))}
-      </Grid>
+      </Grid> */}
     </Container>
   )
 }
 
-export default PlugPage
+export default PlugDetailPage

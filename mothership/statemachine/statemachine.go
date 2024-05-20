@@ -64,13 +64,18 @@ func InitPlugStateMachine(ctx context.Context, fs *firestore.Client, pubsubClien
 
 	topic := pubsubClient.Topic(receiveTopicName)
 
+	detailsToUse := status.StateMachineDetails
+	if detailsToUse == nil {
+		detailsToUse = &contracts.StateMachineDetails{}
+	}
+
 	stateMachine := &PlugStateMachine{
 		plugID:           status.Id,
 		latestReadingPtr: -1,
 		latestReadings:   latestReadings,
 		siteTopic:        topic,
 		siteID:           status.SiteId,
-		details:          &contracts.StateMachineDetails{}, // no need to init to zero for internal use
+		details:          detailsToUse,
 		state:            status.State,
 
 		fs:         fs,

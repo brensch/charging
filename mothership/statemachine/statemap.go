@@ -2,7 +2,6 @@ package statemachine
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -120,6 +119,19 @@ var (
 				TargetState: contracts.StateMachineState_StateMachineState_SENSING_CHARGE,
 				AsyncOnly:   true,
 			},
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_NOT_RESPONDING,
+				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+
+					log.Println("checking if sensing start request expired")
+					// enter this state if we failed to transition in 60 seconds
+					if p.state.State == contracts.StateMachineState_StateMachineState_SENSING_START_ISSUED_LOCALLY &&
+						time.Since(time.UnixMilli(p.state.TimeMs)) > 60*time.Second {
+						return true
+					}
+					return false
+				},
+			},
 		},
 		contracts.StateMachineState_StateMachineState_SENSING_CHARGE: {
 			{
@@ -208,10 +220,10 @@ var (
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
 
-					fmt.Println("checking if account removal request expired")
+					log.Println("checking if account removal request expired")
 					// enter this state if we failed to transition in 60 seconds
 					if p.state.State == contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_ISSUED_LOCALLY &&
-						time.Since(time.UnixMilli(p.state.TimeMs)) > 10*time.Second {
+						time.Since(time.UnixMilli(p.state.TimeMs)) > 60*time.Second {
 						return true
 					}
 					return false
@@ -223,6 +235,14 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_REMOVAL_REQUESTED,
 				AsyncOnly:   true,
+				UserPrompt:  "Request Disable Again",
+			},
+		},
+		contracts.StateMachineState_StateMachineState_SENSING_START_NOT_RESPONDING: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_ISSUED_LOCALLY,
+				AsyncOnly:   true,
+				UserPrompt:  "Request Enable Again",
 			},
 		},
 	}
@@ -247,7 +267,6 @@ var (
 			}
 			p.detailsMu.Lock()
 			sessionToCheck := p.details.SessionId
-			p.details.SessionId = ""
 			p.detailsMu.Unlock()
 
 			calculatedSession, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
@@ -273,6 +292,11 @@ var (
 				log.Println("failed to clear owner", err)
 				return false
 			}
+
+			p.detailsMu.Lock()
+			p.details.SessionId = ""
+			p.detailsMu.Unlock()
+
 			return true
 		},
 	}

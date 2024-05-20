@@ -26,7 +26,8 @@ import ConfirmLoginInPage from "./pages/ConfirmLoginPage"
 import HomePage from "./pages/HomePage"
 import LoginPage from "./pages/LoginPage"
 import LoginPendingPage from "./pages/LoginPendingPage"
-import PlugPage from "./pages/PlugPage"
+import PlugSelectPage from "./pages/PlugSelectPage"
+import PlugDetailPage from "./pages/PlugDetailPage"
 import UserPage from "./pages/UserPage"
 import TopUpPage from "./pages/TopUpPage"
 import MoneyPage from "./pages/MoneyPage"
@@ -197,7 +198,15 @@ function App() {
                   path="/plug"
                   element={
                     <ProtectedRoute>
-                      <PlugPage />
+                      <PlugSelectPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/plug/:plugID"
+                  element={
+                    <ProtectedRoute>
+                      <PlugDetailPage />
                     </ProtectedRoute>
                   }
                 />

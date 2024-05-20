@@ -91,14 +91,11 @@ func (tf *TasmotaFuze) StartPolling(ctx context.Context) {
 }
 
 func (tf *TasmotaFuze) pollDevice() {
-	log.Println("polling", tf.fuzeID)
-	start := time.Now()
 	readings, err := tf.getDeviceReadings()
 	if err != nil {
 		log.Printf("Error polling device at %s: %v\n", tf.address, err)
 		return
 	}
-	log.Println("finished polling", tf.fuzeID, time.Since(start).Milliseconds())
 
 	if len(readings) != len(tf.plugs) {
 		log.Println("wrong length readings")

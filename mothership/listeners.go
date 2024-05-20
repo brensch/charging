@@ -39,13 +39,15 @@ func ListenForDeviceCommandResponses(ctx context.Context, fs *firestore.Client, 
 
 		plug, ok := stateMachines.GetStateMachine(response.GetPlugId())
 		if !ok {
-			log.Println("no plug state machine....", response.GetPlugId())
+			log.Println("no plug state machine, should not happen", response.GetPlugId())
+			msg.Ack()
 			return
 		}
 
 		successfulTransition := plug.Transition(ctx, statemachine.StateMap, state)
 		if !successfulTransition {
 			log.Println("didn't successfully transition, skipping", plug.State().GetPlugId())
+			msg.Ack()
 			return
 		}
 		// we always want to ack this, or we'll have spurious state commands updating state
