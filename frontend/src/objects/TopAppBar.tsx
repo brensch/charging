@@ -189,9 +189,9 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
               <Container maxWidth="sm">
                 <ListItem key={`${index}-inside`} disablePadding>
                   <ListItemText
-                    primary={`Your plug ${item.id.slice(-15)} - ${formatState(
-                      item.state?.state,
-                    )}`}
+                    primary={`Your plug ${item.id.slice(-15)} - ${
+                      item.state?.state ? formatState(item.state?.state) : ""
+                    }`}
                   />
                 </ListItem>{" "}
               </Container>
