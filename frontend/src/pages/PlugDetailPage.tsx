@@ -141,6 +141,7 @@ const PlugDetailPage = () => {
       (doc) => {
         if (doc.exists()) {
           setPlugStatus(PlugStatus.fromJSON(doc.data()))
+          setInvalidPlugStatus(false)
         } else {
           setInvalidPlugStatus(true)
         }
@@ -158,6 +159,7 @@ const PlugDetailPage = () => {
       (doc) => {
         if (doc.exists()) {
           setPlugSettings(PlugSettings.fromJSON(doc.data()))
+          setInvalidPlugStatus(false)
         } else {
           setInvalidPlugStatus(true)
         }
