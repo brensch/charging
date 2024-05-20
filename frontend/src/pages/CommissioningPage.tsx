@@ -197,9 +197,9 @@ const CommissioningPage = () => {
         </Button>
       )} */}
       <BarcodeScannerDialog
-        open={openScanner}
+        // open={openScanner}
         onClose={handleScannerClose}
-        banner="Scan QR Code on magic box"
+        // banner="Scan QR Code on magic box"
       />
       {plugsSettings.map((plug) => (
         <div>{plug.id}</div>

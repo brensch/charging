@@ -184,169 +184,119 @@ const PlugDetailPage = () => {
 
   return (
     <Container>
-      {loadingPlugStatus && <Typography>loading plug state</Typography>}
-      {invalidPlugStatus &&
-        "Invalid plug. Try scanning again. If problem persists, contact support."}
-      {!loadingPlugStatus &&
-        plugStatus &&
-        plugSettings &&
-        plugStatus.state?.state && (
-          <React.Fragment>
-            <Paper elevation={3} style={{ padding: 0, margin: 0 }}>
-              <Grid container spacing={0}>
-                <Grid
-                  item
-                  xs={12}
-                  style={{ padding: 16, borderBottom: "2px solid black" }}
-                >
-                  <Typography variant="h6" style={{ fontWeight: "bold" }}>
-                    {plugSettings?.name === ""
-                      ? plugStatus.id
-                      : plugSettings.name}
-                  </Typography>
-                </Grid>
-                <Grid
-                  item
-                  xs={7}
-                  style={{
-                    padding: 16,
-                    borderRight: "2px solid black",
-                    borderBottom: "2px solid black",
-                  }}
-                >
-                  <Typography
-                    variant="body1"
-                    style={{ fontWeight: "bold", wordWrap: "break-word" }}
-                  >
-                    {formatState(plugStatus.state.state)}
-                  </Typography>
-                </Grid>
-                <Grid
-                  item
-                  xs={5}
-                  style={{ padding: 16, borderBottom: "2px solid black" }}
-                >
-                  <Typography
-                    variant="body1"
-                    style={{ fontWeight: "bold", wordWrap: "break-word" }}
-                  >
-                    {(
-                      plugStatus.latest_reading?.current! *
-                      plugStatus.latest_reading?.voltage!
-                    ).toFixed(2)}
-                    W
-                  </Typography>
-                </Grid>
-                <Grid
-                  item
-                  xs={9}
-                  style={{
-                    padding: 16,
-                    borderRight: "2px solid black",
-                    backgroundColor: "ff00ff",
-                  }}
-                >
-                  <Box display="flex" justifyContent="space-around">
-                    {plugStatus.possible_next_states_labels.map(
-                      (possibleState, index) => {
-                        return (
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            onClick={() =>
-                              handleCreateRequest(
-                                plugStatus.possible_next_states[index],
-                              )
-                            }
-                            style={{
-                              fontWeight: "bold",
-                              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
-                            }}
-                          >
-                            {possibleState}
-                          </Button>
+      <Grid container spacing={2} justifyContent="center">
+        {loadingPlugStatus && (
+          <Grid item xs={12}>
+            <Typography>Loading plug state...</Typography>
+          </Grid>
+        )}
+        {invalidPlugStatus && (
+          <Grid item xs={12}>
+            <Typography>
+              Invalid plug. Try scanning again. If problem persists, contact
+              support.
+            </Typography>
+          </Grid>
+        )}
+        {!loadingPlugStatus &&
+          plugStatus &&
+          plugSettings &&
+          plugStatus.state?.state && (
+            <React.Fragment>
+              <Grid item xs={12}>
+                <Typography variant="h6">
+                  Plug Name:{" "}
+                  {plugSettings?.name === ""
+                    ? plugStatus.id.slice(-20)
+                    : plugSettings.name.slice(-20)}{" "}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} container justifyContent="space-around">
+                {plugStatus.possible_next_states_labels.map(
+                  (possibleState, index) => (
+                    <Button
+                      key={index}
+                      variant="outlined"
+                      color="primary"
+                      fullWidth
+                      onClick={() =>
+                        handleCreateRequest(
+                          plugStatus.possible_next_states[index],
                         )
-                      },
-                    )}
-                    {plugStatus.possible_next_states_labels.length === 0 && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        disabled
+                      }
+                    >
+                      {possibleState}
+                    </Button>
+                  ),
+                )}
+                {plugStatus.possible_next_states_labels.length === 0 && (
+                  <Button variant="contained" color="primary" disabled>
+                    Waiting for system.
+                  </Button>
+                )}
+              </Grid>
+              <Grid item xs={12}>
+                <Paper elevation={0} style={{ padding: 0 }}>
+                  <Grid container>
+                    <Grid item xs={6}>
+                      <Typography variant="body1" style={{ padding: 16 }}>
+                        Current State:
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body1" style={{ padding: 16 }}>
+                        {formatState(plugStatus.state.state)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body1" style={{ padding: 16 }}>
+                        Current Power:
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body1" style={{ padding: 16 }}>
+                        {(
+                          plugStatus.latest_reading?.current! *
+                          plugStatus.latest_reading?.voltage!
+                        ).toFixed(2)}{" "}
+                        W
+                      </Typography>
+                    </Grid>
+                    <Grid
+                      item
+                      xs={12}
+                      style={{
+                        backgroundColor:
+                          plugStatus.latest_reading?.state ===
+                          ActualState.ActualState_ON
+                            ? "#00ff00"
+                            : "#f1f1f1",
+                        padding: 0, // No padding to allow color to extend to the edges
+                      }}
+                    >
+                      <Typography
+                        variant="body1"
                         style={{
-                          fontWeight: "bold",
-                          boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
+                          padding: 16,
+                          textAlign: "center",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        Waiting for system.
-                      </Button>
-                    )}
-                  </Box>
-                </Grid>
-                <Grid
-                  item
-                  xs={3}
-                  style={{
-                    display: "flex", // Enable flexbox
-                    flexDirection: "column", // Stack children vertically
-                    justifyContent: "center", // Center vertically
-                    alignItems: "center", // Center horizontally
-                    padding: 16,
-                    backgroundColor:
-                      plugStatus.latest_reading?.state ===
-                      ActualState.ActualState_ON
-                        ? "#00ff00"
-                        : "#f1f1f1",
-                  }}
-                >
-                  <Typography
-                    variant="body1"
-                    style={{
-                      fontWeight: "bold",
-                      wordWrap: "break-word",
-                      textAlign: "center", // Ensure text is centered within Typography
-                    }}
-                  >
-                    {plugStatus.latest_reading?.state &&
-                      actualStateToJSON(
-                        plugStatus.latest_reading?.state,
-                      ).replace("ActualState_", "")}
-                  </Typography>
-                </Grid>
+                        {plugStatus.latest_reading?.state &&
+                          actualStateToJSON(
+                            plugStatus.latest_reading?.state,
+                          ).replace("ActualState_", "")}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Paper>
               </Grid>
-            </Paper>
-          </React.Fragment>
-        )}
-      {/* <Grid container spacing={1}>
-        {inUsePlugs.length > 0 && (
-          <React.Fragment>
-            <Grid item xs={12}>
-              <Typography variant="h6">Your plugs in use right now</Typography>
-            </Grid>
-            {inUsePlugs.map((inUsePlugID) => (
-              <Grid item xs={4}>
-                <PlugDetails
-                  plugId={inUsePlugID}
-                  updateSelectedPlug={updatePlug}
-                />
-              </Grid>
-            ))}
-          </React.Fragment>
-        )}
-        {previousPlugs.length > 0 && (
-          <Grid item xs={12}>
-            <Typography variant="h6">Previous plugs you've used</Typography>
-          </Grid>
-        )}
-        {previousPlugs.map((previousPlugID) => (
-          <Grid item xs={4}>
-            <PlugDetails
-              plugId={previousPlugID}
-              updateSelectedPlug={updatePlug}
-            />
-          </Grid>
-        ))}
-      </Grid> */}
+            </React.Fragment>
+          )}
+      </Grid>
     </Container>
   )
 }
