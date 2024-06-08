@@ -41,38 +41,44 @@ const SessionsPage = () => {
         <Typography variant="h6" mb={2}>
           Charging Sessions
         </Typography>
-        <TableContainer component={Paper}>
-          <Table aria-label="charging sessions table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell> {/* Added Date column */}
-                <TableCell>Time</TableCell> {/* Added Time column */}
-                <TableCell>Duration</TableCell>
-                <TableCell>Energy</TableCell>
-                <TableCell>Cost</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow key={session.session_id}>
-                  <TableCell>
-                    {formatDate(session.start_ms)} {/* Display Date */}
-                  </TableCell>
-                  <TableCell>
-                    {formatTime(session.start_ms)} {/* Display Time */}
-                  </TableCell>
-                  <TableCell>
-                    {calculateDuration(session.start_ms, session.finish_ms)}
-                  </TableCell>
-                  <TableCell>{session.total_kwh.toFixed(3)}kWh</TableCell>
-                  <TableCell component="th" scope="row">
-                    ${session.cents / 100}
-                  </TableCell>
+        {sessions.length > 0 ? (
+          <TableContainer component={Paper}>
+            <Table aria-label="charging sessions table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell> {/* Added Date column */}
+                  <TableCell>Time</TableCell> {/* Added Time column */}
+                  <TableCell>Duration</TableCell>
+                  <TableCell>Energy</TableCell>
+                  <TableCell>Cost</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {sessions.map((session) => (
+                  <TableRow key={session.session_id}>
+                    <TableCell>
+                      {formatDate(session.start_ms)} {/* Display Date */}
+                    </TableCell>
+                    <TableCell>
+                      {formatTime(session.start_ms)} {/* Display Time */}
+                    </TableCell>
+                    <TableCell>
+                      {calculateDuration(session.start_ms, session.finish_ms)}
+                    </TableCell>
+                    <TableCell>{session.total_kwh.toFixed(3)}kWh</TableCell>
+                    <TableCell component="th" scope="row">
+                      ${session.cents / 100}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography>
+            No charging sessions logged yet. Plug in to get started.
+          </Typography>
+        )}
       </Box>
     </Container>
   )

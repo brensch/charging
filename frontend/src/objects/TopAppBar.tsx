@@ -96,13 +96,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
       path: "/money",
     },
     { label: "View Charge Sessions", icon: <ReceiptIcon />, path: "/sessions" },
-    {
-      label: auth.currentUser?.displayName
-        ? auth.currentUser?.displayName
-        : "User",
-      icon: <AccountCircleIcon />,
-      path: "/user",
-    },
+    // {
+    //   label: auth.currentUser?.displayName
+    //     ? auth.currentUser?.displayName
+    //     : "User",
+    //   icon: <AccountCircleIcon />,
+    //   path: "/user",
+    // },
   ]
 
   const handleListItemClick = (path: string) => {
