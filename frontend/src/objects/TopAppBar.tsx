@@ -242,7 +242,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Magic Charge
             </Typography>
-            {customer.customerBalance?.cents_aud && (
+            {typeof customer.customerBalance?.cents_aud === "number" && (
               <Typography variant="h6">
                 ${customer.customerBalance?.cents_aud / 100}
               </Typography>

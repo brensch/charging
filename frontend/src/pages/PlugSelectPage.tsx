@@ -1,5 +1,6 @@
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward"
 import {
+  Button,
   Container,
   Grid,
   IconButton,
@@ -11,13 +12,14 @@ import { doc, updateDoc } from "firebase/firestore"
 import React, { useContext, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
-import { CustomerContext } from "../contexts/CustomerContext"
+import { CustomerContext, useCustomer } from "../contexts/CustomerContext"
 import { firestore } from "../firebase" // Assume you have a Firebase config file
 import BarcodeScannerDialog from "../objects/BarcodeScanner"
 
 const PlugSelectPage = () => {
-  // const urlQuery = useQuery()
   const navigate = useNavigate()
+  const customer = useCustomer()
+
   const auth = useAuth()
 
   const { sessions } = useContext(CustomerContext)
@@ -94,66 +96,63 @@ const PlugSelectPage = () => {
     setPlugID(value)
   }
 
-  // const previousPlugs = previousPlugIDs.filter(
-  //   (previousPlug) => !inUsePlugs.includes(previousPlug),
-  // )
-
   return (
     <Container>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <Typography variant="h6">Scan QR code on Plug</Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <BarcodeScannerDialog
-            // open={openScanner}
-            onClose={handleScannerClose}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <Typography variant="h6">Or type in code</Typography>
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            label="Enter Code Manually"
-            variant="outlined"
-            value={plugID}
-            onChange={handleInputChange}
-            fullWidth
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    disabled={plugID === ""}
-                    onClick={() => updatePlug(plugID)}
-                    edge="end"
-                  >
-                    <ArrowForwardIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && plugID !== "") {
-                updatePlug(plugID)
-              }
-            }}
-          />
-        </Grid>
+      {customer.customerBalance?.cents_aud !== 0 ? (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography variant="h6">Scan QR code on Plug</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <BarcodeScannerDialog
+              // open={openScanner}
+              onClose={handleScannerClose}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Typography variant="h6">Or type in code</Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="Enter Code Manually"
+              variant="outlined"
+              value={plugID}
+              onChange={handleInputChange}
+              fullWidth
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      disabled={plugID === ""}
+                      onClick={() => updatePlug(plugID)}
+                      edge="end"
+                    >
+                      <ArrowForwardIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && plugID !== "") {
+                  updatePlug(plugID)
+                }
+              }}
+            />
+          </Grid>
 
-        {/* {inUsePlugs.length > 0 && (
+          {/* {inUsePlugs.length > 0 && (
           <React.Fragment>
-            <Grid item xs={12}>
-              <Typography variant="h6">Your plugs in use right now</Typography>
+          <Grid item xs={12}>
+          <Typography variant="h6">Your plugs in use right now</Typography>
+          </Grid>
+          {inUsePlugs.map((inUsePlugID) => (
+            <Grid item xs={4}>
+            <PlugDetails
+            plugId={inUsePlugID}
+            updateSelectedPlug={updatePlug}
+            />
             </Grid>
-            {inUsePlugs.map((inUsePlugID) => (
-              <Grid item xs={4}>
-                <PlugDetails
-                  plugId={inUsePlugID}
-                  updateSelectedPlug={updatePlug}
-                />
-              </Grid>
-            ))}
+          ))}
           </React.Fragment>
         )}
         {previousPlugs.length > 0 && (
@@ -164,12 +163,26 @@ const PlugSelectPage = () => {
         {previousPlugs.map((previousPlugID) => (
           <Grid item xs={4}>
             <PlugDetails
-              plugId={previousPlugID}
+            plugId={previousPlugID}
               updateSelectedPlug={updatePlug}
-            />
-          </Grid>
+              />
+              </Grid>
         ))} */}
-      </Grid>
+        </Grid>
+      ) : (
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography>
+              You don't have any credit yet. Top up to get started.
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Button variant="outlined" onClick={() => navigate("/money")}>
+              Top Up
+            </Button>{" "}
+          </Grid>
+        </Grid>
+      )}
     </Container>
   )
 }

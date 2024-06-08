@@ -71,6 +71,7 @@ export const CustomerProvider: React.FC<CustomerProviderProps> = ({
 
       const unsubscribeBalance = onSnapshot(balanceDocRef, (doc) => {
         const data = doc.data()
+        console.log(data)
         if (data) {
           setCustomerBalance(CustomerBalance.fromJSON(data))
         }
