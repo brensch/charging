@@ -186,6 +186,22 @@ var (
 					// 	time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
 				},
 			},
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_UPDATING_CREDIT,
+				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+
+					// if we haven't checked credit for 5 minutes, update it
+					if p.details.LastCreditCheckMs == 0 {
+						return true
+					}
+
+					// TODO: start here. need to make the concept of a session and balance updates different.
+					// we need to incrementally update balance so that we can check users have sufficient
+					// on an ongoing basis and kick them off if they don't have sufficient.
+					return
+
+				},
+			},
 			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE: {
@@ -245,6 +261,13 @@ var (
 				UserPrompt:  "Request Enable Again",
 			},
 		},
+		// contracts.StateMachineState_StateMachineState_UPDATING_CREDIT: {
+		// 	{
+		// 		TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_REQUESTED,
+		// 		AsyncOnly:   true,
+		// 		UserPrompt:  "Request Enable Again",
+		// 	},
+		// },
 	}
 
 	manuallyDisableSocket = StateTransition{

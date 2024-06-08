@@ -21,6 +21,8 @@ export enum StateMachineState {
   StateMachineState_COMMISSIONING = 20,
   StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21,
   StateMachineState_SENSING_START_NOT_RESPONDING = 22,
+  StateMachineState_UPDATING_CREDIT = 23,
+  StateMachineState_INSUFFICIENT_CREDIT = 24,
   UNRECOGNIZED = -1,
 }
 
@@ -74,6 +76,12 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case 22:
     case "StateMachineState_SENSING_START_NOT_RESPONDING":
       return StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING;
+    case 23:
+    case "StateMachineState_UPDATING_CREDIT":
+      return StateMachineState.StateMachineState_UPDATING_CREDIT;
+    case 24:
+    case "StateMachineState_INSUFFICIENT_CREDIT":
+      return StateMachineState.StateMachineState_INSUFFICIENT_CREDIT;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -115,6 +123,10 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
       return "StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING";
     case StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING:
       return "StateMachineState_SENSING_START_NOT_RESPONDING";
+    case StateMachineState.StateMachineState_UPDATING_CREDIT:
+      return "StateMachineState_UPDATING_CREDIT";
+    case StateMachineState.StateMachineState_INSUFFICIENT_CREDIT:
+      return "StateMachineState_INSUFFICIENT_CREDIT";
     case StateMachineState.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -494,6 +506,7 @@ export interface StateMachineDetails {
   queue_entered_ms: number;
   error: string;
   session_id: string;
+  last_credit_check_ms: number;
 }
 
 export interface Reading {
@@ -1581,6 +1594,7 @@ function createBaseStateMachineDetails(): StateMachineDetails {
     queue_entered_ms: 0,
     error: "",
     session_id: "",
+    last_credit_check_ms: 0,
   };
 }
 
@@ -1603,6 +1617,9 @@ export const StateMachineDetails = {
     }
     if (message.session_id !== "") {
       writer.uint32(50).string(message.session_id);
+    }
+    if (message.last_credit_check_ms !== 0) {
+      writer.uint32(56).int64(message.last_credit_check_ms);
     }
     return writer;
   },
@@ -1656,6 +1673,13 @@ export const StateMachineDetails = {
 
           message.session_id = reader.string();
           continue;
+        case 7:
+          if (tag !== 56) {
+            break;
+          }
+
+          message.last_credit_check_ms = longToNumber(reader.int64() as Long);
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1673,6 +1697,7 @@ export const StateMachineDetails = {
       queue_entered_ms: isSet(object.queue_entered_ms) ? globalThis.Number(object.queue_entered_ms) : 0,
       error: isSet(object.error) ? globalThis.String(object.error) : "",
       session_id: isSet(object.session_id) ? globalThis.String(object.session_id) : "",
+      last_credit_check_ms: isSet(object.last_credit_check_ms) ? globalThis.Number(object.last_credit_check_ms) : 0,
     };
   },
 
@@ -1696,6 +1721,9 @@ export const StateMachineDetails = {
     if (message.session_id !== "") {
       obj.session_id = message.session_id;
     }
+    if (message.last_credit_check_ms !== 0) {
+      obj.last_credit_check_ms = Math.round(message.last_credit_check_ms);
+    }
     return obj;
   },
 
@@ -1710,6 +1738,7 @@ export const StateMachineDetails = {
     message.queue_entered_ms = object.queue_entered_ms ?? 0;
     message.error = object.error ?? "";
     message.session_id = object.session_id ?? "";
+    message.last_credit_check_ms = object.last_credit_check_ms ?? 0;
     return message;
   },
 };
