@@ -174,7 +174,7 @@ function App() {
               maxWidth="sm"
               sx={{
                 marginTop: `${appBarHeight}px`,
-                p: 1,
+                p: 2,
                 maxWidth: "100%",
                 overflowX: "hidden",
                 boxSizing: "border-box",

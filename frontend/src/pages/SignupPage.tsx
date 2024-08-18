@@ -8,7 +8,9 @@ import Typography from "@mui/material/Typography"
 import Button from "@mui/material/Button"
 import Stack from "@mui/material/Stack"
 import TextField from "@mui/material/TextField"
+import Divider from "@mui/material/Divider"
 import { useLocation, useNavigate } from "react-router-dom"
+import { Box } from "@mui/material"
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate()
@@ -42,48 +44,71 @@ const SignupPage: React.FC = () => {
     }
   }
 
+  const handleBackToLogin = () => {
+    navigate("/login") // Adjust the route as necessary for your project
+  }
+
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ mt: 8, p: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Sign Up
-        </Typography>
-        <Stack spacing={2}>
-          <TextField
-            fullWidth
-            label="Email"
-            variant="outlined"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            variant="outlined"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            type="password"
-            variant="outlined"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
+      <Paper elevation={6} sx={{ mt: 8, p: 0 }}>
+        <Box sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Sign Up
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              fullWidth
+              label="Email"
+              variant="outlined"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              variant="outlined"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="Confirm Password"
+              type="password"
+              variant="outlined"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={handleSignUp}
+              style={{
+                boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
+              }}
+            >
+              Sign Up
+            </Button>
+            {error && <Typography color="error">{error}</Typography>}
+          </Stack>
+        </Box>
+
+        <Divider
+          sx={{ width: "100%", borderColor: "black", borderWidth: "1px" }}
+        />
+
+        <Box sx={{ p: 4 }}>
           <Button
             fullWidth
             variant="outlined"
-            onClick={handleSignUp}
+            onClick={handleBackToLogin}
             style={{
               boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
             }}
           >
-            Sign Up
+            Back to Login
           </Button>
-          {error && <Typography color="error">{error}</Typography>}
-        </Stack>
+        </Box>
       </Paper>
     </Container>
   )

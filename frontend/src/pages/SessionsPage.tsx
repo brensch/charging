@@ -35,10 +35,12 @@ const SessionsPage = () => {
     return time.toLocaleTimeString()
   }
 
+  console.log(sessions)
+
   return (
     <Container>
       <Box sx={{ width: "100%" }}>
-        <Typography variant="h6" mb={2}>
+        <Typography variant="h6" my={2}>
           Charging Sessions
         </Typography>
         {sessions.length > 0 ? (

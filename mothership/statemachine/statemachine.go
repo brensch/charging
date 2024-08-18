@@ -165,6 +165,21 @@ func (p *PlugStateMachine) SetChargeStartTimeMs(ctx context.Context, chargeStart
 	return nil
 }
 
+func (p *PlugStateMachine) SetLastCreditCheckTime(ctx context.Context, lastCreditCheckMs int64) error {
+	p.detailsMu.Lock()
+	defer p.detailsMu.Unlock()
+	_, err := p.fs.Collection(common.CollectionPlugStatus).Doc(p.plugID).Update(ctx, []firestore.Update{
+		{Path: "state_machine_details.last_credit_check_ms", Value: lastCreditCheckMs},
+	})
+	if err != nil {
+		return err
+	}
+
+	p.details.LastCreditCheckMs = lastCreditCheckMs
+
+	return nil
+}
+
 func (p *PlugStateMachine) SetQueuePosition(ctx context.Context, queuePosition int64) error {
 	p.detailsMu.Lock()
 	defer p.detailsMu.Unlock()

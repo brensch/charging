@@ -210,6 +210,25 @@ func ListenForUserRequests(ctx context.Context, fs *firestore.Client, stateMachi
 				continue
 			}
 
+			// check if the plug already has an owner and we should abort
+			if plugStateMachine.State().GetOwnerId() != "" &&
+				plugStateMachine.State().GetOwnerId() != userRequest.UserId {
+				// record if the state transition failed
+				log.Println("state transition request had invalid user", userRequest.GetRequestedState())
+				resRequestResult := &contracts.UserRequestResult{
+					TimeEnteredState: time.Now().UnixMilli(),
+					Status:           contracts.UserRequestStatus_RequestedStatus_FAILURE,
+					Reason:           fmt.Sprintf("User %s does not control the plug", userRequest.UserId),
+				}
+				_, err = fs.Collection(common.CollectionUserRequests).Doc(userRequest.Id).Update(ctx, []firestore.Update{
+					{Path: "result", Value: resRequestResult},
+				})
+				if err != nil {
+					log.Printf("Error updating user requests: %v\n", err)
+				}
+				continue
+			}
+
 			// // bit of a cludge here, not sure how to unify this with state machine without accepting inputs
 			err = plugStateMachine.SetOwner(ctx, userRequest.UserId)
 			if err != nil {

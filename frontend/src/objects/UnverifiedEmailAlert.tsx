@@ -83,7 +83,7 @@ const UnverifiedEmailAlert: React.FC = () => {
 
   return (
     <>
-      <Alert severity="warning" sx={{ textAlign: "left", mb: 2 }}>
+      <Alert severity="warning" sx={{ textAlign: "left", mt: 1 }}>
         <AlertTitle>Unverified email</AlertTitle>
         <Typography>
           You can't top up your credit until your email is verified.

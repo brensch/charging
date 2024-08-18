@@ -136,7 +136,7 @@ func main() {
 			for i := 0; i < ptr; i++ {
 				messages[i].Ack()
 			}
-			logger.Info("flushed points", "count", ptr)
+			logger.Debug("flushed points", "count", ptr)
 			ptr = 0
 
 		}

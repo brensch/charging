@@ -100,11 +100,11 @@ const PlugSelectPage = () => {
   return (
     <Container>
       {customer.customerBalance?.cents_aud === undefined ||
-      customer.customerBalance?.cents_aud === 0 ? (
+      customer.customerBalance?.cents_aud <= 0 ? (
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <Typography>
-              You don't have any credit yet. Top up to get started.
+            <Typography my={2}>
+              You don't have any credit. Top up to start charging.
             </Typography>
           </Grid>
           <Grid item xs={12}>

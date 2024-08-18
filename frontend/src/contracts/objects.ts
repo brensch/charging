@@ -21,8 +21,7 @@ export enum StateMachineState {
   StateMachineState_COMMISSIONING = 20,
   StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21,
   StateMachineState_SENSING_START_NOT_RESPONDING = 22,
-  StateMachineState_UPDATING_CREDIT = 23,
-  StateMachineState_INSUFFICIENT_CREDIT = 24,
+  StateMachineState_INSUFFICIENT_CREDIT = 23,
   UNRECOGNIZED = -1,
 }
 
@@ -77,9 +76,6 @@ export function stateMachineStateFromJSON(object: any): StateMachineState {
     case "StateMachineState_SENSING_START_NOT_RESPONDING":
       return StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING;
     case 23:
-    case "StateMachineState_UPDATING_CREDIT":
-      return StateMachineState.StateMachineState_UPDATING_CREDIT;
-    case 24:
     case "StateMachineState_INSUFFICIENT_CREDIT":
       return StateMachineState.StateMachineState_INSUFFICIENT_CREDIT;
     case -1:
@@ -123,8 +119,6 @@ export function stateMachineStateToJSON(object: StateMachineState): string {
       return "StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING";
     case StateMachineState.StateMachineState_SENSING_START_NOT_RESPONDING:
       return "StateMachineState_SENSING_START_NOT_RESPONDING";
-    case StateMachineState.StateMachineState_UPDATING_CREDIT:
-      return "StateMachineState_UPDATING_CREDIT";
     case StateMachineState.StateMachineState_INSUFFICIENT_CREDIT:
       return "StateMachineState_INSUFFICIENT_CREDIT";
     case StateMachineState.UNRECOGNIZED:

@@ -30,8 +30,7 @@ enum StateMachineState {
   StateMachineState_COMMISSIONING = 20;
   StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21;
   StateMachineState_SENSING_START_NOT_RESPONDING = 22;
-  StateMachineState_UPDATING_CREDIT = 23;
-  StateMachineState_INSUFFICIENT_CREDIT = 24;
+  StateMachineState_INSUFFICIENT_CREDIT = 23;
 }
 
 message StateMachineTransition {

@@ -73,6 +73,7 @@ var (
 			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_ENTERING_QUEUE: {
+			creditCheck,
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_IN_QUEUE,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
@@ -161,6 +162,7 @@ var (
 			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_CHARGING: {
+			creditCheck,
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
@@ -184,22 +186,6 @@ var (
 					// TODO: remove time limitation
 					// return latestReading.Current == 0 ||
 					// 	time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
-				},
-			},
-			{
-				TargetState: contracts.StateMachineState_StateMachineState_UPDATING_CREDIT,
-				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-
-					// if we haven't checked credit for 5 minutes, update it
-					if p.details.LastCreditCheckMs == 0 {
-						return true
-					}
-
-					// TODO: start here. need to make the concept of a session and balance updates different.
-					// we need to incrementally update balance so that we can check users have sufficient
-					// on an ongoing basis and kick them off if they don't have sufficient.
-					return
-
 				},
 			},
 			manuallyDisableSocket,
@@ -261,13 +247,18 @@ var (
 				UserPrompt:  "Request Enable Again",
 			},
 		},
-		// contracts.StateMachineState_StateMachineState_UPDATING_CREDIT: {
-		// 	{
-		// 		TargetState: contracts.StateMachineState_StateMachineState_SENSING_START_REQUESTED,
-		// 		AsyncOnly:   true,
-		// 		UserPrompt:  "Request Enable Again",
-		// 	},
-		// },
+		contracts.StateMachineState_StateMachineState_INSUFFICIENT_CREDIT: {
+			{
+				TargetState: contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE,
+				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+
+					log.Println("user ran out of credit")
+					// TODO: email or something
+
+					return true
+				},
+			},
+		},
 	}
 
 	manuallyDisableSocket = StateTransition{
@@ -275,9 +266,48 @@ var (
 		UserPrompt:  "Disable Socket",
 		AsyncOnly:   true,
 	}
-)
 
-var (
+	creditCheck = StateTransition{
+		TargetState: contracts.StateMachineState_StateMachineState_INSUFFICIENT_CREDIT,
+		DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
+
+			p.detailsMu.Lock()
+			customerID := p.details.CurrentOwner
+			sessionID := p.details.SessionId
+			lastCreditCheck := p.details.LastCreditCheckMs
+			p.detailsMu.Unlock()
+
+			// skip if it's been less than 5 minutes since last check
+			start := time.Now()
+			if time.Now().UnixMilli()-lastCreditCheck < 60*1000 {
+				return false
+			}
+
+			// gather the credit and cost of current session
+			customerBalance, err := session.GetBalance(ctx, p.fs, customerID)
+			if err != nil {
+				log.Println("failed to get customer balance", err)
+				return false
+			}
+
+			currentSession, err := session.CalculateSession(ctx, p.ifClient, sessionID)
+			if err != nil {
+				log.Println("failed to get current session cost", err)
+				return false
+			}
+			log.Println("credit check", currentSession.Cents, customerBalance.CentsAud)
+
+			err = p.SetLastCreditCheckTime(ctx, start.UnixMilli())
+			if err != nil {
+				log.Println("failed to set last credit check time", err)
+				return false
+			}
+
+			return currentSession.Cents >= customerBalance.CentsAud
+
+		},
+	}
+
 	accountNullTransition = StateTransition{
 		TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
 		AsyncOnly:   true,
@@ -313,6 +343,13 @@ var (
 			err = p.ResetStateMachineDetails(ctx)
 			if err != nil {
 				log.Println("failed to reset state machine details", err)
+				return false
+			}
+
+			// zero last credit check time so it triggers straight away on new transition
+			err = p.SetLastCreditCheckTime(ctx, 0)
+			if err != nil {
+				log.Println("failed to set last credit check time", err)
 				return false
 			}
 
