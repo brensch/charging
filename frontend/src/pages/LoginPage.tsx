@@ -1,94 +1,173 @@
-import React, { useState } from "react"
-import { sendSignInLinkToEmail } from "firebase/auth"
-import { auth } from "../firebase" // Adjust the path according to your project structure
+import React, { useState, useEffect } from "react"
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+} from "firebase/auth"
+import { FirebaseError } from "firebase/app"
+import { auth } from "../firebase"
 import Container from "@mui/material/Container"
 import Typography from "@mui/material/Typography"
 import Paper from "@mui/material/Paper"
-import TextField from "@mui/material/TextField"
 import Button from "@mui/material/Button"
-import Box from "@mui/material/Box"
+import Stack from "@mui/material/Stack"
+import TextField from "@mui/material/TextField"
+import Divider from "@mui/material/Divider"
 import { useLocation, useNavigate } from "react-router-dom"
+import GoogleIcon from "@mui/icons-material/Google"
+import AppleIcon from "@mui/icons-material/Apple"
 
 const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState("")
   const navigate = useNavigate()
-  const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState<string>("")
+  const [password, setPassword] = useState<string>("")
   const location = useLocation()
-
   const from = location.state?.from || "/"
-  console.log(location)
+  const [isAppleDevice, setIsAppleDevice] = useState(false)
 
-  console.log(`${from.pathname}${from.search}`)
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    if (/iphone|ipad|ipod|macintosh/.test(userAgent)) {
+      setIsAppleDevice(true)
+    }
+  }, [])
 
-  const sendEmailLink = async (e: React.FormEvent) => {
-    setSending(true)
+  const handleSignIn = async (provider: any) => {
     setError(null)
-    e.preventDefault()
-
-    // Retrieve the originally targeted URL from query parameters or state
-    // For example, if you're using React Router and have passed the target URL as a query parameter named 'redirectTo'
-    const from = location.state?.from || "/"
-
-    const actionCodeSettings = {
-      // Include the originally targeted URL in the 'url' parameter, ensuring it's properly encoded
-      url: `${
-        window.location.origin
-      }/confirm-login?redirectTo=${`${from.pathname}${from.search}`}`,
-      handleCodeInApp: true,
-    }
-
     try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings)
-      window.localStorage.setItem("emailForSignIn", email)
-      navigate("/loginpending")
-    } catch (error) {
-      console.error(error)
-      setError("Failed to send signin link: " + error)
-      setSending(false)
+      await signInWithPopup(auth, provider)
+      navigate(from)
+    } catch (error: unknown) {
+      console.log(error)
+      if (error instanceof FirebaseError) {
+        setError(error.message.replace("Firebase:", ""))
+      } else if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        console.error("Unknown error type", error)
+        setError("An unknown error occurred.")
+      }
     }
+  }
+
+  const handleEmailSignIn = async () => {
+    setError(null)
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+      navigate(from)
+    } catch (error: unknown) {
+      if (error instanceof FirebaseError) {
+        setError(error.message.replace("Firebase:", ""))
+      } else if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        console.error("Unknown error type", error)
+        setError("An unknown error occurred.")
+      }
+    }
+  }
+
+  const handleSignUp = () => {
+    navigate("/signup")
+  }
+
+  const handleForgotPassword = () => {
+    navigate("/forgot-password")
   }
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ mt: 8, p: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Login
-        </Typography>
-        <Box
-          component="form"
-          onSubmit={sendEmailLink}
-          noValidate
-          sx={{ mt: 1 }}
-        >
+      <Paper elevation={6} sx={{ mt: 8, p: 0, overflow: "hidden" }}>
+        <Stack spacing={2} sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Login
+          </Typography>
           <TextField
-            variant="outlined"
-            margin="normal"
-            required
             fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            autoComplete="email"
-            autoFocus
+            label="Email"
+            variant="outlined"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+          />
+          <TextField
+            fullWidth
+            label="Password"
+            type="password"
+            variant="outlined"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
           <Button
-            type="submit"
             fullWidth
-            disabled={sending || email === ""}
             variant="outlined"
-            sx={{ mt: 3, mb: 2 }}
+            onClick={handleEmailSignIn}
             style={{
-              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)", // Example of a bold, stark shadow
+              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
             }}
           >
-            Send Sign-in Link
+            Sign in with Email
           </Button>
-          {error && <Typography>{error}</Typography>}
-        </Box>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => handleSignIn(new GoogleAuthProvider())}
+            startIcon={<GoogleIcon />}
+            style={{
+              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+            }}
+          >
+            Sign in with Google
+          </Button>
+          {isAppleDevice && (
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AppleIcon />}
+              style={{
+                boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+              }}
+              disabled
+            >
+              Coming Soon
+            </Button>
+          )}
+          {error && <Typography color="error">{error}</Typography>}
+        </Stack>
+        <Divider
+          sx={{
+            borderColor: "black",
+            borderWidth: "1px",
+            width: "100%",
+          }}
+        />
+        <Stack
+          direction="row"
+          spacing={2}
+          justifyContent="space-between"
+          sx={{ p: 4 }}
+        >
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleSignUp}
+            style={{
+              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+            }}
+          >
+            Sign Up
+          </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={handleForgotPassword}
+            style={{
+              boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+            }}
+          >
+            Forgot Password
+          </Button>
+        </Stack>
       </Paper>
     </Container>
   )
