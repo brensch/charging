@@ -4,6 +4,7 @@ import {
   Button,
   Container,
   CssBaseline,
+  Grid,
   IconButton,
   Menu,
   MenuItem,
@@ -32,9 +33,14 @@ import UserPage from "./pages/UserPage"
 import TopUpPage from "./pages/TopUpPage"
 import MoneyPage from "./pages/MoneyPage"
 import SessionsPage from "./pages/SessionsPage"
+import SignupPage from "./pages/SignupPage"
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"
+import PasswordResetSuccessPage from "./pages/PasswordResetSuccessPage"
+import PasswordResetPage from "./pages/PasswordResetPage"
 import { useState } from "react"
 import UnprotectedRoute from "./UnprotectedRoute"
 import CommissioningPage from "./pages/CommissioningPage"
+import UnverifiedEmailAlert from "./objects/UnverifiedEmailAlert"
 
 const theme = createTheme({
   palette: {
@@ -62,7 +68,6 @@ const theme = createTheme({
       '"Segoe UI Emoji"',
       '"Segoe UI Symbol"',
     ].join(","),
-    // Define font weights for consistency
     fontWeightRegular: 400,
     fontWeightMedium: 500,
     fontWeightBold: 700,
@@ -91,13 +96,9 @@ const theme = createTheme({
     },
     MuiButton: {
       styleOverrides: {
-        // Name of the slot
         root: {
-          // Some CSS
           borderRadius: "20px", // Adjust the border-radius for rounded corners
-          // padding: "6px 16px", // Adjust padding, if necessary
           borderWidth: "2px",
-
           textTransform: "none", // Buttons have uppercase text by default, set this to 'none' to use normal casing
           boxShadow: "none", // remove shadow from all buttons
           "&:hover": {
@@ -112,7 +113,6 @@ const theme = createTheme({
             backgroundColor: "#000", // Change this to the color code you want
             color: "#fff", // Text color for contained button
             "&:hover": {
-              // Styles for when the button is hovered
               backgroundColor: "rgba(0, 0, 0, 0.8)", // Darken button color slightly on hover
               boxShadow: "none", // remove shadow on hover
             },
@@ -124,10 +124,8 @@ const theme = createTheme({
             borderColor: "#000", // Border color for outlined button
             color: "#000", // Text color for outlined button
             "&:hover": {
-              // Styles for when the button is hovered
               color: "#fff",
               backgroundColor: "#000",
-              // borderColor: "rgba(0, 0, 0, 0.5)", // Darken border color slightly on hover
               boxShadow: "none", // remove shadow on hover
             },
           },
@@ -145,9 +143,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           "& .MuiOutlinedInput-root": {
-            // Target the Outlined Input inside the TextField
             "& fieldset": {
-              // Target the fieldset element which is the actual border
               borderColor: "#000", // Set the border color
               borderWidth: "2px", // Set the border width
             },
@@ -178,12 +174,14 @@ function App() {
               maxWidth="sm"
               sx={{
                 marginTop: `${appBarHeight}px`,
-                p: 1,
+                p: 2,
                 maxWidth: "100%",
                 overflowX: "hidden",
                 boxSizing: "border-box",
               }}
             >
+              <UnverifiedEmailAlert />
+
               <Routes>
                 <Route path="/home" element={<HomePage />} />
                 <Route
@@ -239,6 +237,38 @@ function App() {
                   element={
                     <UnprotectedRoute>
                       <LoginPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/signup"
+                  element={
+                    <UnprotectedRoute>
+                      <SignupPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/forgot-password"
+                  element={
+                    <UnprotectedRoute>
+                      <ForgotPasswordPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/password-reset-success"
+                  element={
+                    <UnprotectedRoute>
+                      <PasswordResetSuccessPage />
+                    </UnprotectedRoute>
+                  }
+                />
+                <Route
+                  path="/reset-password"
+                  element={
+                    <UnprotectedRoute>
+                      <PasswordResetPage />
                     </UnprotectedRoute>
                   }
                 />

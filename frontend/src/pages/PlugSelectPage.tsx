@@ -96,10 +96,26 @@ const PlugSelectPage = () => {
     setPlugID(value)
   }
 
+  console.log(customer.customerBalance?.cents_aud)
   return (
     <Container>
-      {customer.customerBalance?.cents_aud !== 0 ? (
+      {customer.customerBalance?.cents_aud === undefined ||
+      customer.customerBalance?.cents_aud <= 0 ? (
         <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <Typography my={2}>
+              You don't have any credit. Top up to start charging.
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Button variant="outlined" onClick={() => navigate("/money")}>
+              Top Up
+            </Button>
+          </Grid>
+        </Grid>
+      ) : (
+        <Grid container spacing={2}>
+          yooooooo {customer.customerBalance?.cents_aud} yo
           <Grid item xs={12}>
             <Typography variant="h6">Scan QR code on Plug</Typography>
           </Grid>
@@ -138,48 +154,6 @@ const PlugSelectPage = () => {
                 }
               }}
             />
-          </Grid>
-
-          {/* {inUsePlugs.length > 0 && (
-          <React.Fragment>
-          <Grid item xs={12}>
-          <Typography variant="h6">Your plugs in use right now</Typography>
-          </Grid>
-          {inUsePlugs.map((inUsePlugID) => (
-            <Grid item xs={4}>
-            <PlugDetails
-            plugId={inUsePlugID}
-            updateSelectedPlug={updatePlug}
-            />
-            </Grid>
-          ))}
-          </React.Fragment>
-        )}
-        {previousPlugs.length > 0 && (
-          <Grid item xs={12}>
-            <Typography variant="h6">Previous plugs you've used</Typography>
-          </Grid>
-        )}
-        {previousPlugs.map((previousPlugID) => (
-          <Grid item xs={4}>
-            <PlugDetails
-            plugId={previousPlugID}
-              updateSelectedPlug={updatePlug}
-              />
-              </Grid>
-        ))} */}
-        </Grid>
-      ) : (
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Typography>
-              You don't have any credit yet. Top up to get started.
-            </Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Button variant="outlined" onClick={() => navigate("/money")}>
-              Top Up
-            </Button>{" "}
           </Grid>
         </Grid>
       )}

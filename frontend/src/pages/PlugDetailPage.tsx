@@ -1,63 +1,27 @@
-import React, { useState, useEffect, useContext } from "react"
-import {
-  Typography,
-  TextField,
-  Box,
-  Button,
-  Container,
-  IconButton,
-  InputAdornment,
-  Paper,
-  Grid,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-} from "@mui/material"
-import { useLocation, useNavigate } from "react-router-dom"
-import {
-  addDoc,
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore"
-import { firestore } from "../firebase" // Assume you have a Firebase config file
+import { Button, Container, Grid, Paper, Typography } from "@mui/material"
+import { format, formatDistanceToNow } from "date-fns"
+import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore"
+import React, { useEffect, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { v4 as uuidv4 } from "uuid"
+import { useAuth } from "../contexts/AuthContext"
 import {
   ActualState,
   PlugSettings,
   PlugStatus,
   StateMachineState,
   UserRequest,
-  UserRequestResult,
+  UserRequestStatus,
   actualStateToJSON,
   stateMachineStateToJSON,
-  userRequestStatusFromJSON,
-  userRequestStatusToJSON,
 } from "../contracts/objects"
-import { useAuth } from "../contexts/AuthContext"
-import { v4 as uuidv4 } from "uuid"
-import { UserRequestStatus } from "../contracts/objects"
-import QrCode2Icon from "@mui/icons-material/QrCode2"
-import BarcodeScannerDialog from "../objects/BarcodeScanner"
-import { CustomerContext } from "../contexts/CustomerContext"
-import PlugDetails from "../objects/PlugDetails"
-import { useParams } from "react-router-dom"
-import { format, formatDistanceToNow } from "date-fns"
-
-const useQuery = () => {
-  return new URLSearchParams(useLocation().search)
-}
+import { firestore } from "../firebase" // Assume you have a Firebase config file
+import { useCustomer } from "../contexts/CustomerContext"
 
 const PlugDetailPage = () => {
   const auth = useAuth()
+  const { customerBalance } = useCustomer()
+  const navigate = useNavigate()
 
   const { plugID } = useParams()
   const [plugStatus, setPlugStatus] = useState<PlugStatus | null>(null)
@@ -185,11 +149,41 @@ const PlugDetailPage = () => {
       .toLowerCase()
       .replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 
+  console.log(
+    plugStatus?.state_machine_details?.current_owner,
+    auth.currentUser?.uid,
+  )
+
+  if (
+    plugStatus?.state_machine_details?.current_owner !== undefined &&
+    plugStatus?.state_machine_details?.current_owner !== "" &&
+    plugStatus?.state_machine_details?.current_owner !== auth.currentUser?.uid
+  ) {
+    return (
+      <Container>
+        <Grid container spacing={2} justifyContent="center">
+          <Grid item xs={12} my={2}>
+            <Typography>
+              Someone else is currently using this plug. Please scan a different
+              plug.
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            <Button variant="outlined">Scan different plug</Button>
+          </Grid>
+        </Grid>
+      </Container>
+    )
+  }
+
+  const needsCredit =
+    customerBalance?.cents_aud !== undefined && customerBalance?.cents_aud <= 0
+
   return (
     <Container>
       <Grid container spacing={2} justifyContent="center">
         {loadingPlugStatus && (
-          <Grid item xs={12}>
+          <Grid item xs={12} my={2}>
             <Typography>Loading plug state...</Typography>
           </Grid>
         )}
@@ -214,7 +208,13 @@ const PlugDetailPage = () => {
                     : plugSettings.name.slice(-15)}{" "}
                 </Typography>
               </Grid>
-
+              {needsCredit && (
+                <Grid item xs={12}>
+                  <Button onClick={() => navigate("/money")} variant="outlined">
+                    Insufficient credit - top up
+                  </Button>
+                </Grid>
+              )}
               <Grid item xs={12} container>
                 {plugStatus.possible_next_states_labels.map(
                   (possibleState, index) => (
@@ -222,6 +222,7 @@ const PlugDetailPage = () => {
                       key={index}
                       variant="outlined"
                       color="primary"
+                      disabled={needsCredit}
                       onClick={() =>
                         handleCreateRequest(
                           plugStatus.possible_next_states[index],

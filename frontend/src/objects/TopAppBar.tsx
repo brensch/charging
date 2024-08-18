@@ -11,13 +11,14 @@ import ListItem from "@mui/material/ListItem"
 import ListItemIcon from "@mui/material/ListItemIcon"
 import ListItemText from "@mui/material/ListItemText"
 import ElectricalServicesIcon from "@mui/icons-material/ElectricalServices"
-import AccountCircleIcon from "@mui/icons-material/AccountCircle"
 import ReceiptIcon from "@mui/icons-material/Receipt"
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney"
 import Box from "@mui/material/Box"
 import { Button, Container, Divider } from "@mui/material"
 import { useAuth } from "../contexts/AuthContext"
+import { sendEmailVerification } from "firebase/auth"
 import { auth } from "../firebase"
+
 import { useCustomer } from "../contexts/CustomerContext"
 import {
   StateMachineState,
@@ -47,7 +48,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
   const authState = useAuth()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null) // Reference to the menu
   const appBarRef = useRef<HTMLDivElement>(null)
   const customer = useCustomer()
 
@@ -57,31 +57,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
     }
   }, [setAppBarHeight])
 
-  useEffect(() => {
-    // TODO: fix pressing the hamburger when open reopening
-    const handleClickOutside = (event: MouseEvent) => {
-      // Check if the click is outside the menu and not on the menu button
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false)
-      }
-    }
-
-    // Add event listener only when the menu is open
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-
-    // Cleanup the event listener
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isMenuOpen]) // Depend on isMenuOpen to add/remove the event listener
-
   const toggleMenu = () => {
-    if (isMenuOpen) {
-      return
-    }
-    setIsMenuOpen(!isMenuOpen)
+    setIsMenuOpen((prev) => !prev)
+  }
+
+  const handleSignOut = () => {
+    setIsMenuOpen(false)
+    auth.signOut()
   }
 
   const menuItems: MenuItem[] = [
@@ -96,33 +78,25 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
       path: "/money",
     },
     { label: "View Charge Sessions", icon: <ReceiptIcon />, path: "/sessions" },
-    // {
-    //   label: auth.currentUser?.displayName
-    //     ? auth.currentUser?.displayName
-    //     : "User",
-    //   icon: <AccountCircleIcon />,
-    //   path: "/user",
-    // },
   ]
 
   const handleListItemClick = (path: string) => {
     navigate(path)
-    setIsMenuOpen(false) // Close menu after navigation
+    setIsMenuOpen(false)
   }
 
-  const appBarZIndex = 1200 // Set AppBar zIndex to be higher than the menu
-  const menuZIndex = 1100 // Ensure this is lower than AppBar's zIndex
+  const appBarZIndex = 1200
+  const menuZIndex = 1100
 
   const fullScreenMenu = (
     <Slide direction="down" in={isMenuOpen} mountOnEnter unmountOnExit>
       <Box
-        ref={menuRef} // Add the ref here
         sx={{
           width: "100vw",
           position: "fixed",
-          top: appBarHeight, // AppBar height
+          top: appBarHeight,
           left: 0,
-          zIndex: menuZIndex, // zIndex lower than AppBar
+          zIndex: menuZIndex,
           backgroundColor: "white",
           borderBottom: "2px solid black",
         }}
@@ -134,17 +108,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
               onClick={() => handleListItemClick(item.path)}
               sx={{
                 "&:hover": {
-                  backgroundColor: "#bafca2", // Light grey background on hover
-                  cursor: "pointer", // Change cursor to pointer on hover
-
-                  // Change icon color on hover
+                  backgroundColor: "#bafca2",
+                  cursor: "pointer",
                   "& .MuiListItemIcon-root": {
-                    color: "black", // Change this to your desired color on hover
+                    color: "black",
                   },
-
-                  // Change text color on hover
                   "& .MuiListItemText-primary": {
-                    color: "black", // Change this to your desired color on hover
+                    color: "black",
                   },
                 },
               }}
@@ -155,7 +125,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText primary={item.label} />
-                </ListItem>{" "}
+                </ListItem>
               </Container>
             </ListItem>
           ))}
@@ -171,17 +141,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
               onClick={() => handleListItemClick(`/plug/${item.id}`)}
               sx={{
                 "&:hover": {
-                  backgroundColor: "#bafca2", // Light grey background on hover
-                  cursor: "pointer", // Change cursor to pointer on hover
-
-                  // Change icon color on hover
+                  backgroundColor: "#bafca2",
+                  cursor: "pointer",
                   "& .MuiListItemIcon-root": {
-                    color: "black", // Change this to your desired color on hover
+                    color: "black",
                   },
-
-                  // Change text color on hover
                   "& .MuiListItemText-primary": {
-                    color: "black", // Change this to your desired color on hover
+                    color: "black",
                   },
                 },
               }}
@@ -193,7 +159,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
                       item.state?.state ? formatState(item.state?.state) : ""
                     }`}
                   />
-                </ListItem>{" "}
+                </ListItem>
               </Container>
             </ListItem>
           ))}
@@ -204,19 +170,13 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
         <Box
           sx={{
             display: "flex",
-            justifyContent: "center", // This centers the buttons
-            padding: "16px", // This adds padding; you can adjust as needed
-            gap: "16px", // This adds space between the buttons
-            flexDirection: "row", // This stacks the buttons vertically
+            justifyContent: "center",
+            padding: "16px",
+            gap: "16px",
+            flexDirection: "row",
           }}
         >
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setIsMenuOpen(false)
-              auth.signOut()
-            }}
-          >
+          <Button variant="outlined" onClick={handleSignOut}>
             Sign Out
           </Button>
           <Button
@@ -238,15 +198,16 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ setAppBarHeight }) => {
         sx={{ height: appBarHeight, zIndex: appBarZIndex }}
       >
         <Container maxWidth="sm">
-          <Toolbar ref={menuRef}>
+          <Toolbar ref={appBarRef}>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
               Magic Charge
             </Typography>
-            {typeof customer.customerBalance?.cents_aud === "number" && (
-              <Typography variant="h6">
-                ${customer.customerBalance?.cents_aud / 100}
-              </Typography>
-            )}
+            {authState.currentUser &&
+              typeof customer.customerBalance?.cents_aud === "number" && (
+                <Typography variant="h6">
+                  ${customer.customerBalance?.cents_aud / 100}
+                </Typography>
+              )}
             {authState.currentUser && (
               <IconButton
                 edge="end"

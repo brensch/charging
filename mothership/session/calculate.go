@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	fixedPricePerkWh = 0.3
+	fixedPricePerkWh = 0.3 * 50
 )
 
 func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID string) (*contracts.Session, error) {
@@ -28,6 +28,8 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 	}
 
 	var start, finish time.Time
+	// if we're not finished, should use now instead
+	finish = time.Now()
 	for results.Next() {
 		state, ok := results.Value()["state"].(string)
 		if !ok {
@@ -51,9 +53,18 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 	}
 
 	// TODO: catch panics from malformed data
-	plugID := results.Value()["plug_id"].(string)
-	siteID := results.Value()["site_id"].(string)
-	ownerID := results.Value()["owner"].(string)
+	plugID, ok := results.Value()["plug_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("plug_id invalid %v", results.Value())
+	}
+	siteID, ok := results.Value()["site_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("site_id invalid %v", results.Value())
+	}
+	ownerID, ok := results.Value()["owner"].(string)
+	if !ok {
+		return nil, fmt.Errorf("owner invalid %v", results.Value())
+	}
 
 	// 2. Query InfluxDB for readings within the session time range
 	readingsQuery := fmt.Sprintf(`
@@ -97,6 +108,9 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 		previousTimestamp = currentTimestamp
 	}
 
+	// TODO: important, make kwh correct here
+	totalKWh *= 1000
+
 	return &contracts.Session{
 		SessionId: sessionID,
 		StartMs:   start.UnixMilli(),
@@ -105,6 +119,6 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 		SiteId:    siteID,
 		OwnerId:   ownerID,
 		TotalKwh:  totalKWh,
-		Cents:     int64(totalKWh * fixedPricePerkWh * 100), // TODO: real prices
+		Cents:     int64(totalKWh * fixedPricePerkWh * 1000), // TODO: real prices using variable price
 	}, nil
 }

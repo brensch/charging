@@ -33,7 +33,7 @@ func TestCalculateSession(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	session, err := CalculateSession(ctx, ifClient, "e01662f2-5784-4853-bd86-d77ee604473b")
+	session, err := CalculateSession(ctx, ifClient, "6a05402a-46c0-498a-99a3-7ca972b51303")
 	if err != nil {
 		t.Error(err)
 	}

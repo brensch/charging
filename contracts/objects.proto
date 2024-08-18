@@ -30,6 +30,7 @@ enum StateMachineState {
   StateMachineState_COMMISSIONING = 20;
   StateMachineState_ACCOUNT_REMOVAL_NOT_RESPONDING = 21;
   StateMachineState_SENSING_START_NOT_RESPONDING = 22;
+  StateMachineState_INSUFFICIENT_CREDIT = 23;
 }
 
 message StateMachineTransition {
@@ -117,6 +118,7 @@ message StateMachineDetails {
   int64 queue_entered_ms = 4;
   string error = 5;
   string session_id = 6;
+  int64 last_credit_check_ms = 7;
 }
 
 enum RequestedState {
