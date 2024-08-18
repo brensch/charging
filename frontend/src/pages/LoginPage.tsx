@@ -78,7 +78,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Paper elevation={6} sx={{ mt: 8, p: 0, overflow: "hidden" }}>
+      <Paper elevation={6} sx={{ mt: 8, p: 0 }}>
         <Stack spacing={2} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom>
             Login
@@ -99,7 +99,6 @@ const LoginPage: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
           <Button
-            fullWidth
             variant="outlined"
             onClick={handleEmailSignIn}
             style={{
@@ -109,7 +108,6 @@ const LoginPage: React.FC = () => {
             Sign in with Email
           </Button>
           <Button
-            fullWidth
             variant="outlined"
             onClick={() => handleSignIn(new GoogleAuthProvider())}
             startIcon={<GoogleIcon />}
@@ -121,11 +119,12 @@ const LoginPage: React.FC = () => {
           </Button>
           {isAppleDevice && (
             <Button
-              fullWidth
               variant="outlined"
               startIcon={<AppleIcon />}
               style={{
                 boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+                width: "auto", // Adjust the width as needed
+                alignSelf: "center", // Center align the button
               }}
               disabled
             >
@@ -148,21 +147,21 @@ const LoginPage: React.FC = () => {
           sx={{ p: 4 }}
         >
           <Button
-            fullWidth
             variant="outlined"
             onClick={handleSignUp}
             style={{
               boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+              width: "auto", // Adjust the width as needed
             }}
           >
             Sign Up
           </Button>
           <Button
-            fullWidth
             variant="outlined"
             onClick={handleForgotPassword}
             style={{
               boxShadow: "4px 4px 0px rgba(0, 0, 0, 1)",
+              width: "auto", // Adjust the width as needed
             }}
           >
             Forgot Password
