@@ -37,7 +37,7 @@ const PasswordResetPage: React.FC = () => {
       navigate("/login")
     } catch (error: unknown) {
       if (error instanceof FirebaseError) {
-        setError(error.message)
+        setError(error.message.replace("Firebase:", ""))
       } else if (error instanceof Error) {
         setError(error.message)
       } else {

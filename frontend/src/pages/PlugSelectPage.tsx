@@ -115,7 +115,6 @@ const PlugSelectPage = () => {
         </Grid>
       ) : (
         <Grid container spacing={2}>
-          yooooooo {customer.customerBalance?.cents_aud} yo
           <Grid item xs={12}>
             <Typography variant="h6">Scan QR code on Plug</Typography>
           </Grid>
