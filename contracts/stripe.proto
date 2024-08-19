@@ -42,6 +42,6 @@ message CustomerBalance {
 message AutoTopupPreferences {
   string firestore_id = 1;
   bool enabled = 2;
-  double threshold_cents = 3;
-  double recharge_value_cents_aud = 4;
+  int64 threshold_cents = 3;
+  int64 recharge_value_cents_aud = 4;
 }

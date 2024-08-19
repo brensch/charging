@@ -11,7 +11,9 @@ generate-proto:
 
 # Configuration variables
 RELAYMANAGER_HOST=ubuntu-pi-server
+RELAYMANAGER_HOST_LOCAL=192.168.1.9
 RELAYMANAGER_USER=niquist
+RELAYMANAGER_USER_LOCAL=pi
 RELAYMANAGER_BINARY=relaymanager-bin
 RELAYMANAGER_SERVICE_FILE=relaymanager.service
 RELAYMANAGER_CONF_FILE=journald.conf
@@ -43,6 +45,14 @@ deploy-relaymanager: build-relaymanager
 	tsh scp $(RELAYMANAGER_BINARY) \
 		$(RELAYMANAGER_USER)@$(RELAYMANAGER_HOST):.
 
+# Deploy the relaymanager binary to the relaymanager
+deploy-relaymanager-local: build-relaymanager
+	@echo "Stopping existing relaymanager service..."
+	ssh root@$(RELAYMANAGER_HOST_LOCAL) 'systemctl stop relaymanager.service || true'
+	@echo "Deploying relaymanager to relaymanager..."
+	scp $(RELAYMANAGER_BINARY) \
+		$(RELAYMANAGER_USER_LOCAL)@$(RELAYMANAGER_HOST_LOCAL):.
+
 # Deploy the mothership binary to the mothership
 deploy-mothership: build-mothership
 	@echo "Stopping existing mothership service..."
@@ -73,6 +83,20 @@ deploy-relaymanager-service: deploy-relaymanager
 	tsh scp ./relaymanager/$(RELAYMANAGER_CONF_FILE) \
 		root@$(RELAYMANAGER_HOST):/tmp
 	tsh ssh root@$(RELAYMANAGER_HOST) 'mv /tmp/$(RELAYMANAGER_SERVICE_FILE) /etc/systemd/system/ && \
+		mv /tmp/$(RELAYMANAGER_CONF_FILE) /etc/systemd/journald.conf && \
+		systemctl restart systemd-journald && \
+		systemctl daemon-reload && \
+		systemctl enable relaymanager.service && \
+		systemctl start relaymanager.service'
+
+# Deploy the relaymanager systemd service and journald configuration to the relaymanager
+deploy-relaymanager-service-local: deploy-relaymanager-local
+	@echo "Deploying relaymanager service to relaymanager..."
+	scp ./relaymanager/$(RELAYMANAGER_SERVICE_FILE) \
+		root@$(RELAYMANAGER_HOST_LOCAL):/tmp
+	scp ./relaymanager/$(RELAYMANAGER_CONF_FILE) \
+		root@$(RELAYMANAGER_HOST_LOCAL):/tmp
+	ssh root@$(RELAYMANAGER_HOST_LOCAL) 'mv /tmp/$(RELAYMANAGER_SERVICE_FILE) /etc/systemd/system/ && \
 		mv /tmp/$(RELAYMANAGER_CONF_FILE) /etc/systemd/journald.conf && \
 		systemctl restart systemd-journald && \
 		systemctl daemon-reload && \

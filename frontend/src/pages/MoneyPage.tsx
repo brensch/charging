@@ -101,7 +101,7 @@ const MoneyPage = () => {
           <>
             <Grid item xs={12}>
               <Button variant="outlined" onClick={handleTopUpSubmit}>
-                Manual Top Up
+                Manual Topup
               </Button>
             </Grid>
             <Grid item xs={12}>
@@ -155,7 +155,7 @@ const MoneyPage = () => {
                     <Grid container spacing={2} alignItems="center">
                       <Grid item xs={12}>
                         <Typography variant="h6">
-                          Auto Top-Up Settings:
+                          Auto Topup Settings:
                         </Typography>
                       </Grid>
                       <Grid item xs={6}>
@@ -200,7 +200,7 @@ const MoneyPage = () => {
                           fullWidth
                           disabled={!autoTopUpTrigger || !autoTopUpAmount}
                         >
-                          Update Auto Top-Up
+                          Update Auto Topup
                         </Button>
                       </Grid>
                     </Grid>
@@ -209,7 +209,7 @@ const MoneyPage = () => {
               )}
             <Grid item xs={12}>
               <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6">Topups</Typography>
+                <Typography variant="h6">Topup History</Typography>
                 <TableContainer>
                   <Table aria-label="transactions table">
                     <TableHead>

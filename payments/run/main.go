@@ -70,7 +70,7 @@ func main() {
 	// Register the Gin handlers
 	router.GET("/topup/:customerID", handler.HandleManualTopup)
 	router.GET("/manage/:customerID", handler.HandleManageCustomer)
-	router.POST("/charge", handler.HandleChargeCustomer)
+	// router.POST("/charge", handler.HandleChargeCustomer)
 	router.POST("/hook", handler.HandleWebhook)
 
 	// Use Gin's run method to start the server on the specified port

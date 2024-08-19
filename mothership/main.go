@@ -13,6 +13,7 @@ import (
 	"github.com/brensch/charging/common"
 	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/brensch/charging/mothership/statemachine"
+	"github.com/stripe/stripe-go/v76"
 
 	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/pubsub"
@@ -41,6 +42,8 @@ func main() {
 	logger.Info("initialising")
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	stripe.Key = "sk_test_51OKyPREiJxehnemBUXuQv5NDjqkPqwozTyEwxUegS5kiCCUWhgw9C6A6HCGNR9ouAwEdym9CCvZL0Spnw34cVAow00Q67ZTEyH"
 
 	projectID, _, err := common.ExtractProjectAndClientID(keyFile)
 	if err != nil {

@@ -2,11 +2,13 @@ package statemachine
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
 	"github.com/brensch/charging/mothership/session"
+	"github.com/brensch/charging/payments"
 	"github.com/google/uuid"
 )
 
@@ -147,7 +149,7 @@ var (
 					latestReading := p.latestReadings[p.latestReadingPtr]
 					p.latestReadingMu.Unlock()
 
-					chargeCommenced := latestReading.Current > 0
+					chargeCommenced := latestReading.Current > 5
 					if chargeCommenced {
 						err := p.SetChargeStartTimeMs(ctx, time.Now().UnixMilli())
 						if err != nil {
@@ -166,28 +168,36 @@ var (
 			{
 				TargetState: contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE,
 				DoTransition: func(ctx context.Context, p *PlugStateMachine) bool {
-					// initialising telemetry still
+					// initializing telemetry still
 					if p.latestReadingPtr == -1 {
 						return false
 					}
 
 					p.latestReadingMu.Lock()
-					latestReading := p.latestReadings[p.latestReadingPtr]
-					p.latestReadingMu.Unlock()
-					// count as stopped only at exactly 0
-					return latestReading.Current == 0
+					defer p.latestReadingMu.Unlock()
 
-					// This code allows us to have a dummy timeout
-					// p.detailsMu.Lock()
-					// chargeStartTimeMS := p.details.ChargeStartTimeMs
-					// p.detailsMu.Unlock()
+					var totalPower float64
+					var validReadings int
 
-					// if it never goes to 0, also stop after dummyChargeDuration time
-					// TODO: remove time limitation
-					// return latestReading.Current == 0 ||
-					// 	time.Now().After(time.UnixMilli(chargeStartTimeMS).Add(dummyChargeDuration))
+					// Sum all readings and count the non-null readings
+					for _, reading := range p.latestReadings {
+						if reading != nil { // assuming nil checks for non-null readings
+							totalPower += reading.Current * reading.Voltage
+							validReadings++
+						}
+					}
+
+					// Calculate the average power
+					averagePower := totalPower / float64(validReadings)
+					if validReadings < 20 {
+						return false
+					}
+
+					// Return true if the average power is below 10W
+					return averagePower < 10
 				},
 			},
+
 			manuallyDisableSocket,
 		},
 		contracts.StateMachineState_StateMachineState_CHARGE_COMPLETE: {
@@ -308,6 +318,7 @@ var (
 		},
 	}
 
+	// the end of a session, all payment stuff should be done here
 	accountNullTransition = StateTransition{
 		TargetState: contracts.StateMachineState_StateMachineState_ACCOUNT_NULL,
 		AsyncOnly:   true,
@@ -320,6 +331,7 @@ var (
 			}
 			p.detailsMu.Lock()
 			sessionToCheck := p.details.SessionId
+			customer := p.details.CurrentOwner
 			p.detailsMu.Unlock()
 
 			calculatedSession, err := session.CalculateSession(ctx, p.ifClient, sessionToCheck)
@@ -351,6 +363,54 @@ var (
 			if err != nil {
 				log.Println("failed to set last credit check time", err)
 				return false
+			}
+
+			// try to top up customer with their prepaid settings
+			// note current behaviour is to kill their session, then top them up.
+			// Don't want to get into making the session top them up as they go since that has the possibility
+			// for tricky edge conditions with multiple plugs on a single account active at one time.
+			// note should return true here since it's not a failure we can't recover from in the UI doing manual topup
+
+			// get topup preferences
+			var topupPreferences *contracts.AutoTopupPreferences
+			topupPreferencesDoc, err := p.fs.Collection(payments.FsCollAutoTopupPreferences).Doc(customer).Get(ctx)
+			if err != nil {
+				log.Println("failed to get customer topup preferences", err)
+				return true
+			}
+			err = topupPreferencesDoc.DataTo(&topupPreferences)
+			if err != nil {
+				log.Println("failed to charge customer after session", err)
+				return true
+			}
+
+			// get customer balance
+			// gather the credit and cost of current session
+			customerBalance, err := session.GetBalance(ctx, p.fs, customer)
+			if err != nil {
+				log.Println("failed to get customer balance", err)
+				return false
+			}
+
+			log.Println("checking if we should recharge",
+				topupPreferences.Enabled,
+				customerBalance.CentsAud,
+				topupPreferences.ThresholdCents,
+				!topupPreferences.Enabled || customerBalance.CentsAud < topupPreferences.ThresholdCents,
+			)
+
+			if !topupPreferences.Enabled || customerBalance.CentsAud > topupPreferences.ThresholdCents {
+				return true
+			}
+
+			// this tops up their balance
+			fmt.Println("topping up balance")
+			err = payments.ChargeCustomer(ctx, p.fs, &contracts.PaymentRequest{
+				FirestoreId: customer,
+				AmountAud:   topupPreferences.RechargeValueCentsAud,
+			})
+			if err != nil {
+				log.Println("failed to charge customer after session", err)
 			}
 
 			return true

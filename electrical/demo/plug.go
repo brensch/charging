@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/brensch/charging/gen/go/contracts"
@@ -18,6 +19,11 @@ type Plug struct {
 	On bool
 
 	siteID string
+
+	lastCurrent          float64
+	lastSessionStartedMs int64
+
+	mu sync.Mutex
 }
 
 func (s *Plug) ID() string {
@@ -34,11 +40,16 @@ func (s *Plug) SiteID() string {
 
 func (s *Plug) SetState(req contracts.RequestedState) error {
 	log.Println("setting demo plug state: ", req.String())
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lastSessionStartedMs = time.Now().UnixMilli()
 	s.On = req == contracts.RequestedState_RequestedState_ON
 	return nil
 }
 
 func (s *Plug) GetReading() (*contracts.Reading, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	timestamp := time.Now().UnixMilli() // Current timestamp
 	plugId := s.ID()
@@ -49,14 +60,35 @@ func (s *Plug) GetReading() (*contracts.Reading, error) {
 		return &contracts.Reading{
 			State:       state,
 			TimestampMs: timestamp,
+			Current:     0,
+			Voltage:     0,
 			PlugId:      plugId,
 			FuzeId:      s.FuzeID(),
 		}, nil
 	}
-	// Generate random values for each field
-	current := rand.Float64() * 100     // Random current in watts
-	voltage := rand.Float64() * 240     // Random voltage in volts
-	powerFactor := rand.Float64()*2 - 1 // Random power factor between -1 and 1
+
+	// after 5 hours, ramp to 5w
+	targetCurrent := 1000.0
+
+	// Feedback mechanism to tend towards 10000 with less randomness
+	variationFactor := 0.01                        // Smaller variation factor for slow adjustment
+	randomAdjustment := (rand.Float64() - 0.5) * 2 // Smaller random value between -1 and 1
+
+	// Calculate adjustment based on distance from target with reduced randomness
+	current := s.lastCurrent + (targetCurrent-s.lastCurrent)*variationFactor + randomAdjustment*1
+
+	// Ensure the current doesn't drop too low
+	if current < 0 {
+		current = 0
+	}
+
+	if time.Now().UnixMilli()-s.lastSessionStartedMs > 5*60*60*1000 {
+		current = 0.02083
+	}
+
+	voltage := 240.0
+	powerFactor := .7
+	s.lastCurrent = current
 
 	return &contracts.Reading{
 		State:       state,

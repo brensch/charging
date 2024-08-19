@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	secondsToStore = 10
+	secondsToStore = 60
 	statesToStore  = 100
 )
 

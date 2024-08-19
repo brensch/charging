@@ -508,10 +508,10 @@ export const AutoTopupPreferences = {
       writer.uint32(16).bool(message.enabled);
     }
     if (message.threshold_cents !== 0) {
-      writer.uint32(25).double(message.threshold_cents);
+      writer.uint32(24).int64(message.threshold_cents);
     }
     if (message.recharge_value_cents_aud !== 0) {
-      writer.uint32(33).double(message.recharge_value_cents_aud);
+      writer.uint32(32).int64(message.recharge_value_cents_aud);
     }
     return writer;
   },
@@ -538,18 +538,18 @@ export const AutoTopupPreferences = {
           message.enabled = reader.bool();
           continue;
         case 3:
-          if (tag !== 25) {
+          if (tag !== 24) {
             break;
           }
 
-          message.threshold_cents = reader.double();
+          message.threshold_cents = longToNumber(reader.int64() as Long);
           continue;
         case 4:
-          if (tag !== 33) {
+          if (tag !== 32) {
             break;
           }
 
-          message.recharge_value_cents_aud = reader.double();
+          message.recharge_value_cents_aud = longToNumber(reader.int64() as Long);
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -580,10 +580,10 @@ export const AutoTopupPreferences = {
       obj.enabled = message.enabled;
     }
     if (message.threshold_cents !== 0) {
-      obj.threshold_cents = message.threshold_cents;
+      obj.threshold_cents = Math.round(message.threshold_cents);
     }
     if (message.recharge_value_cents_aud !== 0) {
-      obj.recharge_value_cents_aud = message.recharge_value_cents_aud;
+      obj.recharge_value_cents_aud = Math.round(message.recharge_value_cents_aud);
     }
     return obj;
   },

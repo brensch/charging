@@ -169,7 +169,14 @@ const PlugDetailPage = () => {
             </Typography>
           </Grid>
           <Grid item xs={12}>
-            <Button variant="outlined">Scan different plug</Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                navigate("/plug")
+              }}
+            >
+              Scan different plug
+            </Button>
           </Grid>
         </Grid>
       </Container>

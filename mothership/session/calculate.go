@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	fixedPricePerkWh = 0.3 * 50
+	centsPerKwh = float64(30.0)
 )
 
 func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID string) (*contracts.Session, error) {
@@ -108,9 +108,6 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 		previousTimestamp = currentTimestamp
 	}
 
-	// TODO: important, make kwh correct here
-	totalKWh *= 1000
-
 	return &contracts.Session{
 		SessionId: sessionID,
 		StartMs:   start.UnixMilli(),
@@ -119,6 +116,6 @@ func CalculateSession(ctx context.Context, ifClient *influxdb3.Client, sessionID
 		SiteId:    siteID,
 		OwnerId:   ownerID,
 		TotalKwh:  totalKWh,
-		Cents:     int64(totalKWh * fixedPricePerkWh * 1000), // TODO: real prices using variable price
+		Cents:     int64(totalKWh * centsPerKwh), // TODO: real prices using variable price
 	}, nil
 }

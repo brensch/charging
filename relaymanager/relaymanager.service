@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/niquist
-ExecStart=/home/niquist/relaymanager-bin
+WorkingDirectory=/home/pi
+ExecStart=/home/pi/relaymanager-bin
 Restart=on-failure
 RestartSec=5s
 
