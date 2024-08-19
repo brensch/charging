@@ -144,7 +144,7 @@ const MoneyPage = () => {
                       onChange={handleToggleAutoTopUp}
                     />
                   }
-                  label="Enable Auto Top-Up"
+                  label="Enable Auto Topup"
                 />
               )}
             </Grid>
